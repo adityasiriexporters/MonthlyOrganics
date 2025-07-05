@@ -1,0 +1,65 @@
+Hello! I am building a new Flask web application called 'Monthly Organics'. Please set up the entire project foundation for me by following these steps precisely:
+
+Step 1: Create the Project Structure
+Create the following directory structure in the project root:
+
+app/
+
+static/
+
+static/css/
+
+static/js/
+
+static/img/
+
+templates/
+
+Next, take the uploaded logo file fulllogo_transparent.png and move it into the static/img/ directory.
+
+Step 2: Initialize the Python Flask Backend
+In the app/ directory, create a file named main.py. Inside main.py, write the Python code to:
+
+Import Flask.
+
+Create a basic Flask application instance.
+
+Define a function named get_db_connection(). IMPORTANT SECURITY REQUIREMENT: This function must connect to a PostgreSQL database using the psycopg2-binary library. It must read the full database connection URL from a Replit Secret named DATABASE_URL.
+
+Create a main index route @app.route('/') that renders an HTML template called index.html.
+
+Step 3: Create the Base HTML Template
+In the templates/ directory, create a file named base.html. This file should be a standard HTML5 boilerplate. In the <head> section, you must include the following:
+
+A link to a local stylesheet at /static/css/style.css.
+
+The latest CDN script for Tailwind CSS.
+
+The latest CDN script for Alpine.js (with defer).
+
+The latest CDN script for htmx.
+
+Step 4: Configure Frontend Tools
+
+In the project root, create a tailwind.config.js file. Inside this file, configure the theme.extend.colors object to include our official brand palette:
+
+primary: '#2C7A3C'
+
+secondary: '#402D1C'
+
+background: '#F9F1E5'
+
+In the static/css/ directory, create a file named style.css. Add the three standard Tailwind @tailwind directives to this file.
+
+Step 5: Create a Test Home Page
+Finally, in the templates/ directory, create the index.html file. This file should:
+
+Extend the base.html template.
+
+Inside the <body>, have a <div> with a light background using our custom brand color: bg-background.
+
+Inside that <div>, add an <h1> heading with the text "Welcome to Monthly Organics" and color it with our custom primary color: text-primary.
+
+Display the brand logo from static/img/fulllogo_transparent.png below the heading.
+
+After you run this, I expect to have a fully structured project, a running Flask server, and a simple homepage that proves Tailwind CSS is correctly configured with our custom brand colors.
