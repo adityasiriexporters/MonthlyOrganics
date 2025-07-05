@@ -3,148 +3,263 @@
 {% block title %}Welcome to Monthly Organics - Fresh Organic Produce Delivered Monthly{% endblock %}
 
 {% block content %}
-<div class="organic-gradient min-h-screen pb-20 md:pb-0">
-    <!-- Hero Section -->
-    <section class="welcome-container" x-data="{ loaded: false }" x-init="setTimeout(() => loaded = true, 100)">
-        <div class="max-w-4xl mx-auto text-center">
-            <!-- Welcome Heading -->
-            <h1 class="welcome-title text-primary animate-fade-in-up" 
-                x-show="loaded" 
-                x-transition:enter="transition ease-out duration-600"
-                x-transition:enter-start="opacity-0 transform translate-y-8"
-                x-transition:enter-end="opacity-1 transform translate-y-0">
-                Welcome to Monthly Organics
-            </h1>
-            
-            <!-- Subtitle -->
-            <p class="text-secondary text-lg md:text-xl mb-8 animate-fade-in-up" 
-               x-show="loaded" 
-               x-transition:enter="transition ease-out duration-600 delay-200"
-               x-transition:enter-start="opacity-0 transform translate-y-8"
-               x-transition:enter-end="opacity-1 transform translate-y-0">
-                Your monthly dose of organic goodness
-            </p>
-            
-            <!-- Brand Logo -->
-            <div class="mb-8" 
-                 x-show="loaded" 
-                 x-transition:enter="transition ease-out duration-600 delay-400"
-                 x-transition:enter-start="opacity-0 transform translate-y-8"
-                 x-transition:enter-end="opacity-1 transform translate-y-0">
-                <img src="{{ url_for('static', filename='img/fulllogo_transparent.png') }}" 
-                     alt="Monthly Organics - Your monthly dose of organic goodness" 
-                     class="brand-logo mx-auto shadow-lg rounded-lg">
-            </div>
-            
-            <!-- Description -->
-            <div class="max-w-2xl mx-auto" 
-                 x-show="loaded" 
-                 x-transition:enter="transition ease-out duration-600 delay-600"
-                 x-transition:enter-start="opacity-0 transform translate-y-8"
-                 x-transition:enter-end="opacity-1 transform translate-y-0">
-                <p class="text-gray-700 text-base md:text-lg leading-relaxed mb-8">
-                    Experience the freshest organic produce delivered straight to your door every month. 
-                    We partner with local organic farms to bring you the highest quality fruits and vegetables, 
-                    picked at peak ripeness and delivered with care.
-                </p>
-                
-                <!-- Features Grid - Mobile First -->
-                <div class="grid grid-cols-1 gap-4 mt-8 md:grid-cols-3 md:gap-6 md:mt-12">
-                    <div class="feature-card">
-                        <div class="feature-icon bg-primary">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
+<div class="min-h-screen pb-20 md:pb-0 bg-gray-50">
+    <!-- Sliding Banners -->
+    <section class="bg-white shadow-sm">
+        <div class="max-w-md mx-auto" x-data="{ currentSlide: 0, slides: 3 }" x-init="setInterval(() => { currentSlide = (currentSlide + 1) % slides }, 5000)">
+            <div class="relative aspect-[16/9] overflow-hidden">
+                <!-- Slide 1 -->
+                <div class="absolute inset-0 transition-transform duration-500 ease-in-out" 
+                     :class="currentSlide === 0 ? 'translate-x-0' : 'translate-x-full'">
+                    <div class="w-full h-full bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center">
+                        <div class="text-center text-white">
+                            <h3 class="text-2xl font-bold mb-2">Fresh Organic Vegetables</h3>
+                            <p class="text-lg">Farm to Table in 24 Hours</p>
                         </div>
-                        <h3 class="text-lg font-semibold text-secondary mb-2">100% Organic</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
-                            Certified organic produce from trusted local farms
-                        </p>
-                    </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon bg-primary">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-semibold text-secondary mb-2">Fresh Monthly</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
-                            Delivered fresh to your door every month
-                        </p>
-                    </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon bg-primary">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-semibold text-secondary mb-2">Locally Sourced</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
-                            Supporting local organic farmers in your community
-                        </p>
                     </div>
                 </div>
                 
-                <!-- Call to Action - Mobile First -->
-                <div class="mt-8 md:mt-12">
-                    <button class="btn-primary w-full md:w-auto shadow-lg hover:shadow-xl transform hover:scale-105 transition-transform"
-                            x-on:click="$dispatch('open-modal', 'coming-soon')">
-                        Get Started Today
-                    </button>
+                <!-- Slide 2 -->
+                <div class="absolute inset-0 transition-transform duration-500 ease-in-out" 
+                     :class="currentSlide === 1 ? 'translate-x-0' : currentSlide === 0 ? 'translate-x-full' : '-translate-x-full'">
+                    <div class="w-full h-full bg-gradient-to-r from-orange-400 to-red-500 flex items-center justify-center">
+                        <div class="text-center text-white">
+                            <h3 class="text-2xl font-bold mb-2">Seasonal Fruits</h3>
+                            <p class="text-lg">Sweet & Nutritious</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slide 3 -->
+                <div class="absolute inset-0 transition-transform duration-500 ease-in-out" 
+                     :class="currentSlide === 2 ? 'translate-x-0' : '-translate-x-full'">
+                    <div class="w-full h-full bg-gradient-to-r from-purple-400 to-purple-600 flex items-center justify-center">
+                        <div class="text-center text-white">
+                            <h3 class="text-2xl font-bold mb-2">Herb Gardens</h3>
+                            <p class="text-lg">Fresh Herbs Delivered</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slide indicators -->
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                    <template x-for="(slide, index) in Array.from({length: slides})" :key="index">
+                        <button @click="currentSlide = index" 
+                                class="w-2 h-2 rounded-full transition-colors"
+                                :class="currentSlide === index ? 'bg-white' : 'bg-white/50'"></button>
+                    </template>
                 </div>
             </div>
         </div>
     </section>
-    
-    <!-- Coming Soon Modal -->
-    <div x-data="{ open: false }" 
-         x-on:open-modal.window="open = ($event.detail === 'coming-soon')"
-         x-show="open" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-         style="display: none;">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0 transform scale-95"
-             x-transition:enter-end="opacity-1 transform scale-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-1 transform scale-100"
-             x-transition:leave-end="opacity-0 transform scale-95">
-            <div class="text-center">
-                <h3 class="text-2xl font-bold text-primary mb-4">Coming Soon!</h3>
-                <p class="text-gray-600 mb-6">
-                    We're working hard to bring you the best organic produce delivery service. 
-                    Stay tuned for updates!
-                </p>
-                <button x-on:click="open = false" 
-                        class="bg-primary hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                    Close
-                </button>
+
+    <!-- Category Grid -->
+    <section class="py-6 bg-white">
+        <div class="max-w-md mx-auto px-4">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Shop by Category</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Vegetables -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">Vegetables</span>
+                </div>
+                
+                <!-- Fruits -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">Fruits</span>
+                </div>
+                
+                <!-- Herbs -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">Herbs</span>
+                </div>
+                
+                <!-- Grains -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1h2a1 1 0 011 1v18a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h2v3"></path>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">Grains</span>
+                </div>
+                
+                <!-- Dairy -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">Dairy</span>
+                </div>
+                
+                <!-- Spices -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">Spices</span>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
+    </section>
 
-{% block extra_scripts %}
-<script>
-    // Additional page-specific JavaScript
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('heroSection', () => ({
-            loaded: false,
-            init() {
-                setTimeout(() => {
-                    this.loaded = true;
-                }, 100);
-            }
-        }));
-    });
-</script>
+    <!-- Static Banners -->
+    <section class="py-4 bg-gray-50">
+        <div class="max-w-md mx-auto px-4 space-y-4">
+            <!-- Banner 1 -->
+            <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+                <h3 class="text-lg font-bold mb-2">🌱 Organic Certification</h3>
+                <p class="text-sm opacity-90">All our products are certified organic by trusted authorities</p>
+            </div>
+            
+            <!-- Banner 2 -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+                <h3 class="text-lg font-bold mb-2">🚚 Free Delivery</h3>
+                <p class="text-sm opacity-90">Free doorstep delivery on orders above ₹500</p>
+            </div>
+            
+            <!-- Banner 3 -->
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+                <h3 class="text-lg font-bold mb-2">💰 Best Prices</h3>
+                <p class="text-sm opacity-90">Competitive prices with no hidden charges</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Top Best Sellers -->
+    <section class="py-6 bg-white">
+        <div class="max-w-md mx-auto px-4">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Top Best Sellers</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Product 1 -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="aspect-square bg-green-100 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2"></path>
+                        </svg>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-medium text-sm text-gray-900 mb-1">Organic Spinach</h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-gray-900">₹45</span>
+                            <span class="text-xs text-gray-500 line-through">₹60</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            <button class="bg-primary text-white px-3 py-1 rounded text-xs font-medium hover:bg-primary/90 transition-colors">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product 2 -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="aspect-square bg-orange-100 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-medium text-sm text-gray-900 mb-1">Fresh Oranges</h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-gray-900">₹120</span>
+                            <span class="text-xs text-gray-500 line-through">₹150</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            <button class="bg-primary text-white px-3 py-1 rounded text-xs font-medium hover:bg-primary/90 transition-colors">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product 3 -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="aspect-square bg-red-100 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-medium text-sm text-gray-900 mb-1">Organic Tomatoes</h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-gray-900">₹80</span>
+                            <span class="text-xs text-gray-500 line-through">₹100</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            <button class="bg-primary text-white px-3 py-1 rounded text-xs font-medium hover:bg-primary/90 transition-colors">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product 4 -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="aspect-square bg-purple-100 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-medium text-sm text-gray-900 mb-1">Fresh Basil</h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-gray-900">₹35</span>
+                            <span class="text-xs text-gray-500 line-through">₹50</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            <button class="bg-primary text-white px-3 py-1 rounded text-xs font-medium hover:bg-primary/90 transition-colors">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
 {% endblock %}
