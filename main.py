@@ -40,10 +40,67 @@ def index():
     """Main index route that renders the homepage template."""
     try:
         logger.info("Rendering homepage")
-        return render_template('index.html')
+        # You can pass selected_address variable here when implementing address functionality
+        return render_template('index.html', selected_address=None)
     except Exception as e:
         logger.error(f"Error rendering index page: {e}")
-        return render_template('index.html')
+        return render_template('index.html', selected_address=None)
+
+@app.route('/profile')
+def profile():
+    """Profile page route."""
+    try:
+        logger.info("Rendering profile page")
+        return render_template('profile.html')
+    except Exception as e:
+        logger.error(f"Error rendering profile page: {e}")
+        return render_template('profile.html')
+
+# Placeholder routes for navigation items
+@app.route('/store')
+def store():
+    """Store page route - placeholder."""
+    return "<h1>Store Page - Coming Soon</h1><p>Product catalog will be available here.</p>"
+
+@app.route('/cart')
+def cart():
+    """Cart page route - placeholder."""
+    return "<h1>Shopping Cart - Coming Soon</h1><p>Your cart items will be displayed here.</p>"
+
+@app.route('/orders')
+def orders():
+    """Orders page route - placeholder."""
+    return "<h1>Your Orders - Coming Soon</h1><p>Order history will be available here.</p>"
+
+@app.route('/support')
+def support():
+    """Support page route - placeholder."""
+    return "<h1>Help & Support - Coming Soon</h1><p>Customer support features will be available here.</p>"
+
+@app.route('/wallet')
+def wallet():
+    """Wallet page route - placeholder."""
+    return "<h1>Wallet - Coming Soon</h1><p>Wallet management will be available here.</p>"
+
+@app.route('/rewards')
+def rewards():
+    """Rewards page route - placeholder."""
+    return "<h1>Rewards - Coming Soon</h1><p>Reward tracking will be available here.</p>"
+
+@app.route('/profile-settings')
+def profile_settings():
+    """Profile settings page route - placeholder."""
+    return "<h1>Profile Settings - Coming Soon</h1><p>Profile management will be available here.</p>"
+
+@app.route('/addresses')
+def addresses():
+    """Addresses page route - placeholder."""
+    return "<h1>Saved Addresses - Coming Soon</h1><p>Address management will be available here.</p>"
+
+@app.route('/addresses/add')
+def add_address():
+    """Add address page route - placeholder."""
+    return "<h1>Add Address - Coming Soon</h1><p>Address addition form will be available here.</p>"
 
 @app.route('/health')
 def health_check():
