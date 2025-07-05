@@ -51,7 +51,8 @@ def health_check():
     try:
         # Test database connection
         with app.app_context():
-            db.engine.execute("SELECT 1")
+            from sqlalchemy import text
+            db.session.execute(text("SELECT 1"))
         
         return {"status": "healthy", "database": "connected"}, 200
     except Exception as e:
