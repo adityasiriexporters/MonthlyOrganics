@@ -31,8 +31,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Initialize the database with the app
 init_db(app)
 
-# Import routes from app/main.py
-from app.main import app as main_app
+# Import routes from app/main.py 
+from app.main import app as main_app, store as store_view, products_by_category
 
 # Register the main app routes
 @app.route('/')
@@ -56,11 +56,9 @@ def profile():
         logger.error(f"Error rendering profile page: {e}")
         return render_template('profile.html')
 
-# Placeholder routes for navigation items
-@app.route('/store')
-def store():
-    """Store page route - placeholder."""
-    return "<h1>Store Page - Coming Soon</h1><p>Product catalog will be available here.</p>"
+# Store routes (import from app/main.py)
+app.add_url_rule('/store', 'store', store_view, methods=['GET'])
+app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 
 @app.route('/cart')
 def cart():

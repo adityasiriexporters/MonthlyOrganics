@@ -1,6 +1,7 @@
 import os
 import logging
 import psycopg2
+import psycopg2.extras
 from flask import Flask, render_template, request
 
 # Set up logging for debugging
@@ -25,12 +26,12 @@ def get_db_connection():
             logging.error("DATABASE_URL environment variable not set")
             return None
         
-        # Connect to PostgreSQL database
+        # Connect to PostgreSQL database with DictCursor
         conn = psycopg2.connect(database_url)
         logging.info("Database connection established successfully")
         
         # Get cursor to execute table creation statements
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         # Create tables if they don't exist
         create_tables_sql = [
@@ -83,6 +84,74 @@ def get_db_connection():
         for sql in create_tables_sql:
             cursor.execute(sql)
         
+        # Insert sample data if tables are empty
+        cursor.execute("SELECT COUNT(*) FROM categories")
+        result = cursor.fetchone()
+        category_count = result[0] if result else 0
+        
+        if category_count == 0:
+            # Insert sample categories
+            categories_data = [
+                ('Vegetables', '/static/icons/vegetables.svg'),
+                ('Fruits', '/static/icons/fruits.svg'),
+                ('Herbs', '/static/icons/herbs.svg'),
+                ('Grains', '/static/icons/grains.svg'),
+                ('Dairy', '/static/icons/dairy.svg'),
+                ('Spices', '/static/icons/spices.svg')
+            ]
+            
+            cursor.executemany(
+                "INSERT INTO categories (name, icon_url) VALUES (%s, %s)",
+                categories_data
+            )
+            
+            # Insert sample products
+            products_data = [
+                ('Organic Spinach', 'Fresh organic spinach leaves, rich in iron and vitamins', 1, True),
+                ('Fresh Carrots', 'Crisp organic carrots, perfect for cooking and salads', 1, True),
+                ('Organic Tomatoes', 'Juicy red tomatoes, vine-ripened and pesticide-free', 1, True),
+                ('Fresh Oranges', 'Sweet and tangy oranges, packed with vitamin C', 2, True),
+                ('Organic Apples', 'Crisp red apples, naturally sweet and healthy', 2, False),
+                ('Fresh Basil', 'Aromatic basil leaves, perfect for cooking', 3, True),
+                ('Organic Rice', 'Premium quality brown rice, nutrient-rich', 4, False),
+                ('Fresh Milk', 'Pure organic milk from grass-fed cows', 5, False),
+                ('Turmeric Powder', 'Pure turmeric powder with anti-inflammatory properties', 6, False)
+            ]
+            
+            cursor.executemany(
+                "INSERT INTO products (name, description, category_id, is_best_seller) VALUES (%s, %s, %s, %s)",
+                products_data
+            )
+            
+            # Insert product variations
+            variations_data = [
+                (1, '250g', 45.00, 100),  # Spinach
+                (1, '500g', 80.00, 50),
+                (2, '1kg', 60.00, 75),    # Carrots
+                (2, '2kg', 110.00, 30),
+                (3, '500g', 80.00, 90),   # Tomatoes
+                (3, '1kg', 150.00, 45),
+                (4, '1kg', 120.00, 60),   # Oranges
+                (4, '2kg', 220.00, 25),
+                (5, '1kg', 180.00, 40),   # Apples
+                (5, '2kg', 340.00, 20),
+                (6, '50g', 35.00, 80),    # Basil
+                (6, '100g', 65.00, 40),
+                (7, '1kg', 95.00, 50),    # Rice
+                (7, '5kg', 450.00, 20),
+                (8, '500ml', 45.00, 30),  # Milk
+                (8, '1L', 85.00, 25),
+                (9, '100g', 25.00, 100),  # Turmeric
+                (9, '250g', 55.00, 50)
+            ]
+            
+            cursor.executemany(
+                "INSERT INTO product_variations (product_id, variation_name, mrp, stock_quantity) VALUES (%s, %s, %s, %s)",
+                variations_data
+            )
+            
+            logging.info("Sample data inserted successfully")
+        
         # Commit the changes
         conn.commit()
         logging.info("E-commerce database tables created successfully")
@@ -113,6 +182,89 @@ def index():
     except Exception as e:
         logging.error(f"Error rendering index page: {e}")
         return render_template('index.html')
+
+@app.route('/store')
+def store():
+    """Store page route that displays categories and products."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logging.error("Failed to connect to database")
+            return render_template('store.html', categories=[])
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Fetch all categories with parameterized query
+        cursor.execute("SELECT id, name, icon_url FROM categories ORDER BY name")
+        categories = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        logging.info(f"Fetched {len(categories)} categories for store page")
+        return render_template('store.html', categories=categories)
+        
+    except Exception as e:
+        logging.error(f"Error loading store page: {e}")
+        return render_template('store.html', categories=[])
+
+@app.route('/products/<int:category_id>')
+def products_by_category(category_id):
+    """HTMX route that returns products for a specific category."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logging.error("Failed to connect to database")
+            return render_template('partials/product_list.html', products=[])
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Fetch products with their variations using parameterized query
+        query = """
+        SELECT 
+            p.id, p.name, p.description, p.is_best_seller,
+            pv.id as variation_id, pv.variation_name, pv.mrp, pv.stock_quantity
+        FROM products p
+        LEFT JOIN product_variations pv ON p.id = pv.product_id
+        WHERE p.category_id = %s
+        ORDER BY p.is_best_seller DESC, p.name, pv.mrp
+        """
+        
+        cursor.execute(query, (category_id,))
+        results = cursor.fetchall()
+        
+        # Group variations by product
+        products = {}
+        for row in results:
+            product_id = row['id']
+            if product_id not in products:
+                products[product_id] = {
+                    'id': row['id'],
+                    'name': row['name'],
+                    'description': row['description'],
+                    'is_best_seller': row['is_best_seller'],
+                    'variations': []
+                }
+            
+            if row['variation_id']:  # Only add if variation exists
+                products[product_id]['variations'].append({
+                    'id': row['variation_id'],
+                    'name': row['variation_name'],
+                    'price': float(row['mrp']),
+                    'stock': row['stock_quantity']
+                })
+        
+        products_list = list(products.values())
+        
+        cursor.close()
+        conn.close()
+        
+        logging.info(f"Fetched {len(products_list)} products for category {category_id}")
+        return render_template('partials/product_list.html', products=products_list)
+        
+    except Exception as e:
+        logging.error(f"Error loading products for category {category_id}: {e}")
+        return render_template('partials/product_list.html', products=[])
 
 @app.route('/health')
 def health_check():
