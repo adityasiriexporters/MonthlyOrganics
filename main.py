@@ -176,16 +176,16 @@ def send_otp():
             flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
             return redirect(url_for('login'))
         
-        # Generate 6-digit OTP
-        otp = random.randint(100000, 999999)
+        # Use fixed OTP for testing (will be replaced with MSG91 API later)
+        otp = "290921"
         
         # Store OTP and mobile number in session
-        session['otp'] = str(otp)
+        session['otp'] = otp
         session['mobile_number'] = mobile_number
         session['otp_attempts'] = 0
         
-        # For testing - print OTP to console (will be replaced with MSG91 API later)
-        print(f"OTP for {mobile_number} is: {otp}")
+        # For testing - print OTP to console
+        print(f"OTP for {mobile_number} is: {otp} (TEST MODE)")
         
         return redirect(url_for('verify'))
         
@@ -239,7 +239,7 @@ def verify_otp():
         
         # OTP is correct - find or create user using SQLAlchemy
         from models import User
-        user = User.query.filter_by(mobile_number=mobile_number).first()
+        user = User.query.filter_by(phone=mobile_number).first()
         
         if user:
             user_id = user.id
