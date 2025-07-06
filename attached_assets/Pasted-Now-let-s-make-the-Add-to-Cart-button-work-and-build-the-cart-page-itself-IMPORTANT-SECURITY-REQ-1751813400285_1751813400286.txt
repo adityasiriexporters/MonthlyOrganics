@@ -1,0 +1,29 @@
+Now let's make the 'Add to Cart' button work and build the cart page itself.
+
+IMPORTANT SECURITY REQUIREMENTS: Remember to use parameterized queries and ensure only logged-in users can access cart functions.
+
+Step 1: Create the Login Gate
+In app/main.py, create a decorator function @login_required. This decorator will check if session.get('user_id') exists. If not, it will redirect the user to the /login page.
+
+Step 2: Implement 'Add to Cart' Logic
+
+Create a new route /add-to-cart/<int:variation_id> that accepts POST requests and is protected by your @login_required decorator.
+
+This route should perform an INSERT ... ON CONFLICT (or an UPSERT) query on the cart_items table. It should add the item with a quantity of 1 for the logged-in user. If the item already exists in the cart, it should update the quantity by adding 1.
+
+The route should then return a small HTML snippet for the quantity stepper UI: <div class='flex items-center'><button hx-post='/update-cart/{{ variation_id }}/decr'>-</button><span>{{ current_quantity }}</span><button hx-post='/update-cart/{{ variation_id }}/incr'>+</button></div>.
+
+Modify the 'Add to Cart' button in templates/partials/product_list.html to use hx-post="/add-to-cart/{{ variation.id }}" and hx-swap="outerHTML".
+
+Step 3: Implement Cart Updates
+Create a new route /update-cart/<int:variation_id>/<string:action> (where action is 'incr' or 'decr') protected by @login_required. This route should update the quantity in the cart_items table. If the quantity becomes zero, delete the row. It should return the updated quantity stepper HTML snippet.
+
+Step 4: Build the Cart Page
+
+Create a /cart route protected by @login_required. It should query the cart_items table for the user's items, join with products/variations to get details like name and price, and pass this data to templates/cart.html.
+
+Create templates/cart.html. Loop through the cart items and display them. Include the quantity stepper for each item, which should already work with the route from Step 3.
+
+Calculate and display the total cost of all items.
+
+Add a 'Proceed to Checkout' button that links to /pre-checkout.

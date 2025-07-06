@@ -96,6 +96,8 @@ Changelog:
 - July 06, 2025. Added interactive store features: default category selection, click-to-jump navigation, and automatic scroll highlighting
 - July 06, 2025. Enhanced JavaScript with intersection observer for scroll detection and comprehensive browser compatibility
 - July 06, 2025. Fixed click-to-jump navigation with multiple scrolling methods and enhanced cross-browser category highlighting with !important CSS rules
+- July 06, 2025. Implemented complete cart functionality with database tables (cart_items, orders, order_items) and secure login-protected routes
+- July 06, 2025. Added dynamic Add to Cart/quantity stepper UI with HTMX for real-time updates and UPSERT database operations
 ```
 
 ## User Preferences

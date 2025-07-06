@@ -2,7 +2,8 @@ import os
 import logging
 import psycopg2
 import psycopg2.extras
-from flask import Flask, render_template, request
+from functools import wraps
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -202,6 +203,15 @@ def get_db_connection():
         logging.error(f"Unexpected error connecting to database: {e}")
         return None
 
+def login_required(f):
+    """Decorator to require login for certain routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/')
 def index():
     """Main index route that renders the homepage template."""
@@ -375,6 +385,213 @@ def all_products():
     except Exception as e:
         logging.error(f"Error loading all products: {e}")
         return render_template('partials/all_products.html', categories_with_products=[])
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Simple login for testing. In production, implement proper authentication."""
+    if request.method == 'POST':
+        # For testing, create or find a user and set session
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            
+            # Check if test user exists, if not create one
+            cursor.execute("SELECT id FROM users WHERE mobile_number = %s", ('1234567890',))
+            user = cursor.fetchone()
+            
+            if not user:
+                cursor.execute(
+                    "INSERT INTO users (name, mobile_number) VALUES (%s, %s) RETURNING id",
+                    ('Test User', '1234567890')
+                )
+                user_id = cursor.fetchone()[0]
+                conn.commit()
+            else:
+                user_id = user[0]
+            
+            session['user_id'] = user_id
+            cursor.close()
+            conn.close()
+            
+            return redirect(url_for('store'))
+    
+    return '''
+    <form method="post" style="padding: 20px;">
+        <h2>Login (Test)</h2>
+        <button type="submit">Login as Test User</button>
+    </form>
+    '''
+
+@app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
+@login_required
+def add_to_cart(variation_id):
+    """Add item to cart or update quantity if already exists."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return "Database connection failed", 500
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Use UPSERT to add item or update quantity
+        cursor.execute("""
+            INSERT INTO cart_items (user_id, variation_id, quantity)
+            VALUES (%s, %s, 1)
+            ON CONFLICT (user_id, variation_id)
+            DO UPDATE SET quantity = cart_items.quantity + 1
+            RETURNING quantity
+        """, (user_id, variation_id))
+        
+        new_quantity = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Return quantity stepper HTML
+        return f'''
+        <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+            <button hx-post="/update-cart/{variation_id}/decr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                -
+            </button>
+            <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
+            <button hx-post="/update-cart/{variation_id}/incr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                +
+            </button>
+        </div>
+        '''
+        
+    except Exception as e:
+        logging.error(f"Error adding to cart: {e}")
+        return "Error adding to cart", 500
+
+@app.route('/update-cart/<int:variation_id>/<string:action>', methods=['POST'])
+@login_required
+def update_cart(variation_id, action):
+    """Update cart item quantity (increment or decrement)."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return "Database connection failed", 500
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        if action == 'incr':
+            cursor.execute("""
+                UPDATE cart_items 
+                SET quantity = quantity + 1 
+                WHERE user_id = %s AND variation_id = %s
+                RETURNING quantity
+            """, (user_id, variation_id))
+        elif action == 'decr':
+            cursor.execute("""
+                UPDATE cart_items 
+                SET quantity = quantity - 1 
+                WHERE user_id = %s AND variation_id = %s
+                RETURNING quantity
+            """, (user_id, variation_id))
+        else:
+            return "Invalid action", 400
+            
+        result = cursor.fetchone()
+        if not result:
+            cursor.close()
+            conn.close()
+            return "Item not found in cart", 404
+            
+        new_quantity = result[0]
+        
+        # If quantity becomes 0, delete the item
+        if new_quantity <= 0:
+            cursor.execute("""
+                DELETE FROM cart_items 
+                WHERE user_id = %s AND variation_id = %s
+            """, (user_id, variation_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            # Return add to cart button
+            return f'''
+            <button hx-post="/add-to-cart/{variation_id}" 
+                    hx-swap="outerHTML"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                Add to Cart
+            </button>
+            '''
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Return updated quantity stepper
+        return f'''
+        <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+            <button hx-post="/update-cart/{variation_id}/decr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                -
+            </button>
+            <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
+            <button hx-post="/update-cart/{variation_id}/incr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                +
+            </button>
+        </div>
+        '''
+        
+    except Exception as e:
+        logging.error(f"Error updating cart: {e}")
+        return "Error updating cart", 500
+
+@app.route('/cart')
+@login_required
+def cart():
+    """Display user's shopping cart."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return render_template('cart.html', cart_items=[], total_amount=0)
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get cart items with product and variation details
+        cursor.execute("""
+            SELECT 
+                ci.variation_id,
+                ci.quantity,
+                p.name as product_name,
+                p.description as product_description,
+                pv.variation_name,
+                pv.mrp,
+                (ci.quantity * pv.mrp) as line_total
+            FROM cart_items ci
+            JOIN product_variations pv ON ci.variation_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE ci.user_id = %s
+            ORDER BY p.name, pv.variation_name
+        """, (user_id,))
+        
+        cart_items = cursor.fetchall()
+        
+        # Calculate total
+        total_amount = sum(float(item['line_total']) for item in cart_items)
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('cart.html', cart_items=cart_items, total_amount=total_amount)
+        
+    except Exception as e:
+        logging.error(f"Error loading cart: {e}")
+        return render_template('cart.html', cart_items=[], total_amount=0)
 
 @app.route('/health')
 def health_check():

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Monthly Organics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-green-600">Monthly Organics</a>
+                </div>
+                
+                <!-- Navigation -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="/" class="text-gray-700 hover:text-green-600">Home</a>
+                    <a href="/store" class="text-gray-700 hover:text-green-600">Store</a>
+                    <a href="/cart" class="text-green-600 font-semibold">Cart</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+            
+            {% if cart_items %}
+                <!-- Cart Items -->
+                <div class="space-y-6">
+                    {% for item in cart_items %}
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <!-- Product Info -->
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900">{{ item.product_name }}</h3>
+                            <p class="text-sm text-gray-600">{{ item.variation_name }}</p>
+                            <p class="text-sm text-gray-500">{{ item.product_description }}</p>
+                            <p class="text-lg font-bold text-green-600 mt-2">₹{{ "%.2f"|format(item.mrp) }} each</p>
+                        </div>
+                        
+                        <!-- Quantity Controls -->
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+                                <button hx-post="/update-cart/{{ item.variation_id }}/decr" 
+                                        hx-swap="outerHTML"
+                                        class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                                    -
+                                </button>
+                                <span class="px-2 font-semibold text-green-800">{{ item.quantity }}</span>
+                                <button hx-post="/update-cart/{{ item.variation_id }}/incr" 
+                                        hx-swap="outerHTML"
+                                        class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                                    +
+                                </button>
+                            </div>
+                            
+                            <!-- Line Total -->
+                            <div class="text-right">
+                                <p class="text-lg font-bold text-gray-900">₹{{ "%.2f"|format(item.line_total) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Cart Summary -->
+                <div class="mt-8 border-t pt-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Total</h2>
+                        <p class="text-3xl font-bold text-green-600">₹{{ "%.2f"|format(total_amount) }}</p>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="/store" 
+                           class="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg text-center hover:bg-gray-300 transition-colors">
+                            Continue Shopping
+                        </a>
+                        <a href="/pre-checkout" 
+                           class="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg text-center hover:bg-green-700 transition-colors">
+                            Proceed to Checkout
+                        </a>
+                    </div>
+                </div>
+                
+            {% else %}
+                <!-- Empty Cart -->
+                <div class="text-center py-12">
+                    <div class="text-6xl text-gray-300 mb-4">🛒</div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
+                    <p class="text-gray-600 mb-8">Add some fresh organic products to get started!</p>
+                    <a href="/store" 
+                       class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors inline-block">
+                        Start Shopping
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2025 Monthly Organics. Fresh, organic, delivered monthly.</p>
+        </div>
+    </footer>
+</body>
+</html>
