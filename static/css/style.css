@@ -72,6 +72,53 @@
         transform: translateY(-2px);
     }
     
+    /* Active category highlighting for store page */
+    .feature-card.active {
+        background-color: #2C7A3C !important;
+        background: #2C7A3C !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(44, 122, 60, 0.3) !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    .feature-card.active * {
+        color: white !important;
+    }
+    
+    .feature-card.active:hover {
+        background-color: #1e5a2a !important;
+        background: #1e5a2a !important;
+        color: white !important;
+        box-shadow: 0 6px 16px rgba(44, 122, 60, 0.4) !important;
+    }
+    
+    .feature-card.active:hover * {
+        color: white !important;
+    }
+    
+    /* Category item specific styles for store page */
+    .category-item {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    
+    .category-item.active {
+        background-color: #2C7A3C !important;
+        background: #2C7A3C !important;
+        color: white !important;
+    }
+    
+    .category-item.active h3,
+    .category-item.active p,
+    .category-item.active span,
+    .category-item.active div {
+        color: white !important;
+    }
+    
     .feature-icon {
         width: 3rem;
         height: 3rem;

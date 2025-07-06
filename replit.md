@@ -95,6 +95,7 @@ Changelog:
 - July 06, 2025. Implemented comprehensive store page redesign with fixed layout (20% categories sidebar, 80% products area)
 - July 06, 2025. Added interactive store features: default category selection, click-to-jump navigation, and automatic scroll highlighting
 - July 06, 2025. Enhanced JavaScript with intersection observer for scroll detection and comprehensive browser compatibility
+- July 06, 2025. Fixed click-to-jump navigation with multiple scrolling methods and enhanced cross-browser category highlighting with !important CSS rules
 ```
 
 ## User Preferences
