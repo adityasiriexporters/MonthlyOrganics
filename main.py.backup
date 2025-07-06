@@ -18,74 +18,50 @@ logger = logging.getLogger(__name__)
 class Base(DeclarativeBase):
     pass
 
-# Create the app
+# Create the Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# Configure Flask app
+app.secret_key = os.environ.get("SESSION_SECRET", "monthly-organics-secret-key")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///monthly_organics.db")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Initialize the app with the extension
-db.init_app(app)
+# Initialize the database with the app
+init_db(app)
 
-with app.app_context():
-    # Make sure to import the models here or their tables won't be created
-    import models  # noqa: F401
-    db.create_all()
+# Import routes from app/main.py 
+from app.main import app as main_app, store as store_view, products_by_category, all_products
 
+# Register the main app routes
 @app.route('/')
 def index():
     """Main index route that renders the homepage template."""
-    logger.info("Rendering homepage")
-    return render_template('index.html')
+    try:
+        logger.info("Rendering homepage")
+        # You can pass selected_address variable here when implementing address functionality
+        return render_template('index.html', selected_address=None)
+    except Exception as e:
+        logger.error(f"Error rendering index page: {e}")
+        return render_template('index.html', selected_address=None)
 
 @app.route('/profile')
 def profile():
     """Profile page route."""
     try:
+        logger.info("Rendering profile page")
         return render_template('profile.html')
     except Exception as e:
         logger.error(f"Error rendering profile page: {e}")
         return render_template('profile.html')
 
-def get_db_connection():
-    """Get database connection using environment variable."""
-    try:
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            logging.error("DATABASE_URL environment variable not set")
-            return None
-        
-        conn = psycopg2.connect(database_url)
-        return conn
-    except Exception as e:
-        logging.error(f"Database connection failed: {e}")
-        return None
-
-def login_required(f):
-    """Decorator to require login for certain routes."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            # For HTMX requests, use HX-Redirect header to redirect the entire page
-            if request.headers.get('HX-Request'):
-                response = jsonify({'error': 'Login required'})
-                response.headers['HX-Redirect'] = url_for('login')
-                return response, 401
-            else:
-                return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-# Import store functions from app/main.py
-from app.main import store as store_view, products_by_category, all_products
-
-# Store routes 
+# Store routes (import from app/main.py)
 app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
@@ -151,37 +127,46 @@ def orders():
 @app.route('/support')
 def support():
     """Support page route - placeholder."""
-    return "<h1>Customer Support - Coming Soon</h1><p>Support chat will be available here.</p>"
+    return "<h1>Help & Support - Coming Soon</h1><p>Customer support features will be available here.</p>"
 
 @app.route('/wallet')
 def wallet():
     """Wallet page route - placeholder."""
-    return "<h1>Wallet - Coming Soon</h1><p>Wallet balance and transactions will be shown here.</p>"
+    return "<h1>Wallet - Coming Soon</h1><p>Wallet management will be available here.</p>"
 
 @app.route('/rewards')
 def rewards():
     """Rewards page route - placeholder."""
-    return "<h1>Rewards - Coming Soon</h1><p>Loyalty points and rewards will be displayed here.</p>"
+    return "<h1>Rewards - Coming Soon</h1><p>Reward tracking will be available here.</p>"
 
-@app.route('/profile/settings')
+@app.route('/profile-settings')
 def profile_settings():
     """Profile settings page route - placeholder."""
-    return "<h1>Profile Settings - Coming Soon</h1><p>Update your profile information here.</p>"
+    return "<h1>Profile Settings - Coming Soon</h1><p>Profile management will be available here.</p>"
 
 @app.route('/addresses')
 def addresses():
     """Addresses page route - placeholder."""
-    return "<h1>Saved Addresses - Coming Soon</h1><p>Manage your delivery addresses here.</p>"
+    return "<h1>Saved Addresses - Coming Soon</h1><p>Address management will be available here.</p>"
 
 @app.route('/addresses/add')
 def add_address():
     """Add address page route - placeholder."""
-    return "<h1>Add New Address - Coming Soon</h1><p>Add a new delivery address here.</p>"
+    return "<h1>Add Address - Coming Soon</h1><p>Address addition form will be available here.</p>"
 
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""
-    return {"status": "healthy", "message": "Monthly Organics is running"}
+    try:
+        # Test database connection
+        with app.app_context():
+            from sqlalchemy import text
+            db.session.execute(text("SELECT 1"))
+        
+        return {"status": "healthy", "database": "connected"}, 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "unhealthy", "error": str(e)}, 500
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -193,6 +178,35 @@ def internal_error(error):
     """Handle 500 errors."""
     db.session.rollback()
     return render_template('500.html'), 500
+
+def get_db_connection():
+    """Get database connection using environment variable."""
+    try:
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            logging.error("DATABASE_URL environment variable not set")
+            return None
+        
+        conn = psycopg2.connect(database_url)
+        return conn
+    except Exception as e:
+        logging.error(f"Database connection failed: {e}")
+        return None
+
+def login_required(f):
+    """Decorator to require login for certain routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            # For HTMX requests, use HX-Redirect header to redirect the entire page
+            if request.headers.get('HX-Request'):
+                response = jsonify({'error': 'Login required'})
+                response.headers['HX-Redirect'] = url_for('login')
+                return response, 401
+            else:
+                return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -313,6 +327,59 @@ def logout():
     session.clear()
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('index'))
+
+@app.route('/cart')
+@login_required
+def cart():
+    """Display user's shopping cart."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            flash('Database connection failed. Please try again.', 'error')
+            return redirect(url_for('index'))
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get cart items with product details
+        cursor.execute("""
+            SELECT 
+                ci.variation_id,
+                ci.quantity,
+                pv.name as variation_name,
+                pv.price,
+                pv.unit_size,
+                pv.unit_type,
+                p.name as product_name,
+                p.description,
+                (ci.quantity * pv.price) as total_price
+            FROM cart_items ci
+            JOIN product_variations pv ON ci.variation_id = pv.id
+            JOIN ecommerce_products p ON pv.product_id = p.id
+            WHERE ci.user_id = %s
+            ORDER BY p.name, pv.name
+        """, (user_id,))
+        
+        cart_items = cursor.fetchall()
+        
+        # Calculate cart totals
+        subtotal = sum(item['total_price'] for item in cart_items)
+        delivery_fee = 50.00 if subtotal > 0 else 0  # ₹50 delivery fee
+        total = subtotal + delivery_fee
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('cart.html', 
+                             cart_items=cart_items,
+                             subtotal=subtotal,
+                             delivery_fee=delivery_fee,
+                             total=total)
+        
+    except Exception as e:
+        logging.error(f"Error loading cart: {e}")
+        flash('Error loading cart. Please try again.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
 @login_required
