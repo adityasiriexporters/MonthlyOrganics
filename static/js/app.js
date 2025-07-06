@@ -22,6 +22,7 @@ function addSmoothScrolling() {
     // Add smooth scrolling behavior to all anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
+            console.log('Category link clicked!'); // The new line is added here
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {

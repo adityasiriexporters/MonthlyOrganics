@@ -242,7 +242,6 @@ window.scrollToCategory = scrollToCategory;
 document.addEventListener('click', function(e) {
     const categoryItem = e.target.closest('.category-item');
     if (categoryItem) {
-        e.preventDefault();
         const categoryId = categoryItem.dataset.categoryId;
         console.log(`Category clicked: ${categoryId}`);
         scrollToCategory(categoryId);
