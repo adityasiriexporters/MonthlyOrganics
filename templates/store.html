@@ -236,24 +236,43 @@ function scrollToCategory(categoryId) {
     
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     if (targetSection && mainContainer) {
-        // Get the exact position of the target section relative to the scrollable container
-        const containerTop = mainContainer.offsetTop;
-        const sectionTop = targetSection.offsetTop;
-        const targetScrollPosition = sectionTop - 10; // 10px offset from top
+        // Multiple scrolling approaches for better compatibility
         
-        console.log(`Container top: ${containerTop}, Section top: ${sectionTop}, Target scroll: ${targetScrollPosition}`);
-        
-        // Scroll to bring the category section to the top of the viewport
-        mainContainer.scrollTo({
-            top: targetScrollPosition,
-            behavior: 'smooth'
+        // Method 1: Use scrollIntoView (most reliable)
+        targetSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+            inline: 'nearest'
         });
         
-        // Verify scroll after a short delay
+        // Method 2: Manual scrollTop assignment as fallback
+        setTimeout(() => {
+            const sectionTop = targetSection.offsetTop;
+            const targetScrollPosition = sectionTop - 10;
+            
+            if (mainContainer.scrollTop === 0) {
+                console.log('ScrollIntoView may have failed, trying manual scroll');
+                mainContainer.scrollTop = targetScrollPosition;
+            }
+            
+            console.log(`Final scroll position: ${mainContainer.scrollTop}`);
+        }, 50);
+        
+        // Verify scroll after animation
         setTimeout(() => {
             const actualScrollTop = mainContainer.scrollTop;
-            console.log(`Scroll completed. Target: ${targetScrollPosition}, Actual: ${actualScrollTop}`);
-        }, 100);
+            const sectionRect = targetSection.getBoundingClientRect();
+            const containerRect = mainContainer.getBoundingClientRect();
+            const relativeTop = sectionRect.top - containerRect.top;
+            
+            console.log(`Scroll verification - Position: ${actualScrollTop}, Section relative top: ${relativeTop}`);
+            
+            if (relativeTop > 50) {
+                console.log('Section not at top, applying final adjustment');
+                const finalPosition = actualScrollTop + relativeTop - 10;
+                mainContainer.scrollTop = finalPosition;
+            }
+        }, 300);
         
         // Immediately highlight the clicked category
         highlightCategory(categoryId);
