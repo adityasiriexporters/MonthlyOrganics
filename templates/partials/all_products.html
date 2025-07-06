@@ -1,0 +1,121 @@
+{% if categories_with_products %}
+    {% for category in categories_with_products %}
+        {% if category.products %}
+        <!-- Category Section -->
+        <div class="category-section" data-category-id="{{ category.id }}">
+            <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-4 py-3 mb-4 z-10">
+                <h2 class="text-lg font-bold text-gray-900">{{ category.name }}</h2>
+            </div>
+            
+            <!-- Products Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 mb-8">
+                {% for product in category.products %}
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                    <!-- Product Image (16:9 aspect ratio) -->
+                    <div class="w-full aspect-video bg-green-100 flex items-center justify-center">
+                        <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                    </div>
+                    
+                    <!-- Product Content -->
+                    <div class="p-4">
+                        <!-- Product Name and Quick View Row -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="font-semibold text-gray-900 text-sm">{{ product.name }}</h3>
+                                    {% if product.is_best_seller %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                        Best Seller
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Quick View Icon -->
+                            <button class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Product Description -->
+                        <p class="text-xs text-gray-600 leading-relaxed mb-3">{{ product.description }}</p>
+                        
+                        <!-- Product Variations -->
+                        {% if product.variations %}
+                        <div class="space-y-2">
+                            <h4 class="text-xs font-medium text-gray-700 uppercase tracking-wider">Available Options</h4>
+                            {% for variation in product.variations %}
+                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-sm font-medium text-gray-900">{{ variation.name }}</span>
+                                        <span class="text-sm font-bold text-primary">₹{{ "%.0f"|format(variation.price) }}</span>
+                                    </div>
+                                    {% if variation.stock > 0 %}
+                                        <span class="text-xs text-gray-500">{{ variation.stock }} in stock</span>
+                                    {% else %}
+                                        <span class="text-xs text-red-500">Out of stock</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Add to Cart Button -->
+                                {% if variation.stock > 0 %}
+                                <button class="bg-primary hover:bg-primary/90 text-white text-xs font-medium px-3 py-1.5 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        onclick="addToCart({{ variation.id }}, '{{ product.name }}', '{{ variation.name }}', {{ variation.price }})">
+                                    Add to Cart
+                                </button>
+                                {% else %}
+                                <button class="bg-gray-300 text-gray-500 text-xs font-medium px-3 py-1.5 rounded-md cursor-not-allowed" 
+                                        disabled>
+                                    Out of Stock
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-sm text-gray-500">No variations available for this product</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+{% else %}
+    <!-- Empty State -->
+    <div class="text-center py-8">
+        <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="text-sm font-medium text-gray-900 mb-1">No Products Found</h3>
+        <p class="text-xs text-gray-500">There are no products available yet.</p>
+    </div>
+{% endif %}
+
+<script>
+function addToCart(variationId, productName, variationName, price) {
+    // Simple alert for now - we'll implement proper cart functionality later
+    alert(`Added ${productName} (${variationName}) - ₹${price} to cart!\n\nVariation ID: ${variationId}`);
+    
+    // Here you would typically:
+    // 1. Send an AJAX request to add the item to the cart
+    // 2. Update the cart count in the navigation
+    // 3. Show a success notification
+    
+    console.log('Add to cart:', {
+        variationId: variationId,
+        productName: productName,
+        variationName: variationName,
+        price: price
+    });
+}
+</script>

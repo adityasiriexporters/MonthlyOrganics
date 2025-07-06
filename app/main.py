@@ -266,6 +266,82 @@ def products_by_category(category_id):
         logging.error(f"Error loading products for category {category_id}: {e}")
         return render_template('partials/product_list.html', products=[])
 
+@app.route('/all-products')
+def all_products():
+    """Route that returns all products grouped by categories for the store page."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logging.error("Failed to connect to database")
+            return render_template('partials/all_products.html', categories_with_products=[])
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Fetch all categories with their products and variations
+        query = """
+        SELECT 
+            c.id as category_id, c.name as category_name,
+            p.id, p.name, p.description, p.is_best_seller,
+            pv.id as variation_id, pv.variation_name, pv.mrp, pv.stock_quantity
+        FROM categories c
+        LEFT JOIN products p ON c.id = p.category_id
+        LEFT JOIN product_variations pv ON p.id = pv.product_id
+        ORDER BY c.name, p.is_best_seller DESC, p.name, pv.mrp
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+        
+        # Group data by category and then by product
+        categories_data = {}
+        for row in results:
+            category_id = row['category_id']
+            
+            # Initialize category if not exists
+            if category_id not in categories_data:
+                categories_data[category_id] = {
+                    'id': category_id,
+                    'name': row['category_name'],
+                    'products': {}
+                }
+            
+            # If there's a product, add it
+            if row['id']:
+                product_id = row['id']
+                if product_id not in categories_data[category_id]['products']:
+                    categories_data[category_id]['products'][product_id] = {
+                        'id': row['id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'is_best_seller': row['is_best_seller'],
+                        'variations': []
+                    }
+                
+                # Add variation if exists
+                if row['variation_id']:
+                    categories_data[category_id]['products'][product_id]['variations'].append({
+                        'id': row['variation_id'],
+                        'name': row['variation_name'],
+                        'price': float(row['mrp']),
+                        'stock': row['stock_quantity']
+                    })
+        
+        # Convert to list format for template
+        categories_with_products = []
+        for category_data in categories_data.values():
+            category_data['products'] = list(category_data['products'].values())
+            categories_with_products.append(category_data)
+        
+        cursor.close()
+        conn.close()
+        
+        logging.info(f"Fetched {len(categories_with_products)} categories with products")
+        return render_template('partials/all_products.html', categories_with_products=categories_with_products)
+        
+    except Exception as e:
+        logging.error(f"Error loading all products: {e}")
+        return render_template('partials/all_products.html', categories_with_products=[])
+
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""

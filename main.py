@@ -32,7 +32,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 init_db(app)
 
 # Import routes from app/main.py 
-from app.main import app as main_app, store as store_view, products_by_category
+from app.main import app as main_app, store as store_view, products_by_category, all_products
 
 # Register the main app routes
 @app.route('/')
@@ -59,6 +59,7 @@ def profile():
 # Store routes (import from app/main.py)
 app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
+app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
 @app.route('/cart')
 def cart():

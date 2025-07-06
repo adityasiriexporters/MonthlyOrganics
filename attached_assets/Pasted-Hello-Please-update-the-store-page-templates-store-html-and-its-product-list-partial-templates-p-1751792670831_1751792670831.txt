@@ -1,0 +1,23 @@
+Hello! Please update the store page (templates/store.html) and its product list partial (templates/partials/product_list.html) to match a new, specific design. Please apply the following changes precisely:
+1. Implement a Fixed, Scrolling Layout: Re-architect the store.html page layout using CSS so that the header, the left category column, and the bottom navigation bar are all fixed in place and do not move when the user scrolls.
+The main content area between the fixed header and footer should use Flexbox.
+The left (20%) category column and the right (80%) product column must scroll independently if their content overflows. Use overflow-y: auto for this.
+2. Update the Header: The header must be a single, fixed row containing two items:
+On the left: The brand logo. Please make it slightly larger than it is now.
+On the right: A location pin icon followed by the text + Add Address (which is same as in the home page). Use Flexbox with items-center to ensure they are vertically aligned.
+3. Redesign the Category Column:
+For each category item in the left column, display a circular image placeholder above the category name. The container for each item should center the image and text.
+Ensure the "Categories" heading text does not spill out of its 20% column.
+4. Redesign the Product Cards: Modify the product card layout in templates/partials/product_list.html:
+The product image must be at the top with a 16:9 aspect ratio, spanning the full width of the card.
+Immediately below the image, create a single row. On the left, display the 'Name of the product'. On the far right of this same row, place a 'Quick view' eye icon.
+The 'AVAILABLE OPTIONS' section with the product variations and 'Add to Cart' buttons should remain below this row, as it is.
+5. Implement Auto-Advancing Category Highlight on Scroll: This is a key user experience feature. Use JavaScript's Intersection Observer API for this.
+All products must be in the store page. Sorted as per the categories on the left. So that, As the user scrolls down the product list on the right, observe which product category is currently visible in the viewport.
+When a new category's section comes into view, automatically update the styling of the corresponding category in the fixed left column to show that it is now the 'active' one (e.g., change its background color).
+(In other words:  Imagine, we are having the 5 categories on the left and we are in the 1st category selection, looking for the products on the right. We are scrolling all the products one after the other on the right and we have reached the end of the products list of 1st category. Upon further scrolling on the right, we should directly jump into the second category 'First product'. By this, automatically category selection should come down to 2nd. This should continue until last category last product. There by the selection in the categories column should automatically come to the respective category.)
+
+6. Final Aesthetic Touches: Apply a consistent visual polish across the page:
+Use rounded corners (e.g., rounded-lg) on product cards and the main containers.
+Add subtle borders (e.g., border border-gray-200) to the product cards and to separate the main layout columns to improve definition and visibility.
+
