@@ -125,8 +125,9 @@ def cart():
         logging.info(f"Found {len(cart_items)} cart items for user {user_id}")
         
         # Calculate cart totals
+        from decimal import Decimal
         subtotal = sum(item['total_price'] for item in cart_items)
-        delivery_fee = 50.00 if subtotal > 0 else 0  # ₹50 delivery fee
+        delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')  # ₹50 delivery fee
         total = subtotal + delivery_fee
         
         cursor.close()
