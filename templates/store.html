@@ -179,38 +179,54 @@ function initializeScrollSpy() {
     
     // Create intersection observer for scroll-based highlighting
     const observer = new IntersectionObserver((entries) => {
-        let currentCategory = null;
-        let bestVisibility = 0;
+        let visibleSections = [];
         
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const visibilityRatio = entry.intersectionRatio;
+            if (entry.isIntersecting && entry.intersectionRatio > 0) {
                 const rect = entry.target.getBoundingClientRect();
                 const containerRect = mainContainer.getBoundingClientRect();
                 const relativeTop = rect.top - containerRect.top;
                 
-                // Prefer sections that are closer to the top and more visible
-                if (relativeTop >= 0 && relativeTop < 100 && visibilityRatio > bestVisibility) {
-                    bestVisibility = visibilityRatio;
-                    currentCategory = entry.target.dataset.categoryId;
-                }
+                visibleSections.push({
+                    categoryId: entry.target.dataset.categoryId,
+                    relativeTop: relativeTop,
+                    intersectionRatio: entry.intersectionRatio
+                });
             }
         });
         
-        // Highlight the current category
-        if (currentCategory) {
+        // Sort by position (closest to top) and pick the best one
+        if (visibleSections.length > 0) {
+            visibleSections.sort((a, b) => {
+                // Prioritize sections closer to top
+                if (Math.abs(a.relativeTop) < Math.abs(b.relativeTop)) return -1;
+                if (Math.abs(a.relativeTop) > Math.abs(b.relativeTop)) return 1;
+                // If similar distance, prefer higher visibility
+                return b.intersectionRatio - a.intersectionRatio;
+            });
+            
+            const currentCategory = visibleSections[0].categoryId;
             highlightCategory(currentCategory);
         }
     }, {
         root: mainContainer,
-        rootMargin: '-10px 0px -80% 0px',
-        threshold: [0, 0.25, 0.5, 0.75, 1.0]
+        rootMargin: '0px 0px -60% 0px', // Trigger when section reaches top 40%
+        threshold: [0, 0.1, 0.3, 0.5, 0.7, 1.0]
     });
     
     // Observe all category sections
     categorySections.forEach(section => {
         observer.observe(section);
         console.log(`Observing category section: ${section.dataset.categoryId}`);
+    });
+    
+    // Additional scroll listener for manual scroll detection
+    let scrollTimeout;
+    mainContainer.addEventListener('scroll', function() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            console.log('Manual scroll detected');
+        }, 150);
     });
 }
 
@@ -220,12 +236,26 @@ function scrollToCategory(categoryId) {
     
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     if (targetSection && mainContainer) {
-        const targetOffset = targetSection.offsetTop - 20; // Small offset from top
+        // Calculate precise offset position
+        const containerRect = mainContainer.getBoundingClientRect();
+        const sectionRect = targetSection.getBoundingClientRect();
+        const currentScrollTop = mainContainer.scrollTop;
+        const targetOffset = currentScrollTop + (sectionRect.top - containerRect.top) - 10;
         
-        mainContainer.scrollTo({
-            top: targetOffset,
-            behavior: 'smooth'
-        });
+        // Use both scrollTo and scrollIntoView for better browser compatibility
+        try {
+            mainContainer.scrollTo({
+                top: targetOffset,
+                behavior: 'smooth'
+            });
+        } catch (e) {
+            // Fallback for older browsers
+            targetSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+                inline: 'nearest'
+            });
+        }
         
         // Immediately highlight the clicked category
         highlightCategory(categoryId);
@@ -237,6 +267,27 @@ function scrollToCategory(categoryId) {
 
 // Make scrollToCategory globally accessible for onclick handlers
 window.scrollToCategory = scrollToCategory;
+
+// Additional event delegation for better browser compatibility
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for content to load, then add delegation
+    setTimeout(() => {
+        const sidebar = document.querySelector('aside');
+        if (sidebar) {
+            sidebar.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const categoryItem = e.target.closest('.category-item');
+                if (categoryItem) {
+                    const categoryId = categoryItem.dataset.categoryId;
+                    console.log(`Delegation click on category: ${categoryId}`);
+                    scrollToCategory(categoryId);
+                }
+            });
+        }
+    }, 1000);
+});
 
 // Click handlers for category items (backup to onclick)
 document.addEventListener('click', function(e) {
