@@ -210,7 +210,13 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            # For HTMX requests, use HX-Redirect header to redirect the entire page
+            if request.headers.get('HX-Request'):
+                response = jsonify({'error': 'Login required'})
+                response.headers['HX-Redirect'] = url_for('login')
+                return response, 401
+            else:
+                return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
