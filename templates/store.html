@@ -236,30 +236,28 @@ function scrollToCategory(categoryId) {
     
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     if (targetSection && mainContainer) {
-        // Calculate precise offset position
-        const containerRect = mainContainer.getBoundingClientRect();
-        const sectionRect = targetSection.getBoundingClientRect();
-        const currentScrollTop = mainContainer.scrollTop;
-        const targetOffset = currentScrollTop + (sectionRect.top - containerRect.top) - 10;
+        // Get the exact position of the target section relative to the scrollable container
+        const containerTop = mainContainer.offsetTop;
+        const sectionTop = targetSection.offsetTop;
+        const targetScrollPosition = sectionTop - 10; // 10px offset from top
         
-        // Use both scrollTo and scrollIntoView for better browser compatibility
-        try {
-            mainContainer.scrollTo({
-                top: targetOffset,
-                behavior: 'smooth'
-            });
-        } catch (e) {
-            // Fallback for older browsers
-            targetSection.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-                inline: 'nearest'
-            });
-        }
+        console.log(`Container top: ${containerTop}, Section top: ${sectionTop}, Target scroll: ${targetScrollPosition}`);
+        
+        // Scroll to bring the category section to the top of the viewport
+        mainContainer.scrollTo({
+            top: targetScrollPosition,
+            behavior: 'smooth'
+        });
+        
+        // Verify scroll after a short delay
+        setTimeout(() => {
+            const actualScrollTop = mainContainer.scrollTop;
+            console.log(`Scroll completed. Target: ${targetScrollPosition}, Actual: ${actualScrollTop}`);
+        }, 100);
         
         // Immediately highlight the clicked category
         highlightCategory(categoryId);
-        console.log(`Scrolled to category ${categoryId}`);
+        console.log(`Initiated scroll to category ${categoryId}`);
     } else {
         console.error(`Could not find section for category: ${categoryId}`);
     }
