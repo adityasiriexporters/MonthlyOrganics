@@ -1,6 +1,11 @@
 import os
 import logging
-from flask import Flask, render_template
+import psycopg2
+import psycopg2.extras
+import random
+import re
+from functools import wraps
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -125,6 +130,283 @@ def internal_error(error):
     """Handle 500 errors."""
     db.session.rollback()
     return render_template('500.html'), 500
+
+def get_db_connection():
+    """Get database connection using environment variable."""
+    try:
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            logging.error("DATABASE_URL environment variable not set")
+            return None
+        
+        conn = psycopg2.connect(database_url)
+        return conn
+    except Exception as e:
+        logging.error(f"Database connection failed: {e}")
+        return None
+
+def login_required(f):
+    """Decorator to require login for certain routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            # For HTMX requests, use HX-Redirect header to redirect the entire page
+            if request.headers.get('HX-Request'):
+                response = jsonify({'error': 'Login required'})
+                response.headers['HX-Redirect'] = url_for('login')
+                return response, 401
+            else:
+                return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Mobile number login page."""
+    return render_template('login.html')
+
+@app.route('/send-otp', methods=['POST'])
+def send_otp():
+    """Generate and send OTP for mobile number verification."""
+    try:
+        mobile_number = request.form.get('mobile_number', '').strip()
+        
+        # Validate mobile number format (10 digits)
+        if not mobile_number or not re.match(r'^[6-9]\d{9}$', mobile_number):
+            flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
+            return redirect(url_for('login'))
+        
+        # Generate 6-digit OTP
+        otp = random.randint(100000, 999999)
+        
+        # Store OTP and mobile number in session
+        session['otp'] = str(otp)
+        session['mobile_number'] = mobile_number
+        session['otp_attempts'] = 0
+        
+        # For testing - print OTP to console (will be replaced with MSG91 API later)
+        print(f"OTP for {mobile_number} is: {otp}")
+        
+        return redirect(url_for('verify'))
+        
+    except Exception as e:
+        logging.error(f"Error sending OTP: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/verify')
+def verify():
+    """OTP verification page."""
+    if 'mobile_number' not in session or 'otp' not in session:
+        flash('Please start by entering your mobile number.', 'error')
+        return redirect(url_for('login'))
+    
+    mobile_number = session.get('mobile_number')
+    return render_template('verify.html', mobile_number=mobile_number)
+
+@app.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    """Verify OTP and login user."""
+    try:
+        if 'mobile_number' not in session or 'otp' not in session:
+            flash('Session expired. Please start again.', 'error')
+            return redirect(url_for('login'))
+        
+        submitted_otp = request.form.get('otp', '').strip()
+        stored_otp = session.get('otp')
+        mobile_number = session.get('mobile_number')
+        attempts = session.get('otp_attempts', 0)
+        
+        # Increment attempt counter
+        session['otp_attempts'] = attempts + 1
+        
+        # Check for too many attempts
+        if session['otp_attempts'] > 3:
+            # Clear session and redirect to login
+            session.clear()
+            flash('Too many failed attempts. Please try again.', 'error')
+            return redirect(url_for('login'))
+        
+        # Validate OTP format
+        if not submitted_otp or not re.match(r'^\d{6}$', submitted_otp):
+            flash('Please enter a valid 6-digit OTP.', 'error')
+            return redirect(url_for('verify'))
+        
+        # Verify OTP
+        if submitted_otp != stored_otp:
+            flash(f'Invalid OTP. You have {4 - session["otp_attempts"]} attempts remaining.', 'error')
+            return redirect(url_for('verify'))
+        
+        # OTP is correct - find or create user using SQLAlchemy
+        from models import User
+        user = User.query.filter_by(mobile_number=mobile_number).first()
+        
+        if user:
+            user_id = user.id
+            logging.info(f"Existing user logged in: {mobile_number}")
+        else:
+            # Create new user
+            user = User(
+                first_name=f"User",
+                last_name=mobile_number[-4:],
+                phone=mobile_number,
+                email=f"user{mobile_number}@monthlyorganics.com"
+            )
+            db.session.add(user)
+            db.session.commit()
+            user_id = user.id
+            logging.info(f"New user created: {mobile_number}")
+        
+        # Login user
+        session['user_id'] = user_id
+        
+        # Clear OTP data from session
+        session.pop('otp', None)
+        session.pop('mobile_number', None)
+        session.pop('otp_attempts', None)
+        
+        flash('Login successful!', 'success')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        logging.error(f"Error verifying OTP: {e}")
+        flash('An error occurred during verification. Please try again.', 'error')
+        return redirect(url_for('verify'))
+
+@app.route('/logout')
+def logout():
+    """Logout user by clearing session."""
+    session.clear()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
+@login_required
+def add_to_cart(variation_id):
+    """Add item to cart or update quantity if already exists."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return "Database connection failed", 500
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Use UPSERT to add item or update quantity
+        cursor.execute("""
+            INSERT INTO cart_items (user_id, variation_id, quantity)
+            VALUES (%s, %s, 1)
+            ON CONFLICT (user_id, variation_id)
+            DO UPDATE SET quantity = cart_items.quantity + 1
+            RETURNING quantity
+        """, (user_id, variation_id))
+        
+        new_quantity = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Return quantity stepper HTML
+        return f'''
+        <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+            <button hx-post="/update-cart/{variation_id}/decr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                -
+            </button>
+            <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
+            <button hx-post="/update-cart/{variation_id}/incr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                +
+            </button>
+        </div>
+        '''
+        
+    except Exception as e:
+        logging.error(f"Error adding to cart: {e}")
+        return "Error adding to cart", 500
+
+@app.route('/update-cart/<int:variation_id>/<string:action>', methods=['POST'])
+@login_required
+def update_cart(variation_id, action):
+    """Update cart item quantity (increment or decrement)."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return "Database connection failed", 500
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        if action == 'incr':
+            cursor.execute("""
+                UPDATE cart_items 
+                SET quantity = quantity + 1 
+                WHERE user_id = %s AND variation_id = %s
+                RETURNING quantity
+            """, (user_id, variation_id))
+        elif action == 'decr':
+            cursor.execute("""
+                UPDATE cart_items 
+                SET quantity = quantity - 1 
+                WHERE user_id = %s AND variation_id = %s
+                RETURNING quantity
+            """, (user_id, variation_id))
+        else:
+            return "Invalid action", 400
+            
+        result = cursor.fetchone()
+        if not result:
+            cursor.close()
+            conn.close()
+            return "Item not found in cart", 404
+            
+        new_quantity = result[0]
+        
+        # If quantity becomes 0, delete the item
+        if new_quantity <= 0:
+            cursor.execute("""
+                DELETE FROM cart_items 
+                WHERE user_id = %s AND variation_id = %s
+            """, (user_id, variation_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            # Return add to cart button
+            return f'''
+            <button hx-post="/add-to-cart/{variation_id}" 
+                    hx-swap="outerHTML"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                Add to Cart
+            </button>
+            '''
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Return updated quantity stepper
+        return f'''
+        <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+            <button hx-post="/update-cart/{variation_id}/decr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                -
+            </button>
+            <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
+            <button hx-post="/update-cart/{variation_id}/incr" 
+                    hx-swap="outerHTML"
+                    class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                +
+            </button>
+        </div>
+        '''
+        
+    except Exception as e:
+        logging.error(f"Error updating cart: {e}")
+        return "Error updating cart", 500
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
