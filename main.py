@@ -96,6 +96,7 @@ def cart():
     """Display user's shopping cart."""
     try:
         user_id = session['user_id']
+        logging.info(f"Cart page accessed by user_id: {user_id}")
         conn = get_db_connection()
         if not conn:
             flash('Database connection failed. Please try again.', 'error')
@@ -121,6 +122,7 @@ def cart():
         """, (user_id,))
         
         cart_items = cursor.fetchall()
+        logging.info(f"Found {len(cart_items)} cart items for user {user_id}")
         
         # Calculate cart totals
         subtotal = sum(item['total_price'] for item in cart_items)
