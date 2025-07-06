@@ -79,43 +79,71 @@
 </div>
 
 <script>
+// Global variables to store elements
+let categoryItems = [];
+let categorySections = [];
+let mainContainer = null;
+
 // Load all products when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Store page loading...');
+    
     // Load all products initially
     htmx.ajax('GET', '/all-products', {
         target: '#product-display',
         indicator: '#loading'
     }).then(function() {
-        // Initialize intersection observer after products are loaded
-        initializeScrollSpy();
+        console.log('Products loaded, initializing features...');
         
-        // Default selection: Category 1 and scroll to its products
+        // Wait a bit for DOM to update, then initialize
         setTimeout(() => {
-            selectFirstCategory();
-        }, 100);
+            initializeStoreFeatures();
+        }, 200);
     });
 });
 
+// Initialize all store features
+function initializeStoreFeatures() {
+    // Get references to DOM elements
+    categoryItems = document.querySelectorAll('.category-item');
+    categorySections = document.querySelectorAll('.category-section');
+    mainContainer = document.querySelector('main');
+    
+    console.log(`Found ${categoryItems.length} category items and ${categorySections.length} category sections`);
+    
+    if (categoryItems.length > 0 && categorySections.length > 0) {
+        // Initialize intersection observer for scroll-based highlighting
+        initializeScrollSpy();
+        
+        // Select first category by default
+        selectFirstCategory();
+        
+        console.log('Store features initialized successfully');
+    } else {
+        console.warn('Could not find category items or sections');
+    }
+}
+
 // Select the first category by default
 function selectFirstCategory() {
-    const categoryItems = document.querySelectorAll('.category-item');
-    const categorySections = document.querySelectorAll('.category-section');
-    
     if (categoryItems.length > 0 && categorySections.length > 0) {
         // Get the first category's ID
         const firstCategoryId = categoryItems[0].dataset.categoryId;
+        console.log(`Selecting first category: ${firstCategoryId}`);
         
         // Highlight the first category
         highlightCategory(firstCategoryId);
         
         // Scroll to the first category's products
-        scrollToCategory(firstCategoryId);
+        setTimeout(() => {
+            scrollToCategory(firstCategoryId);
+        }, 100);
     }
 }
 
 // Highlight a specific category
 function highlightCategory(categoryId) {
-    const categoryItems = document.querySelectorAll('.category-item');
+    console.log(`Highlighting category: ${categoryId}`);
     
     // Remove active class from all category items
     categoryItems.forEach(item => {
@@ -136,58 +164,63 @@ function highlightCategory(categoryId) {
         const svg = activeItem.querySelector('svg');
         if (span) span.classList.add('text-white');
         if (svg) svg.classList.add('text-white');
+        console.log(`Category ${categoryId} highlighted successfully`);
     }
 }
 
 // Auto-advancing category highlight using Intersection Observer
 function initializeScrollSpy() {
-    const categoryItems = document.querySelectorAll('.category-item');
-    const categorySections = document.querySelectorAll('.category-section');
-    const mainContainer = document.querySelector('main');
+    if (!mainContainer || categorySections.length === 0) {
+        console.warn('Cannot initialize scroll spy - missing container or sections');
+        return;
+    }
+    
+    console.log('Initializing scroll spy...');
     
     // Create intersection observer for scroll-based highlighting
     const observer = new IntersectionObserver((entries) => {
-        // Find the topmost visible section
-        let topmostSection = null;
-        let topmostPosition = Infinity;
+        let currentCategory = null;
+        let bestVisibility = 0;
         
         entries.forEach(entry => {
             if (entry.isIntersecting) {
+                const visibilityRatio = entry.intersectionRatio;
                 const rect = entry.target.getBoundingClientRect();
                 const containerRect = mainContainer.getBoundingClientRect();
                 const relativeTop = rect.top - containerRect.top;
                 
-                // Check if this section is closer to the top
-                if (relativeTop < topmostPosition && relativeTop >= -10) {
-                    topmostPosition = relativeTop;
-                    topmostSection = entry.target;
+                // Prefer sections that are closer to the top and more visible
+                if (relativeTop >= 0 && relativeTop < 100 && visibilityRatio > bestVisibility) {
+                    bestVisibility = visibilityRatio;
+                    currentCategory = entry.target.dataset.categoryId;
                 }
             }
         });
         
-        // Highlight the category of the topmost section
-        if (topmostSection) {
-            const categoryId = topmostSection.dataset.categoryId;
-            highlightCategory(categoryId);
+        // Highlight the current category
+        if (currentCategory) {
+            highlightCategory(currentCategory);
         }
     }, {
         root: mainContainer,
-        rootMargin: '0px 0px -50% 0px', // Trigger when section is at the top half
-        threshold: [0, 0.1, 0.5, 1.0]
+        rootMargin: '-10px 0px -80% 0px',
+        threshold: [0, 0.25, 0.5, 0.75, 1.0]
     });
     
     // Observe all category sections
     categorySections.forEach(section => {
         observer.observe(section);
+        console.log(`Observing category section: ${section.dataset.categoryId}`);
     });
 }
 
 // Smooth scroll to category when clicked
 function scrollToCategory(categoryId) {
+    console.log(`Scrolling to category: ${categoryId}`);
+    
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
-    if (targetSection) {
-        const mainContainer = document.querySelector('main');
-        const targetOffset = targetSection.offsetTop - 10; // Small offset from top
+    if (targetSection && mainContainer) {
+        const targetOffset = targetSection.offsetTop - 20; // Small offset from top
         
         mainContainer.scrollTo({
             top: targetOffset,
@@ -196,14 +229,22 @@ function scrollToCategory(categoryId) {
         
         // Immediately highlight the clicked category
         highlightCategory(categoryId);
+        console.log(`Scrolled to category ${categoryId}`);
+    } else {
+        console.error(`Could not find section for category: ${categoryId}`);
     }
 }
 
-// Click handlers for category items
+// Make scrollToCategory globally accessible for onclick handlers
+window.scrollToCategory = scrollToCategory;
+
+// Click handlers for category items (backup to onclick)
 document.addEventListener('click', function(e) {
     const categoryItem = e.target.closest('.category-item');
     if (categoryItem) {
+        e.preventDefault();
         const categoryId = categoryItem.dataset.categoryId;
+        console.log(`Category clicked: ${categoryId}`);
         scrollToCategory(categoryId);
     }
 });
