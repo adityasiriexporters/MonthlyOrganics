@@ -317,6 +317,7 @@ def logout():
 def add_to_cart(variation_id):
     """Add item to cart or update quantity if already exists."""
     try:
+        logging.info(f"Add to cart request for variation {variation_id} by user {session.get('user_id')}")
         user_id = session['user_id']
         conn = get_db_connection()
         if not conn:
