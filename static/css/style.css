@@ -36,27 +36,6 @@
         transform: scale(1.05);
     }
     
-    /* Category navigation styles */
-    .category-item {
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    
-    .category-item:hover {
-        text-decoration: none;
-        transform: translateY(-2px);
-    }
-    
-    .category-item.active {
-        box-shadow: 0 4px 12px rgba(44, 122, 60, 0.3);
-        transform: translateY(-1px);
-    }
-    
-    /* Smooth scrolling for main content */
-    main {
-        scroll-behavior: smooth;
-    }
-    
     /* Mobile-first welcome container */
     .welcome-container {
         min-height: 100vh;
