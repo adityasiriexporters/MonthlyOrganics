@@ -147,7 +147,7 @@ function highlightCategory(categoryId) {
     
     // Remove active class from all category items
     categoryItems.forEach(item => {
-        item.classList.remove('bg-primary', 'text-white');
+        item.classList.remove('active', 'bg-primary', 'text-white');
         item.classList.add('bg-gray-50');
         const span = item.querySelector('span');
         const svg = item.querySelector('svg');
@@ -158,13 +158,9 @@ function highlightCategory(categoryId) {
     // Add active class to specified category
     const activeItem = document.querySelector(`.category-item[data-category-id="${categoryId}"]`);
     if (activeItem) {
-        activeItem.classList.add('bg-primary', 'text-white');
+        activeItem.classList.add('active');
         activeItem.classList.remove('bg-gray-50');
-        const span = activeItem.querySelector('span');
-        const svg = activeItem.querySelector('svg');
-        if (span) span.classList.add('text-white');
-        if (svg) svg.classList.add('text-white');
-        console.log(`Category ${categoryId} highlighted successfully`);
+        console.log(`Category ${categoryId} highlighted successfully with active class`);
     }
 }
 
