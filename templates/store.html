@@ -304,6 +304,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Click handlers for category items (backup to onclick)
 document.addEventListener('click', function(e) {
+    // Skip cart buttons and HTMX-related elements
+    if (e.target.closest('[hx-post]') || e.target.closest('[data-cart]') || e.target.hasAttribute('hx-post')) {
+        return; // Let HTMX handle cart button clicks
+    }
+    
     console.log('Click event detected on:', e.target.tagName, e.target.className);
     
     // Check if click is within the sidebar area
