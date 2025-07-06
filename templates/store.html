@@ -240,11 +240,14 @@ window.scrollToCategory = scrollToCategory;
 
 // Click handlers for category items (backup to onclick)
 document.addEventListener('click', function(e) {
+    console.log('Click event detected on:', e.target);
     const categoryItem = e.target.closest('.category-item');
     if (categoryItem) {
         const categoryId = categoryItem.dataset.categoryId;
         console.log(`Category clicked: ${categoryId}`);
         scrollToCategory(categoryId);
+    } else {
+        console.log('Click was not on a category item');
     }
 });
 </script>

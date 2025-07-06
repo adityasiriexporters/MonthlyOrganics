@@ -19,10 +19,15 @@ function initializeAlpineComponents() {
 }
 
 function addSmoothScrolling() {
-    // Add smooth scrolling behavior to all anchor links
+    // Add smooth scrolling behavior to all anchor links (excluding store page category items)
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        // Skip if this is on the store page and is a category item
+        if (window.location.pathname === '/store' && anchor.closest('.category-item')) {
+            return;
+        }
+        
         anchor.addEventListener('click', function (e) {
-            console.log('Category link clicked!'); // The new line is added here
+            console.log('Smooth scroll link clicked!');
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
