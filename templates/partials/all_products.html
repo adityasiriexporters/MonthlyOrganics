@@ -2,7 +2,7 @@
     {% for category in categories_with_products %}
         {% if category.products %}
         <!-- Category Section -->
-        <div class="category-section" data-category-id="{{ category.id }}">
+        <section id="category-{{ category.id }}" class="category-section" data-category-id="{{ category.id }}">
             <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-4 py-3 mb-4 z-10">
                 <h2 class="text-lg font-bold text-gray-900">{{ category.name }}</h2>
             </div>
@@ -87,7 +87,7 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>
+        </section>
         {% endif %}
     {% endfor %}
 {% else %}

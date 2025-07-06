@@ -34,9 +34,9 @@
                 <h2 class="text-xs font-semibold text-gray-700 mb-4 uppercase tracking-wider text-center">Categories</h2>
                 <div class="space-y-3">
                     {% for category in categories %}
-                    <div class="category-item flex flex-col items-center text-center cursor-pointer p-2 rounded-lg hover:bg-white transition-colors"
-                         data-category-id="{{ category.id }}"
-                         onclick="scrollToCategory({{ category.id }})">
+                    <a href="#category-{{ category.id }}" 
+                       class="category-item flex flex-col items-center text-center p-2 rounded-lg hover:bg-white transition-colors no-underline"
+                       data-category-id="{{ category.id }}">
                         <!-- Circular Image Placeholder -->
                         <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
                             <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@
                         </div>
                         <!-- Category Name -->
                         <span class="text-xs font-medium text-gray-700 break-words leading-tight">{{ category.name }}</span>
-                    </div>
+                    </a>
                     {% endfor %}
                 </div>
             </div>
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Auto-advancing category highlight using Intersection Observer
 function initializeScrollSpy() {
-    const categoryItems = document.querySelectorAll('.category-item');
+    const categoryLinks = document.querySelectorAll('.category-item');
     const categorySections = document.querySelectorAll('.category-section');
     
     // Create intersection observer
@@ -102,32 +102,54 @@ function initializeScrollSpy() {
             if (entry.isIntersecting) {
                 const categoryId = entry.target.dataset.categoryId;
                 
-                // Remove active class from all category items
-                categoryItems.forEach(item => {
-                    item.classList.remove('bg-primary', 'text-white');
-                    item.classList.add('bg-gray-50');
-                    const span = item.querySelector('span');
-                    const svg = item.querySelector('svg');
-                    if (span) span.classList.remove('text-white');
-                    if (svg) svg.classList.remove('text-white');
+                // Remove active class from all category links
+                categoryLinks.forEach(link => {
+                    link.classList.remove('active', 'bg-primary', 'text-white');
+                    const span = link.querySelector('span');
+                    const svg = link.querySelector('svg');
+                    const iconContainer = link.querySelector('div');
+                    
+                    if (span) {
+                        span.classList.remove('text-white');
+                        span.classList.add('text-gray-700');
+                    }
+                    if (svg) {
+                        svg.classList.remove('text-white');
+                        svg.classList.add('text-green-600');
+                    }
+                    if (iconContainer) {
+                        iconContainer.classList.remove('bg-primary');
+                        iconContainer.classList.add('bg-green-100');
+                    }
                 });
                 
-                // Add active class to current category
-                const activeItem = document.querySelector(`[data-category-id="${categoryId}"]`);
-                if (activeItem && activeItem.classList.contains('category-item')) {
-                    activeItem.classList.add('bg-primary', 'text-white');
-                    activeItem.classList.remove('bg-gray-50');
-                    const span = activeItem.querySelector('span');
-                    const svg = activeItem.querySelector('svg');
-                    if (span) span.classList.add('text-white');
-                    if (svg) svg.classList.add('text-white');
+                // Add active class to current category link
+                const activeLink = document.querySelector(`a.category-item[data-category-id="${categoryId}"]`);
+                if (activeLink) {
+                    activeLink.classList.add('active', 'bg-primary', 'text-white');
+                    const span = activeLink.querySelector('span');
+                    const svg = activeLink.querySelector('svg');
+                    const iconContainer = activeLink.querySelector('div');
+                    
+                    if (span) {
+                        span.classList.add('text-white');
+                        span.classList.remove('text-gray-700');
+                    }
+                    if (svg) {
+                        svg.classList.add('text-white');
+                        svg.classList.remove('text-green-600');
+                    }
+                    if (iconContainer) {
+                        iconContainer.classList.add('bg-primary');
+                        iconContainer.classList.remove('bg-green-100');
+                    }
                 }
             }
         });
     }, {
         root: document.querySelector('main'),
-        rootMargin: '-20% 0px -70% 0px', // Trigger when section is 20% visible
-        threshold: 0.1
+        rootMargin: '-10% 0px -80% 0px', // Trigger when section is 10% visible from top
+        threshold: 0.2
     });
     
     // Observe all category sections
@@ -136,26 +158,25 @@ function initializeScrollSpy() {
     });
 }
 
-// Smooth scroll to category when clicked
-function scrollToCategory(categoryId) {
-    const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
-    if (targetSection) {
-        const mainContainer = document.querySelector('main');
-        const targetOffset = targetSection.offsetTop - 20; // 20px offset from top
-        
-        mainContainer.scrollTo({
-            top: targetOffset,
-            behavior: 'smooth'
-        });
-    }
-}
-
-// Fallback click handlers for category items
+// Custom smooth scroll for better control
 document.addEventListener('click', function(e) {
-    const categoryItem = e.target.closest('.category-item');
-    if (categoryItem) {
-        const categoryId = categoryItem.dataset.categoryId;
-        scrollToCategory(categoryId);
+    const categoryLink = e.target.closest('.category-item');
+    if (categoryLink && categoryLink.getAttribute('href')) {
+        e.preventDefault(); // Prevent default anchor behavior
+        
+        const targetId = categoryLink.getAttribute('href').substring(1); // Remove # from href
+        const targetSection = document.getElementById(targetId);
+        
+        if (targetSection) {
+            const mainContainer = document.querySelector('main');
+            const headerHeight = 80; // Account for fixed header
+            const targetOffset = targetSection.offsetTop - headerHeight;
+            
+            mainContainer.scrollTo({
+                top: targetOffset,
+                behavior: 'smooth'
+            });
+        }
     }
 });
 </script>
