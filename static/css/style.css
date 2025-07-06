@@ -73,7 +73,7 @@
     }
     
     /* Active category highlighting for store page */
-    .feature-card.active {
+    .category-item.active {
         background-color: #2C7A3C !important;
         background: #2C7A3C !important;
         color: white !important;
@@ -81,18 +81,26 @@
         transform: translateY(-1px) !important;
     }
     
-    .feature-card.active * {
+    .category-item.active * {
         color: white !important;
     }
     
-    .feature-card.active:hover {
+    .category-item.active:hover {
         background-color: #1e5a2a !important;
         background: #1e5a2a !important;
         color: white !important;
         box-shadow: 0 6px 16px rgba(44, 122, 60, 0.4) !important;
     }
     
-    .feature-card.active:hover * {
+    .category-item.active:hover * {
+        color: white !important;
+    }
+    
+    .category-item.active .w-12 {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    .category-item.active svg {
         color: white !important;
     }
     
@@ -104,19 +112,6 @@
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-    }
-    
-    .category-item.active {
-        background-color: #2C7A3C !important;
-        background: #2C7A3C !important;
-        color: white !important;
-    }
-    
-    .category-item.active h3,
-    .category-item.active p,
-    .category-item.active span,
-    .category-item.active div {
-        color: white !important;
     }
     
     .feature-icon {
