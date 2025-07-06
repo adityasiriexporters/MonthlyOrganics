@@ -108,18 +108,16 @@ def cart():
             SELECT 
                 ci.variation_id,
                 ci.quantity,
-                pv.name as variation_name,
-                pv.price,
-                pv.unit_size,
-                pv.unit_type,
+                pv.variation_name,
+                pv.mrp as price,
                 p.name as product_name,
                 p.description,
-                (ci.quantity * pv.price) as total_price
+                (ci.quantity * pv.mrp) as total_price
             FROM cart_items ci
             JOIN product_variations pv ON ci.variation_id = pv.id
             JOIN ecommerce_products p ON pv.product_id = p.id
             WHERE ci.user_id = %s
-            ORDER BY p.name, pv.name
+            ORDER BY p.name, pv.variation_name
         """, (user_id,))
         
         cart_items = cursor.fetchall()
