@@ -77,40 +77,6 @@ def get_db_connection():
                 stock_quantity INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            """,
-            
-            # Cart items table
-            """
-            CREATE TABLE IF NOT EXISTS cart_items (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                variation_id INTEGER REFERENCES product_variations(id) ON DELETE CASCADE,
-                quantity INTEGER NOT NULL,
-                UNIQUE(user_id, variation_id)
-            );
-            """,
-            
-            # Orders table
-            """
-            CREATE TABLE IF NOT EXISTS orders (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                total_amount DECIMAL(10, 2) NOT NULL,
-                shipping_address TEXT NOT NULL,
-                order_status VARCHAR(50) DEFAULT 'Pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            
-            # Order items table
-            """
-            CREATE TABLE IF NOT EXISTS order_items (
-                id SERIAL PRIMARY KEY,
-                order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
-                variation_id INTEGER REFERENCES product_variations(id) ON DELETE CASCADE,
-                quantity INTEGER NOT NULL,
-                price_at_purchase DECIMAL(10, 2) NOT NULL
-            );
             """
         ]
         
