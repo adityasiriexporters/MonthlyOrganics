@@ -88,46 +88,92 @@ document.addEventListener('DOMContentLoaded', function() {
     }).then(function() {
         // Initialize intersection observer after products are loaded
         initializeScrollSpy();
+        
+        // Default selection: Category 1 and scroll to its products
+        setTimeout(() => {
+            selectFirstCategory();
+        }, 100);
     });
 });
+
+// Select the first category by default
+function selectFirstCategory() {
+    const categoryItems = document.querySelectorAll('.category-item');
+    const categorySections = document.querySelectorAll('.category-section');
+    
+    if (categoryItems.length > 0 && categorySections.length > 0) {
+        // Get the first category's ID
+        const firstCategoryId = categoryItems[0].dataset.categoryId;
+        
+        // Highlight the first category
+        highlightCategory(firstCategoryId);
+        
+        // Scroll to the first category's products
+        scrollToCategory(firstCategoryId);
+    }
+}
+
+// Highlight a specific category
+function highlightCategory(categoryId) {
+    const categoryItems = document.querySelectorAll('.category-item');
+    
+    // Remove active class from all category items
+    categoryItems.forEach(item => {
+        item.classList.remove('bg-primary', 'text-white');
+        item.classList.add('bg-gray-50');
+        const span = item.querySelector('span');
+        const svg = item.querySelector('svg');
+        if (span) span.classList.remove('text-white');
+        if (svg) svg.classList.remove('text-white');
+    });
+    
+    // Add active class to specified category
+    const activeItem = document.querySelector(`.category-item[data-category-id="${categoryId}"]`);
+    if (activeItem) {
+        activeItem.classList.add('bg-primary', 'text-white');
+        activeItem.classList.remove('bg-gray-50');
+        const span = activeItem.querySelector('span');
+        const svg = activeItem.querySelector('svg');
+        if (span) span.classList.add('text-white');
+        if (svg) svg.classList.add('text-white');
+    }
+}
 
 // Auto-advancing category highlight using Intersection Observer
 function initializeScrollSpy() {
     const categoryItems = document.querySelectorAll('.category-item');
     const categorySections = document.querySelectorAll('.category-section');
+    const mainContainer = document.querySelector('main');
     
-    // Create intersection observer
+    // Create intersection observer for scroll-based highlighting
     const observer = new IntersectionObserver((entries) => {
+        // Find the topmost visible section
+        let topmostSection = null;
+        let topmostPosition = Infinity;
+        
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const categoryId = entry.target.dataset.categoryId;
+                const rect = entry.target.getBoundingClientRect();
+                const containerRect = mainContainer.getBoundingClientRect();
+                const relativeTop = rect.top - containerRect.top;
                 
-                // Remove active class from all category items
-                categoryItems.forEach(item => {
-                    item.classList.remove('bg-primary', 'text-white');
-                    item.classList.add('bg-gray-50');
-                    const span = item.querySelector('span');
-                    const svg = item.querySelector('svg');
-                    if (span) span.classList.remove('text-white');
-                    if (svg) svg.classList.remove('text-white');
-                });
-                
-                // Add active class to current category
-                const activeItem = document.querySelector(`[data-category-id="${categoryId}"]`);
-                if (activeItem && activeItem.classList.contains('category-item')) {
-                    activeItem.classList.add('bg-primary', 'text-white');
-                    activeItem.classList.remove('bg-gray-50');
-                    const span = activeItem.querySelector('span');
-                    const svg = activeItem.querySelector('svg');
-                    if (span) span.classList.add('text-white');
-                    if (svg) svg.classList.add('text-white');
+                // Check if this section is closer to the top
+                if (relativeTop < topmostPosition && relativeTop >= -10) {
+                    topmostPosition = relativeTop;
+                    topmostSection = entry.target;
                 }
             }
         });
+        
+        // Highlight the category of the topmost section
+        if (topmostSection) {
+            const categoryId = topmostSection.dataset.categoryId;
+            highlightCategory(categoryId);
+        }
     }, {
-        root: document.querySelector('main'),
-        rootMargin: '-20% 0px -70% 0px', // Trigger when section is 20% visible
-        threshold: 0.1
+        root: mainContainer,
+        rootMargin: '0px 0px -50% 0px', // Trigger when section is at the top half
+        threshold: [0, 0.1, 0.5, 1.0]
     });
     
     // Observe all category sections
@@ -141,16 +187,19 @@ function scrollToCategory(categoryId) {
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     if (targetSection) {
         const mainContainer = document.querySelector('main');
-        const targetOffset = targetSection.offsetTop - 20; // 20px offset from top
+        const targetOffset = targetSection.offsetTop - 10; // Small offset from top
         
         mainContainer.scrollTo({
             top: targetOffset,
             behavior: 'smooth'
         });
+        
+        // Immediately highlight the clicked category
+        highlightCategory(categoryId);
     }
 }
 
-// Fallback click handlers for category items
+// Click handlers for category items
 document.addEventListener('click', function(e) {
     const categoryItem = e.target.closest('.category-item');
     if (categoryItem) {
