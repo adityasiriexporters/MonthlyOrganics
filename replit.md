@@ -100,6 +100,9 @@ Changelog:
 - July 06, 2025. Added dynamic Add to Cart/quantity stepper UI with HTMX for real-time updates and UPSERT database operations
 - July 06, 2025. Built secure mobile number and OTP authentication system with session management, rate limiting, and parameterized queries
 - July 06, 2025. Created login/verify templates with mobile-first design, flash messages, and auto-submit OTP functionality
+- July 06, 2025. Fixed HTMX loading indicator blocking clicks by making it non-interactive with pointer-events-none
+- July 06, 2025. Consolidated cart routes from separate Flask app to main application, fixing route registration issues
+- July 06, 2025. Built complete cart page with product details, quantity controls, price calculations, and checkout flow
 ```
 
 ## User Preferences

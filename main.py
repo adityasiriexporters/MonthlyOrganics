@@ -66,11 +66,6 @@ app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
-@app.route('/cart')
-def cart():
-    """Cart page route - placeholder."""
-    return "<h1>Shopping Cart - Coming Soon</h1><p>Your cart items will be displayed here.</p>"
-
 @app.route('/orders')
 def orders():
     """Orders page route - placeholder."""
@@ -407,6 +402,67 @@ def update_cart(variation_id, action):
     except Exception as e:
         logging.error(f"Error updating cart: {e}")
         return "Error updating cart", 500
+
+@app.route('/cart')
+@login_required
+def cart():
+    """Display user's shopping cart."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            flash('Database connection failed', 'error')
+            return redirect(url_for('index'))
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get cart items with product details
+        cursor.execute("""
+            SELECT 
+                ci.variation_id,
+                ci.quantity,
+                pv.price,
+                pv.weight,
+                pv.unit as variation_unit,
+                p.name as product_name,
+                p.description as product_description,
+                c.name as category_name,
+                (ci.quantity * pv.price) as item_total
+            FROM cart_items ci
+            JOIN product_variations pv ON ci.variation_id = pv.id
+            JOIN ecommerce_products p ON pv.product_id = p.id
+            JOIN categories c ON p.category_id = c.id
+            WHERE ci.user_id = %s
+            ORDER BY c.name, p.name
+        """, (user_id,))
+        
+        cart_items = cursor.fetchall()
+        
+        # Calculate total
+        total_amount = sum(item['item_total'] for item in cart_items)
+        
+        cursor.close()
+        conn.close()
+        
+        # Get user info for display
+        from models import User
+        user = User.query.get(user_id)
+        
+        return render_template('cart.html', 
+                             cart_items=cart_items, 
+                             total_amount=total_amount,
+                             user=user)
+        
+    except Exception as e:
+        logging.error(f"Error loading cart: {e}")
+        flash('Error loading cart', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/pre-checkout')
+@login_required
+def pre_checkout():
+    """Pre-checkout page - placeholder for address and payment selection."""
+    return "<h1>Pre-Checkout - Coming Soon</h1><p>Address selection and payment options will be available here.</p>"
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
