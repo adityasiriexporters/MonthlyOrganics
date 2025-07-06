@@ -1,0 +1,254 @@
+Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+store:379 Global scrollToCategory called with ID: 5
+9382store:379 Global scrollToCategory called with ID: 5
+store:379 Uncaught RangeError: Maximum call stack size exceeded
+    at window.scrollToCategory (store:379:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+    at window.scrollToCategory (store:380:5)
+window.scrollToCategory @ store:379
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+window.scrollToCategory @ store:380
+setTimeout
+selectFirstCategory @ store:277
+initializeStoreFeatures @ store:258
+(anonymous) @ store:239
+setTimeout
+(anonymous) @ store:238
+Promise.then
+(anonymous) @ store:234Understand this error
+store:385 Click event detected on: DIV htmx-indicator fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40
+store:415 Click was not in sidebar

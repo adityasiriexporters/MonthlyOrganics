@@ -236,10 +236,7 @@ function scrollToCategory(categoryId) {
 }
 
 // Make scrollToCategory globally accessible for onclick handlers
-window.scrollToCategory = function(categoryId) {
-    console.log(`Global scrollToCategory called with ID: ${categoryId}`);
-    scrollToCategory(categoryId);
-};
+window.scrollToCategory = scrollToCategory;
 
 // Click handlers for category items (backup to onclick)
 document.addEventListener('click', function(e) {
