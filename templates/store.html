@@ -304,31 +304,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Click handlers for category items (backup to onclick)
 document.addEventListener('click', function(e) {
-    // Only handle clicks within the sidebar area for category navigation
+    console.log('Click event detected on:', e.target.tagName, e.target.className);
+    
+    // Check if click is within the sidebar area
     const sidebar = e.target.closest('aside');
-    if (!sidebar) {
-        return; // Ignore clicks outside sidebar
-    }
-    
-    // Look for category item starting from the clicked element
-    const categoryItem = e.target.closest('.category-item');
-    if (categoryItem) {
-        const categoryId = categoryItem.dataset.categoryId;
-        console.log(`Category item clicked, ID: ${categoryId}`);
-        scrollToCategory(categoryId);
-        return;
-    }
-    
-    // If not found, check if the clicked element or its parent has category data
-    let element = e.target;
-    while (element && element !== sidebar) {
-        if (element.dataset && element.dataset.categoryId) {
-            const categoryId = element.dataset.categoryId;
-            console.log(`Category ID found on element: ${categoryId}`);
+    if (sidebar) {
+        console.log('Click is within sidebar');
+        
+        // Look for category item starting from the clicked element
+        const categoryItem = e.target.closest('.category-item');
+        if (categoryItem) {
+            const categoryId = categoryItem.dataset.categoryId;
+            console.log(`Category item found, ID: ${categoryId}`);
             scrollToCategory(categoryId);
             return;
         }
-        element = element.parentElement;
+        
+        // If not found, check if the clicked element or its parent has category data
+        let element = e.target;
+        while (element && element !== sidebar) {
+            if (element.dataset && element.dataset.categoryId) {
+                const categoryId = element.dataset.categoryId;
+                console.log(`Category ID found on element: ${categoryId}`);
+                scrollToCategory(categoryId);
+                return;
+            }
+            element = element.parentElement;
+        }
+        
+        console.log('Click in sidebar but not on category item');
+    } else {
+        console.log('Click was not in sidebar');
     }
 });
 </script>
