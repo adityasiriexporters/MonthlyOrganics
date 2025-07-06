@@ -98,6 +98,8 @@ Changelog:
 - July 06, 2025. Fixed click-to-jump navigation with multiple scrolling methods and enhanced cross-browser category highlighting with !important CSS rules
 - July 06, 2025. Implemented complete cart functionality with database tables (cart_items, orders, order_items) and secure login-protected routes
 - July 06, 2025. Added dynamic Add to Cart/quantity stepper UI with HTMX for real-time updates and UPSERT database operations
+- July 06, 2025. Built secure mobile number and OTP authentication system with session management, rate limiting, and parameterized queries
+- July 06, 2025. Created login/verify templates with mobile-first design, flash messages, and auto-submit OTP functionality
 ```
 
 ## User Preferences

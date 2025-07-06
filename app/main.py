@@ -2,8 +2,10 @@ import os
 import logging
 import psycopg2
 import psycopg2.extras
+import random
+import re
 from functools import wraps
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, flash
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -388,39 +390,131 @@ def all_products():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Simple login for testing. In production, implement proper authentication."""
-    if request.method == 'POST':
-        # For testing, create or find a user and set session
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            
-            # Check if test user exists, if not create one
-            cursor.execute("SELECT id FROM users WHERE mobile_number = %s", ('1234567890',))
-            user = cursor.fetchone()
-            
-            if not user:
-                cursor.execute(
-                    "INSERT INTO users (name, mobile_number) VALUES (%s, %s) RETURNING id",
-                    ('Test User', '1234567890')
-                )
-                user_id = cursor.fetchone()[0]
-                conn.commit()
-            else:
-                user_id = user[0]
-            
-            session['user_id'] = user_id
-            cursor.close()
-            conn.close()
-            
-            return redirect(url_for('store'))
+    """Mobile number login page."""
+    return render_template('login.html')
+
+@app.route('/send-otp', methods=['POST'])
+def send_otp():
+    """Generate and send OTP for mobile number verification."""
+    try:
+        mobile_number = request.form.get('mobile_number', '').strip()
+        
+        # Validate mobile number format (10 digits)
+        if not mobile_number or not re.match(r'^[6-9]\d{9}$', mobile_number):
+            flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
+            return redirect(url_for('login'))
+        
+        # Generate 6-digit OTP
+        otp = random.randint(100000, 999999)
+        
+        # Store OTP and mobile number in session
+        session['otp'] = str(otp)
+        session['mobile_number'] = mobile_number
+        session['otp_attempts'] = 0
+        
+        # For testing - print OTP to console (will be replaced with MSG91 API later)
+        print(f"OTP for {mobile_number} is: {otp}")
+        
+        return redirect(url_for('verify'))
+        
+    except Exception as e:
+        logging.error(f"Error sending OTP: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/verify')
+def verify():
+    """OTP verification page."""
+    if 'mobile_number' not in session or 'otp' not in session:
+        flash('Please start by entering your mobile number.', 'error')
+        return redirect(url_for('login'))
     
-    return '''
-    <form method="post" style="padding: 20px;">
-        <h2>Login (Test)</h2>
-        <button type="submit">Login as Test User</button>
-    </form>
-    '''
+    mobile_number = session.get('mobile_number')
+    return render_template('verify.html', mobile_number=mobile_number)
+
+@app.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    """Verify OTP and login user."""
+    try:
+        if 'mobile_number' not in session or 'otp' not in session:
+            flash('Session expired. Please start again.', 'error')
+            return redirect(url_for('login'))
+        
+        submitted_otp = request.form.get('otp', '').strip()
+        stored_otp = session.get('otp')
+        mobile_number = session.get('mobile_number')
+        attempts = session.get('otp_attempts', 0)
+        
+        # Increment attempt counter
+        session['otp_attempts'] = attempts + 1
+        
+        # Check for too many attempts
+        if session['otp_attempts'] > 3:
+            # Clear session and redirect to login
+            session.clear()
+            flash('Too many failed attempts. Please try again.', 'error')
+            return redirect(url_for('login'))
+        
+        # Validate OTP format
+        if not submitted_otp or not re.match(r'^\d{6}$', submitted_otp):
+            flash('Please enter a valid 6-digit OTP.', 'error')
+            return redirect(url_for('verify'))
+        
+        # Verify OTP
+        if submitted_otp != stored_otp:
+            flash(f'Invalid OTP. You have {4 - session["otp_attempts"]} attempts remaining.', 'error')
+            return redirect(url_for('verify'))
+        
+        # OTP is correct - find or create user
+        conn = get_db_connection()
+        if not conn:
+            flash('Database connection error. Please try again.', 'error')
+            return redirect(url_for('verify'))
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Check if user exists
+        cursor.execute("SELECT id, name FROM users WHERE mobile_number = %s", (mobile_number,))
+        user = cursor.fetchone()
+        
+        if user:
+            user_id = user['id']
+            logging.info(f"Existing user logged in: {mobile_number}")
+        else:
+            # Create new user
+            cursor.execute(
+                "INSERT INTO users (name, mobile_number) VALUES (%s, %s) RETURNING id",
+                (f"User {mobile_number[-4:]}", mobile_number)  # Use last 4 digits as default name
+            )
+            user_id = cursor.fetchone()['id']
+            conn.commit()
+            logging.info(f"New user created: {mobile_number}")
+        
+        # Login user
+        session['user_id'] = user_id
+        
+        # Clear OTP data from session
+        session.pop('otp', None)
+        session.pop('mobile_number', None)
+        session.pop('otp_attempts', None)
+        
+        cursor.close()
+        conn.close()
+        
+        flash('Login successful!', 'success')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        logging.error(f"Error verifying OTP: {e}")
+        flash('An error occurred during verification. Please try again.', 'error')
+        return redirect(url_for('verify'))
+
+@app.route('/logout')
+def logout():
+    """Logout user by clearing session."""
+    session.clear()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
 @login_required
