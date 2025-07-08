@@ -116,7 +116,7 @@ def cart():
                 (ci.quantity * pv.mrp) as total_price
             FROM cart_items ci
             JOIN product_variations pv ON ci.variation_id = pv.id
-            JOIN ecommerce_products p ON pv.product_id = p.id
+            JOIN products p ON pv.product_id = p.id
             WHERE ci.user_id = %s
             ORDER BY p.name, pv.variation_name
         """, (user_id,))
