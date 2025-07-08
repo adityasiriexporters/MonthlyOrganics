@@ -106,6 +106,9 @@ Changelog:
 - July 06, 2025. Resolved Flask routing conflicts and consolidated authentication system into single main.py file
 - July 06, 2025. Successfully deployed cart functionality with login protection and HTMX dynamic updates
 - July 06, 2025. Debugged cart functionality - backend working perfectly, issue is browser authentication state requiring fresh login
+- July 08, 2025. Fixed cart page empty display issue by restoring missing product variations and resolving database schema mismatches
+- July 08, 2025. Resolved "cursor already closed" errors in cart update operations by fixing database connection management
+- July 08, 2025. Corrected decimal type mismatch in cart calculations preventing cart page from loading properly
 ```
 
 ## User Preferences
