@@ -78,7 +78,7 @@
                     <div class="space-y-2" 
                          id="order-totals"
                          hx-get="/cart-totals" 
-                         hx-trigger="cartUpdated from:body"
+                         hx-trigger="cartUpdated"
                          hx-swap="innerHTML">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Subtotal</span>
@@ -159,8 +159,23 @@
 {% endwith %}
 
 <script>
-// Cart totals now automatically update via HTMX trigger
+// Debug cart totals update
 console.log('Cart page loaded with automatic total updates');
+
+// Listen for HTMX events on order totals
+document.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.requestConfig.path.includes('/cart-totals')) {
+        console.log('Cart totals updated successfully');
+    }
+    if (evt.detail.requestConfig.path.includes('/update-cart/')) {
+        console.log('Cart item update completed');
+    }
+});
+
+// Listen for cartUpdated events on order-totals
+document.getElementById('order-totals').addEventListener('cartUpdated', function(e) {
+    console.log('cartUpdated event received on order-totals!', e);
+});
 </script>
 
 {% endblock %}

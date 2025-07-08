@@ -28,7 +28,7 @@ def render_cart_item(item_data: dict) -> str:
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
                                 hx-trigger="click"
-                                hx-on::after-request="htmx.trigger(document.body, 'cartUpdated')"
+                                hx-on::after-request="console.log('Cart item updated, triggering totals refresh'); htmx.trigger('#order-totals', 'cartUpdated')"
                                 class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
                             -
                         </button>
@@ -37,7 +37,7 @@ def render_cart_item(item_data: dict) -> str:
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
                                 hx-trigger="click"
-                                hx-on::after-request="htmx.trigger(document.body, 'cartUpdated')"
+                                hx-on::after-request="console.log('Cart item updated, triggering totals refresh'); htmx.trigger('#order-totals', 'cartUpdated')"
                                 class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
                             +
                         </button>
