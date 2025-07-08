@@ -115,6 +115,7 @@ Changelog:
 - July 08, 2025. Implemented cart quantity sync on store page: Store page now displays actual cart quantities in steppers instead of just "Add to Cart" buttons
 - July 08, 2025. Fixed store page quantity-to-zero behavior: Restores "Add to Cart" button when quantity reduced to zero from steppers
 - July 08, 2025. Implemented real-time cart totals update: Order summary (subtotal, delivery fee, total) updates automatically without page refresh when quantities change
+- July 08, 2025. Enhanced cart total styling: Made total amount green and larger font for better visual prominence, fixed duplicate button issue in real-time updates
 ```
 
 ## User Preferences

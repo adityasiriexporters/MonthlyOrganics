@@ -580,7 +580,7 @@ def cart_totals():
             <div class="border-t border-gray-200 pt-2 mt-2">
                 <div class="flex justify-between font-medium">
                     <span class="text-gray-900">Total</span>
-                    <span class="text-gray-900">₹{total:.2f}</span>
+                    <span class="text-green-600 text-lg font-bold">₹{total:.2f}</span>
                 </div>
             </div>
         </div>
