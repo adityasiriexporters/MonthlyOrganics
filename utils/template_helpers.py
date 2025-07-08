@@ -28,7 +28,7 @@ def render_cart_item(item_data: dict) -> str:
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
                                 hx-trigger="click"
-                                hx-on::after-request="setTimeout(() => { console.log('Triggering cart totals update after decrement'); fetch('/cart-totals').then(r => r.text()).then(html => { const totals = document.getElementById('order-totals'); if (totals) totals.innerHTML = html; }); }, 100);"
+                                hx-on::after-request="console.log('Decr button after-request fired'); setTimeout(() => { console.log('Triggering cart totals update after decrement'); fetch('/cart-totals', {credentials: 'same-origin'}).then(r => { console.log('Fetch response status:', r.status); return r.text(); }).then(html => { console.log('Got totals HTML:', html.substring(0, 100)); const totals = document.getElementById('order-totals'); if (totals) { totals.innerHTML = html; console.log('Updated order totals successfully'); } else { console.error('order-totals element not found'); } }).catch(e => console.error('Fetch error:', e)); }, 100);"
                                 class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
                             -
                         </button>
@@ -37,7 +37,7 @@ def render_cart_item(item_data: dict) -> str:
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
                                 hx-trigger="click"
-                                hx-on::after-request="setTimeout(() => { console.log('Triggering cart totals update after increment'); fetch('/cart-totals').then(r => r.text()).then(html => { const totals = document.getElementById('order-totals'); if (totals) totals.innerHTML = html; }); }, 100);"
+                                hx-on::after-request="console.log('Incr button after-request fired'); setTimeout(() => { console.log('Triggering cart totals update after increment'); fetch('/cart-totals', {credentials: 'same-origin'}).then(r => { console.log('Fetch response status:', r.status); return r.text(); }).then(html => { console.log('Got totals HTML:', html.substring(0, 100)); const totals = document.getElementById('order-totals'); if (totals) { totals.innerHTML = html; console.log('Updated order totals successfully'); } else { console.error('order-totals element not found'); } }).catch(e => console.error('Fetch error:', e)); }, 100);"
                                 class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
                             +
                         </button>

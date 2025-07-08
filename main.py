@@ -335,21 +335,30 @@ def cart_totals():
     """Return updated cart totals using CartService and template helpers."""
     try:
         user_id = session['user_id']
+        logger.info(f"Calculating cart totals for user {user_id}")
         
         # Get cart items using CartService
         cart_items = CartService.get_cart_items(user_id)
+        logger.info(f"Found {len(cart_items)} cart items")
         
-        # Calculate cart totals
-        subtotal = sum(item['total_price'] for item in cart_items)
+        # Calculate cart totals with proper Decimal handling
+        subtotal = Decimal('0.00')
+        for item in cart_items:
+            item_total = Decimal(str(item['total_price']))
+            subtotal += item_total
+            logger.debug(f"Item: {item['variation_name']}, total: {item_total}")
+        
         delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
         total = subtotal + delivery_fee
         
+        logger.info(f"Calculated totals - Subtotal: {subtotal}, Delivery: {delivery_fee}, Total: {total}")
+        
         # Return cart totals HTML using template helper
-        return render_cart_totals(subtotal, delivery_fee, total)
+        return render_cart_totals(float(subtotal), float(delivery_fee), float(total))
         
     except Exception as e:
-        logger.error(f"Error calculating cart totals: {e}")
-        return "Error calculating totals", 500
+        logger.error(f"Error calculating cart totals: {e}", exc_info=True)
+        return f"Error calculating totals: {str(e)}", 500
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
