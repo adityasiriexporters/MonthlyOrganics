@@ -420,8 +420,19 @@ def update_cart(variation_id, action):
             cursor.close()
             conn.close()
             
-            # Return empty response to remove the item from cart
-            return ''
+            # Check if request comes from store page to restore Add to Cart button
+            referer = request.headers.get('Referer', '')
+            if '/store' in referer:
+                return '''
+                <button hx-post="/add-to-cart/{}" 
+                        hx-swap="outerHTML"
+                        class="bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-md transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500/20">
+                    Add to Cart
+                </button>
+                '''.format(variation_id)
+            else:
+                # Return empty response to remove the item from cart page
+                return ''
         
         # Get updated cart item details for proper display before committing
         cursor.execute("""
@@ -517,6 +528,80 @@ def update_cart(variation_id, action):
     except Exception as e:
         logging.error(f"Error updating cart: {e}")
         return "Error updating cart", 500
+
+@app.route('/cart-totals')
+@login_required
+def cart_totals():
+    """Return updated cart totals for HTMX refresh."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return "Database connection failed", 500
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get all cart items to calculate totals
+        cursor.execute("""
+            SELECT 
+                ci.quantity,
+                pv.mrp as price,
+                (ci.quantity * pv.mrp) as total_price
+            FROM cart_items ci
+            JOIN product_variations pv ON ci.variation_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE ci.user_id = %s
+        """, (user_id,))
+        
+        cart_items = cursor.fetchall()
+        
+        # Calculate cart totals
+        from decimal import Decimal
+        subtotal = sum(item['total_price'] for item in cart_items)
+        delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
+        total = subtotal + delivery_fee
+        
+        cursor.close()
+        conn.close()
+        
+        # Return just the order summary HTML
+        return f'''
+        <div class="bg-white shadow-sm mt-4" id="order-summary">
+            <div class="p-4">
+                <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
+                
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal</span>
+                        <span class="font-medium">₹{subtotal:.2f}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Delivery Fee</span>
+                        <span class="font-medium">₹{delivery_fee:.2f}</span>
+                    </div>
+                    <div class="border-t pt-2 mt-2">
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-900">Total</span>
+                            <span class="font-bold text-lg text-primary">₹{total:.2f}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 space-y-2">
+                    <button class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                        Proceed to Checkout
+                    </button>
+                    <button class="w-full border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        Continue Shopping
+                    </button>
+                </div>
+            </div>
+        </div>
+        '''
+        
+    except Exception as e:
+        logging.error(f"Error calculating cart totals: {e}")
+        return "Error calculating totals", 500
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")

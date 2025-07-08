@@ -46,6 +46,8 @@
                                         <button hx-post="/update-cart/{{ item.variation_id }}/decr" 
                                                 hx-target="closest .cart-item-wrapper"
                                                 hx-swap="outerHTML"
+                                                hx-trigger="click"
+                                                hx-on::after-request="htmx.ajax('GET', '/cart-totals', {target:'#order-summary', swap:'outerHTML'})"
                                                 class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
                                             -
                                         </button>
@@ -53,6 +55,8 @@
                                         <button hx-post="/update-cart/{{ item.variation_id }}/incr" 
                                                 hx-target="closest .cart-item-wrapper"
                                                 hx-swap="outerHTML"
+                                                hx-trigger="click"
+                                                hx-on::after-request="htmx.ajax('GET', '/cart-totals', {target:'#order-summary', swap:'outerHTML'})"
                                                 class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
                                             +
                                         </button>
@@ -71,7 +75,7 @@
             </div>
 
             <!-- Order Summary -->
-            <div class="bg-white shadow-sm mt-4">
+            <div class="bg-white shadow-sm mt-4" id="order-summary">
                 <div class="p-4">
                     <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
                     
