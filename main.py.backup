@@ -1,15 +1,19 @@
 import os
 import logging
-import psycopg2
-import psycopg2.extras
-import random
-import re
-from functools import wraps
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify, flash
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
+from decimal import Decimal
+
+# Import services and utilities
 from models import db, init_db
+from services.database import CartService, UserService
+from utils.decorators import login_required, validate_mobile_number, validate_otp
+from utils.template_helpers import (
+    render_cart_item, render_store_quantity_stepper, 
+    render_add_to_cart_button, render_cart_totals
+)
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -18,50 +22,48 @@ logger = logging.getLogger(__name__)
 class Base(DeclarativeBase):
     pass
 
-# Create the Flask app
+# Create the app
 app = Flask(__name__)
-
-# Configure Flask app
-app.secret_key = os.environ.get("SESSION_SECRET", "monthly-organics-secret-key")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
+app.secret_key = os.environ.get("SESSION_SECRET")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///monthly_organics.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Initialize the database with the app
-init_db(app)
+# Initialize the app with the extension
+db.init_app(app)
 
-# Import routes from app/main.py 
-from app.main import app as main_app, store as store_view, products_by_category, all_products
+with app.app_context():
+    # Make sure to import the models here or their tables won't be created
+    import models  # noqa: F401
+    db.create_all()
 
-# Register the main app routes
 @app.route('/')
 def index():
     """Main index route that renders the homepage template."""
-    try:
-        logger.info("Rendering homepage")
-        # You can pass selected_address variable here when implementing address functionality
-        return render_template('index.html', selected_address=None)
-    except Exception as e:
-        logger.error(f"Error rendering index page: {e}")
-        return render_template('index.html', selected_address=None)
+    logger.info("Rendering homepage")
+    return render_template('index.html')
 
 @app.route('/profile')
 def profile():
     """Profile page route."""
     try:
-        logger.info("Rendering profile page")
         return render_template('profile.html')
     except Exception as e:
         logger.error(f"Error rendering profile page: {e}")
         return render_template('profile.html')
 
-# Store routes (import from app/main.py)
+# Database connection management moved to services/database.py
+# Login decorator moved to utils/decorators.py
+
+# Import store functions from app/main.py
+from app.main import store as store_view, products_by_category, all_products
+
+# Store routes 
 app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
@@ -72,6 +74,7 @@ def cart():
     """Display user's shopping cart."""
     try:
         user_id = session['user_id']
+        logging.info(f"Cart page accessed by user_id: {user_id}")
         conn = get_db_connection()
         if not conn:
             flash('Database connection failed. Please try again.', 'error')
@@ -84,25 +87,25 @@ def cart():
             SELECT 
                 ci.variation_id,
                 ci.quantity,
-                pv.name as variation_name,
-                pv.price,
-                pv.unit_size,
-                pv.unit_type,
+                pv.variation_name,
+                pv.mrp as price,
                 p.name as product_name,
                 p.description,
-                (ci.quantity * pv.price) as total_price
+                (ci.quantity * pv.mrp) as total_price
             FROM cart_items ci
             JOIN product_variations pv ON ci.variation_id = pv.id
-            JOIN ecommerce_products p ON pv.product_id = p.id
+            JOIN products p ON pv.product_id = p.id
             WHERE ci.user_id = %s
-            ORDER BY p.name, pv.name
+            ORDER BY p.name, pv.variation_name
         """, (user_id,))
         
         cart_items = cursor.fetchall()
+        logging.info(f"Found {len(cart_items)} cart items for user {user_id}")
         
         # Calculate cart totals
+        from decimal import Decimal
         subtotal = sum(item['total_price'] for item in cart_items)
-        delivery_fee = 50.00 if subtotal > 0 else 0  # ₹50 delivery fee
+        delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')  # ₹50 delivery fee
         total = subtotal + delivery_fee
         
         cursor.close()
@@ -127,46 +130,37 @@ def orders():
 @app.route('/support')
 def support():
     """Support page route - placeholder."""
-    return "<h1>Help & Support - Coming Soon</h1><p>Customer support features will be available here.</p>"
+    return "<h1>Customer Support - Coming Soon</h1><p>Support chat will be available here.</p>"
 
 @app.route('/wallet')
 def wallet():
     """Wallet page route - placeholder."""
-    return "<h1>Wallet - Coming Soon</h1><p>Wallet management will be available here.</p>"
+    return "<h1>Wallet - Coming Soon</h1><p>Wallet balance and transactions will be shown here.</p>"
 
 @app.route('/rewards')
 def rewards():
     """Rewards page route - placeholder."""
-    return "<h1>Rewards - Coming Soon</h1><p>Reward tracking will be available here.</p>"
+    return "<h1>Rewards - Coming Soon</h1><p>Loyalty points and rewards will be displayed here.</p>"
 
-@app.route('/profile-settings')
+@app.route('/profile/settings')
 def profile_settings():
     """Profile settings page route - placeholder."""
-    return "<h1>Profile Settings - Coming Soon</h1><p>Profile management will be available here.</p>"
+    return "<h1>Profile Settings - Coming Soon</h1><p>Update your profile information here.</p>"
 
 @app.route('/addresses')
 def addresses():
     """Addresses page route - placeholder."""
-    return "<h1>Saved Addresses - Coming Soon</h1><p>Address management will be available here.</p>"
+    return "<h1>Saved Addresses - Coming Soon</h1><p>Manage your delivery addresses here.</p>"
 
 @app.route('/addresses/add')
 def add_address():
     """Add address page route - placeholder."""
-    return "<h1>Add Address - Coming Soon</h1><p>Address addition form will be available here.</p>"
+    return "<h1>Add New Address - Coming Soon</h1><p>Add a new delivery address here.</p>"
 
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""
-    try:
-        # Test database connection
-        with app.app_context():
-            from sqlalchemy import text
-            db.session.execute(text("SELECT 1"))
-        
-        return {"status": "healthy", "database": "connected"}, 200
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {"status": "unhealthy", "error": str(e)}, 500
+    return {"status": "healthy", "message": "Monthly Organics is running"}
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -178,35 +172,6 @@ def internal_error(error):
     """Handle 500 errors."""
     db.session.rollback()
     return render_template('500.html'), 500
-
-def get_db_connection():
-    """Get database connection using environment variable."""
-    try:
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            logging.error("DATABASE_URL environment variable not set")
-            return None
-        
-        conn = psycopg2.connect(database_url)
-        return conn
-    except Exception as e:
-        logging.error(f"Database connection failed: {e}")
-        return None
-
-def login_required(f):
-    """Decorator to require login for certain routes."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            # For HTMX requests, use HX-Redirect header to redirect the entire page
-            if request.headers.get('HX-Request'):
-                response = jsonify({'error': 'Login required'})
-                response.headers['HX-Redirect'] = url_for('login')
-                return response, 401
-            else:
-                return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -328,64 +293,12 @@ def logout():
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('index'))
 
-@app.route('/cart')
-@login_required
-def cart():
-    """Display user's shopping cart."""
-    try:
-        user_id = session['user_id']
-        conn = get_db_connection()
-        if not conn:
-            flash('Database connection failed. Please try again.', 'error')
-            return redirect(url_for('index'))
-            
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        
-        # Get cart items with product details
-        cursor.execute("""
-            SELECT 
-                ci.variation_id,
-                ci.quantity,
-                pv.name as variation_name,
-                pv.price,
-                pv.unit_size,
-                pv.unit_type,
-                p.name as product_name,
-                p.description,
-                (ci.quantity * pv.price) as total_price
-            FROM cart_items ci
-            JOIN product_variations pv ON ci.variation_id = pv.id
-            JOIN ecommerce_products p ON pv.product_id = p.id
-            WHERE ci.user_id = %s
-            ORDER BY p.name, pv.name
-        """, (user_id,))
-        
-        cart_items = cursor.fetchall()
-        
-        # Calculate cart totals
-        subtotal = sum(item['total_price'] for item in cart_items)
-        delivery_fee = 50.00 if subtotal > 0 else 0  # ₹50 delivery fee
-        total = subtotal + delivery_fee
-        
-        cursor.close()
-        conn.close()
-        
-        return render_template('cart.html', 
-                             cart_items=cart_items,
-                             subtotal=subtotal,
-                             delivery_fee=delivery_fee,
-                             total=total)
-        
-    except Exception as e:
-        logging.error(f"Error loading cart: {e}")
-        flash('Error loading cart. Please try again.', 'error')
-        return redirect(url_for('index'))
-
 @app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
 @login_required
 def add_to_cart(variation_id):
     """Add item to cart or update quantity if already exists."""
     try:
+        logging.info(f"Add to cart request for variation {variation_id} by user {session.get('user_id')}")
         user_id = session['user_id']
         conn = get_db_connection()
         if not conn:
@@ -407,16 +320,18 @@ def add_to_cart(variation_id):
         cursor.close()
         conn.close()
         
-        # Return quantity stepper HTML
+        # Return quantity stepper HTML with correct targeting for store page
         return f'''
         <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
             <button hx-post="/update-cart/{variation_id}/decr" 
+                    hx-target="closest div"
                     hx-swap="outerHTML"
                     class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
                 -
             </button>
             <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
             <button hx-post="/update-cart/{variation_id}/incr" 
+                    hx-target="closest div"
                     hx-swap="outerHTML"
                     class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
                 +
@@ -434,6 +349,7 @@ def update_cart(variation_id, action):
     """Update cart item quantity (increment or decrement)."""
     try:
         user_id = session['user_id']
+        logging.info(f"Cart update request: user={user_id}, variation={variation_id}, action={action}")
         conn = get_db_connection()
         if not conn:
             return "Database connection failed", 500
@@ -475,39 +391,175 @@ def update_cart(variation_id, action):
             cursor.close()
             conn.close()
             
-            # Return add to cart button
-            return f'''
-            <button hx-post="/add-to-cart/{variation_id}" 
-                    hx-swap="outerHTML"
-                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                Add to Cart
-            </button>
-            '''
+            # Check if request comes from store page to restore Add to Cart button
+            referer = request.headers.get('Referer', '')
+            if '/store' in referer:
+                return '''
+                <button hx-post="/add-to-cart/{}" 
+                        hx-swap="outerHTML"
+                        class="bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-md transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500/20">
+                    Add to Cart
+                </button>
+                '''.format(variation_id)
+            else:
+                # Return empty response to remove the item from cart page
+                return ''
+        
+        # Get updated cart item details for proper display before committing
+        cursor.execute("""
+            SELECT 
+                ci.variation_id,
+                ci.quantity,
+                pv.variation_name,
+                pv.mrp as price,
+                p.name as product_name,
+                (ci.quantity * pv.mrp) as total_price
+            FROM cart_items ci
+            JOIN product_variations pv ON ci.variation_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE ci.user_id = %s AND ci.variation_id = %s
+        """, (user_id, variation_id))
+        
+        item = cursor.fetchone()
         
         conn.commit()
         cursor.close()
         conn.close()
         
-        # Return updated quantity stepper
+        if not item:
+            return "Item not found", 404
+        
+        # Check if request comes from store page (referer check)
+        referer = request.headers.get('Referer', '')
+        if '/store' in referer:
+            # Return simple quantity stepper for store page
+            return f'''
+            <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+                <button hx-post="/update-cart/{variation_id}/decr" 
+                        hx-target="closest div"
+                        hx-swap="outerHTML"
+                        class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                    -
+                </button>
+                <span class="px-2 font-semibold text-green-800">{item['quantity']}</span>
+                <button hx-post="/update-cart/{variation_id}/incr" 
+                        hx-target="closest div"
+                        hx-swap="outerHTML"
+                        class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                    +
+                </button>
+            </div>
+            '''
+        
+        # Return complete cart item HTML for cart page
         return f'''
-        <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
-            <button hx-post="/update-cart/{variation_id}/decr" 
-                    hx-swap="outerHTML"
-                    class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
-                -
-            </button>
-            <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
-            <button hx-post="/update-cart/{variation_id}/incr" 
-                    hx-swap="outerHTML"
-                    class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
-                +
-            </button>
+        <div class="cart-item-wrapper border-b border-gray-100 p-4 last:border-b-0">
+            <div class="flex items-start space-x-3">
+                <!-- Product Image Placeholder -->
+                <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                
+                <!-- Product Details -->
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-medium text-gray-900 text-sm">{item['product_name']}</h3>
+                    <p class="text-sm text-gray-600">{item['variation_name']}</p>
+                    
+                    <div class="flex items-center justify-between mt-2">
+                        <!-- Quantity Controls -->
+                        <div class="flex items-center space-x-2 bg-gray-50 rounded-lg px-2 py-1">
+                            <button hx-post="/update-cart/{variation_id}/decr" 
+                                    hx-target="closest .cart-item-wrapper"
+                                    hx-swap="outerHTML"
+                                    class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
+                                -
+                            </button>
+                            <span class="px-2 font-medium text-gray-800 min-w-[24px] text-center">{item['quantity']}</span>
+                            <button hx-post="/update-cart/{variation_id}/incr" 
+                                    hx-target="closest .cart-item-wrapper"
+                                    hx-swap="outerHTML"
+                                    class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
+                                +
+                            </button>
+                        </div>
+                        
+                        <!-- Price -->
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">₹{item['total_price']:.2f}</p>
+                            <p class="text-xs text-gray-500">₹{item['price']:.2f} each</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         '''
         
     except Exception as e:
         logging.error(f"Error updating cart: {e}")
         return "Error updating cart", 500
+
+@app.route('/cart-totals')
+@login_required
+def cart_totals():
+    """Return updated cart totals for HTMX refresh."""
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        if not conn:
+            return "Database connection failed", 500
+            
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get all cart items to calculate totals
+        cursor.execute("""
+            SELECT 
+                ci.quantity,
+                pv.mrp as price,
+                (ci.quantity * pv.mrp) as total_price
+            FROM cart_items ci
+            JOIN product_variations pv ON ci.variation_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE ci.user_id = %s
+        """, (user_id,))
+        
+        cart_items = cursor.fetchall()
+        
+        # Calculate cart totals
+        from decimal import Decimal
+        subtotal = sum(item['total_price'] for item in cart_items)
+        delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
+        total = subtotal + delivery_fee
+        
+        cursor.close()
+        conn.close()
+        
+        # Return just the totals section without buttons
+        return f'''
+        <div class="space-y-2" id="order-totals">
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Subtotal</span>
+                <span class="text-gray-900">₹{subtotal:.2f}</span>
+            </div>
+            
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Delivery Fee</span>
+                <span class="text-gray-900">₹{delivery_fee:.2f}</span>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-2 mt-2">
+                <div class="flex justify-between font-medium">
+                    <span class="text-gray-900">Total</span>
+                    <span class="text-green-600 text-lg font-bold">₹{total:.2f}</span>
+                </div>
+            </div>
+        </div>
+        '''
+        
+    except Exception as e:
+        logging.error(f"Error calculating cart totals: {e}")
+        return "Error calculating totals", 500
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")

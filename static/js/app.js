@@ -41,20 +41,8 @@ function addSmoothScrolling() {
 }
 
 function initializeLogoAnimation() {
-    // Add entrance animation to logo
-    const logo = document.querySelector('.brand-logo');
-    if (logo) {
-        logo.classList.add('animate-fade-in-up');
-        
-        // Add hover effect
-        logo.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.05)';
-        });
-        
-        logo.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-        });
-    }
+    // Logo animation functionality removed as it was unused
+    // This function kept for backward compatibility
 }
 
 // Utility functions for Alpine.js components

@@ -1,0 +1,16 @@
+<!-- Store Page Quantity Stepper Template -->
+<div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+    <button hx-post="/update-cart/{{ variation_id }}/decr" 
+            hx-target="closest div"
+            hx-swap="outerHTML"
+            class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+        -
+    </button>
+    <span class="px-2 font-semibold text-green-800">{{ quantity }}</span>
+    <button hx-post="/update-cart/{{ variation_id }}/incr" 
+            hx-target="closest div"
+            hx-swap="outerHTML"
+            class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+        +
+    </button>
+</div>
