@@ -27,6 +27,8 @@ def render_cart_item(item_data: dict) -> str:
                         <button hx-post="/update-cart/{{ variation_id }}/decr" 
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
+                                hx-trigger="click"
+                                hx-on::after-request="htmx.trigger(document.body, 'cartUpdated')"
                                 class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
                             -
                         </button>
@@ -34,6 +36,8 @@ def render_cart_item(item_data: dict) -> str:
                         <button hx-post="/update-cart/{{ variation_id }}/incr" 
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
+                                hx-trigger="click"
+                                hx-on::after-request="htmx.trigger(document.body, 'cartUpdated')"
                                 class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
                             +
                         </button>
