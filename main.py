@@ -60,7 +60,7 @@ def get_db_connection():
         if not database_url:
             logging.error("DATABASE_URL environment variable not set")
             return None
-
+        
         conn = psycopg2.connect(database_url)
         return conn
     except Exception as e:
@@ -73,7 +73,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         logging.debug(f"Login check - Session data: {dict(session)}")
         logging.debug(f"Login check - Request headers: {dict(request.headers)}")
-
+        
         if 'user_id' not in session:
             logging.warning(f"No user_id in session for {request.endpoint}")
             # For HTMX requests, use HX-Redirect header to redirect the entire page
@@ -84,7 +84,7 @@ def login_required(f):
                 return response
             else:
                 return redirect(url_for('login'))
-
+        
         logging.debug(f"User {session['user_id']} accessing {request.endpoint}")
         return f(*args, **kwargs)
     return decorated_function
@@ -94,8 +94,8 @@ from app.main import store as store_view, products_by_category, all_products
 
 # Store routes 
 app.add_url_rule('/store', 'store', store_view, methods=['GET'])
-app.add_url_rule('/products/<int:category_id>', 'products_by_category', methods=['GET'])
-app.add_url_rule('/all-products', 'all_products', methods=['GET'])
+app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
+app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
 @app.route('/cart')
 @login_required
@@ -108,9 +108,9 @@ def cart():
         if not conn:
             flash('Database connection failed. Please try again.', 'error')
             return redirect(url_for('index'))
-
+            
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
+        
         # Get cart items with product details
         cursor.execute("""
             SELECT 
@@ -127,25 +127,25 @@ def cart():
             WHERE ci.user_id = %s
             ORDER BY p.name, pv.variation_name
         """, (user_id,))
-
+        
         cart_items = cursor.fetchall()
         logging.info(f"Found {len(cart_items)} cart items for user {user_id}")
-
+        
         # Calculate cart totals
         from decimal import Decimal
         subtotal = sum(item['total_price'] for item in cart_items)
         delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')  # ₹50 delivery fee
         total = subtotal + delivery_fee
-
+        
         cursor.close()
         conn.close()
-
+        
         return render_template('cart.html', 
                              cart_items=cart_items,
                              subtotal=subtotal,
                              delivery_fee=delivery_fee,
                              total=total)
-
+        
     except Exception as e:
         logging.error(f"Error loading cart: {e}")
         flash('Error loading cart. Please try again.', 'error')
@@ -212,25 +212,25 @@ def send_otp():
     """Generate and send OTP for mobile number verification."""
     try:
         mobile_number = request.form.get('mobile_number', '').strip()
-
+        
         # Validate mobile number format (10 digits)
         if not mobile_number or not re.match(r'^[6-9]\d{9}$', mobile_number):
             flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
             return redirect(url_for('login'))
-
+        
         # Use fixed OTP for testing (will be replaced with MSG91 API later)
         otp = "290921"
-
+        
         # Store OTP and mobile number in session
         session['otp'] = otp
         session['mobile_number'] = mobile_number
         session['otp_attempts'] = 0
-
+        
         # For testing - print OTP to console
         print(f"OTP for {mobile_number} is: {otp} (TEST MODE)")
-
+        
         return redirect(url_for('verify'))
-
+        
     except Exception as e:
         logging.error(f"Error sending OTP: {e}")
         flash('An error occurred. Please try again.', 'error')
@@ -242,7 +242,7 @@ def verify():
     if 'mobile_number' not in session or 'otp' not in session:
         flash('Please start by entering your mobile number.', 'error')
         return redirect(url_for('login'))
-
+    
     mobile_number = session.get('mobile_number')
     return render_template('verify.html', mobile_number=mobile_number)
 
@@ -253,36 +253,36 @@ def verify_otp():
         if 'mobile_number' not in session or 'otp' not in session:
             flash('Session expired. Please start again.', 'error')
             return redirect(url_for('login'))
-
+        
         submitted_otp = request.form.get('otp', '').strip()
         stored_otp = session.get('otp')
         mobile_number = session.get('mobile_number')
         attempts = session.get('otp_attempts', 0)
-
+        
         # Increment attempt counter
         session['otp_attempts'] = attempts + 1
-
+        
         # Check for too many attempts
         if session['otp_attempts'] > 3:
             # Clear session and redirect to login
             session.clear()
             flash('Too many failed attempts. Please try again.', 'error')
             return redirect(url_for('login'))
-
+        
         # Validate OTP format
         if not submitted_otp or not re.match(r'^\d{6}$', submitted_otp):
             flash('Please enter a valid 6-digit OTP.', 'error')
             return redirect(url_for('verify'))
-
+        
         # Verify OTP
         if submitted_otp != stored_otp:
             flash(f'Invalid OTP. You have {4 - session["otp_attempts"]} attempts remaining.', 'error')
             return redirect(url_for('verify'))
-
+        
         # OTP is correct - find or create user using SQLAlchemy
         from models import User
         user = User.query.filter_by(phone=mobile_number).first()
-
+        
         if user:
             user_id = user.id
             logging.info(f"Existing user logged in: {mobile_number}")
@@ -298,18 +298,18 @@ def verify_otp():
             db.session.commit()
             user_id = user.id
             logging.info(f"New user created: {mobile_number}")
-
+        
         # Login user
         session['user_id'] = user_id
-
+        
         # Clear OTP data from session
         session.pop('otp', None)
         session.pop('mobile_number', None)
         session.pop('otp_attempts', None)
-
+        
         flash('Login successful!', 'success')
         return redirect(url_for('index'))
-
+        
     except Exception as e:
         logging.error(f"Error verifying OTP: {e}")
         flash('An error occurred during verification. Please try again.', 'error')
@@ -332,9 +332,9 @@ def add_to_cart(variation_id):
         conn = get_db_connection()
         if not conn:
             return "Database connection failed", 500
-
+            
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
+        
         # Use UPSERT to add item or update quantity
         cursor.execute("""
             INSERT INTO cart_items (user_id, variation_id, quantity)
@@ -343,12 +343,12 @@ def add_to_cart(variation_id):
             DO UPDATE SET quantity = cart_items.quantity + 1
             RETURNING quantity
         """, (user_id, variation_id))
-
+        
         new_quantity = cursor.fetchone()[0]
         conn.commit()
         cursor.close()
         conn.close()
-
+        
         # Return quantity stepper HTML with correct targeting for store page
         return f'''
         <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
@@ -367,7 +367,7 @@ def add_to_cart(variation_id):
             </button>
         </div>
         '''
-
+        
     except Exception as e:
         logging.error(f"Error adding to cart: {e}")
         return "Error adding to cart", 500
@@ -382,9 +382,9 @@ def update_cart(variation_id, action):
         conn = get_db_connection()
         if not conn:
             return "Database connection failed", 500
-
+            
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
+        
         if action == 'incr':
             cursor.execute("""
                 UPDATE cart_items 
@@ -401,15 +401,15 @@ def update_cart(variation_id, action):
             """, (user_id, variation_id))
         else:
             return "Invalid action", 400
-
+            
         result = cursor.fetchone()
         if not result:
             cursor.close()
             conn.close()
             return "Item not found in cart", 404
-
+            
         new_quantity = result[0]
-
+        
         # If quantity becomes 0, delete the item
         if new_quantity <= 0:
             cursor.execute("""
@@ -419,7 +419,7 @@ def update_cart(variation_id, action):
             conn.commit()
             cursor.close()
             conn.close()
-
+            
             # Check if request comes from store page to restore Add to Cart button
             referer = request.headers.get('Referer', '')
             if '/store' in referer:
@@ -433,7 +433,7 @@ def update_cart(variation_id, action):
             else:
                 # Return empty response to remove the item from cart page
                 return ''
-
+        
         # Get updated cart item details for proper display before committing
         cursor.execute("""
             SELECT 
@@ -448,16 +448,16 @@ def update_cart(variation_id, action):
             JOIN products p ON pv.product_id = p.id
             WHERE ci.user_id = %s AND ci.variation_id = %s
         """, (user_id, variation_id))
-
+        
         item = cursor.fetchone()
-
+        
         conn.commit()
         cursor.close()
         conn.close()
-
+        
         if not item:
             return "Item not found", 404
-
+        
         # Check if request comes from store page (referer check)
         referer = request.headers.get('Referer', '')
         if '/store' in referer:
@@ -479,24 +479,23 @@ def update_cart(variation_id, action):
                 </button>
             </div>
             '''
-
-        # Return complete cart item HTML for cart page with totals update trigger
-        from flask import make_response
-        response = make_response(f'''
+        
+        # Return complete cart item HTML for cart page
+        return f'''
         <div class="cart-item-wrapper border-b border-gray-100 p-4 last:border-b-0">
             <div class="flex items-start space-x-3">
                 <!-- Product Image Placeholder -->
                 <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </div>
-
+                
                 <!-- Product Details -->
                 <div class="flex-1 min-w-0">
                     <h3 class="font-medium text-gray-900 text-sm">{item['product_name']}</h3>
                     <p class="text-sm text-gray-600">{item['variation_name']}</p>
-
+                    
                     <div class="flex items-center justify-between mt-2">
                         <!-- Quantity Controls -->
                         <div class="flex items-center space-x-2 bg-gray-50 rounded-lg px-2 py-1">
@@ -514,7 +513,7 @@ def update_cart(variation_id, action):
                                 +
                             </button>
                         </div>
-
+                        
                         <!-- Price -->
                         <div class="text-right">
                             <p class="text-sm font-medium text-gray-900">₹{item['total_price']:.2f}</p>
@@ -524,12 +523,8 @@ def update_cart(variation_id, action):
                 </div>
             </div>
         </div>
-        ''')
-
-        # Trigger update of cart totals
-        response.headers['HX-Trigger'] = 'updateCartTotals'
-        return response
-
+        '''
+        
     except Exception as e:
         logging.error(f"Error updating cart: {e}")
         return "Error updating cart", 500
@@ -543,9 +538,9 @@ def cart_totals():
         conn = get_db_connection()
         if not conn:
             return "Database connection failed", 500
-
+            
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
+        
         # Get all cart items to calculate totals
         cursor.execute("""
             SELECT 
@@ -557,24 +552,24 @@ def cart_totals():
             JOIN products p ON pv.product_id = p.id
             WHERE ci.user_id = %s
         """, (user_id,))
-
+        
         cart_items = cursor.fetchall()
-
+        
         # Calculate cart totals
         from decimal import Decimal
         subtotal = sum(item['total_price'] for item in cart_items)
         delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
         total = subtotal + delivery_fee
-
+        
         cursor.close()
         conn.close()
-
+        
         # Return just the order summary HTML
         return f'''
         <div class="bg-white shadow-sm mt-4" id="order-summary">
             <div class="p-4">
                 <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
-
+                
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm">
                         <span class="text-gray-600">Subtotal</span>
@@ -591,7 +586,7 @@ def cart_totals():
                         </div>
                     </div>
                 </div>
-
+                
                 <div class="mt-4 space-y-2">
                     <button class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
                         Proceed to Checkout
@@ -603,7 +598,7 @@ def cart_totals():
             </div>
         </div>
         '''
-
+        
     except Exception as e:
         logging.error(f"Error calculating cart totals: {e}")
         return "Error calculating totals", 500
