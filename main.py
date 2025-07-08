@@ -349,16 +349,18 @@ def add_to_cart(variation_id):
         cursor.close()
         conn.close()
         
-        # Return quantity stepper HTML
+        # Return quantity stepper HTML with correct targeting for store page
         return f'''
         <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
             <button hx-post="/update-cart/{variation_id}/decr" 
+                    hx-target="closest div"
                     hx-swap="outerHTML"
                     class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
                 -
             </button>
             <span class="px-2 font-semibold text-green-800">{new_quantity}</span>
             <button hx-post="/update-cart/{variation_id}/incr" 
+                    hx-target="closest div"
                     hx-swap="outerHTML"
                     class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
                 +
@@ -444,7 +446,29 @@ def update_cart(variation_id, action):
         
         if not item:
             return "Item not found", 404
-            
+        
+        # Check if request comes from store page (referer check)
+        referer = request.headers.get('Referer', '')
+        if '/store' in referer:
+            # Return simple quantity stepper for store page
+            return f'''
+            <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+                <button hx-post="/update-cart/{variation_id}/decr" 
+                        hx-target="closest div"
+                        hx-swap="outerHTML"
+                        class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                    -
+                </button>
+                <span class="px-2 font-semibold text-green-800">{item['quantity']}</span>
+                <button hx-post="/update-cart/{variation_id}/incr" 
+                        hx-target="closest div"
+                        hx-swap="outerHTML"
+                        class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                    +
+                </button>
+            </div>
+            '''
+        
         # Return complete cart item HTML for cart page
         return f'''
         <div class="cart-item-wrapper border-b border-gray-100 p-4 last:border-b-0">
