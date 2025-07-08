@@ -71,7 +71,11 @@ def login_required(f):
     """Decorator to require login for certain routes."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        logging.debug(f"Login check - Session data: {dict(session)}")
+        logging.debug(f"Login check - Request headers: {dict(request.headers)}")
+        
         if 'user_id' not in session:
+            logging.warning(f"No user_id in session for {request.endpoint}")
             # For HTMX requests, use HX-Redirect header to redirect the entire page
             if request.headers.get('HX-Request'):
                 from flask import make_response
@@ -80,6 +84,8 @@ def login_required(f):
                 return response
             else:
                 return redirect(url_for('login'))
+        
+        logging.debug(f"User {session['user_id']} accessing {request.endpoint}")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -370,6 +376,7 @@ def update_cart(variation_id, action):
     """Update cart item quantity (increment or decrement)."""
     try:
         user_id = session['user_id']
+        logging.info(f"Cart update request: user={user_id}, variation={variation_id}, action={action}")
         conn = get_db_connection()
         if not conn:
             return "Database connection failed", 500
