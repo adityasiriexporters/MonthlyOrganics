@@ -112,6 +112,7 @@ Changelog:
 - July 08, 2025. Fixed critical product mismatch bug in cart display where wrong products were shown due to incorrect table join (ecommerce_products vs products)
 - July 08, 2025. Database consolidation: Safely removed duplicate tables (ecommerce_products, ecommerce_users) and updated schema to use single consistent table structure
 - July 08, 2025. Fixed cart update functionality: Resolved 404 errors, improved HTMX authentication handling, and ensured proper cart item display updates
+- July 08, 2025. Implemented cart quantity sync on store page: Store page now displays actual cart quantities in steppers instead of just "Add to Cart" buttons
 ```
 
 ## User Preferences

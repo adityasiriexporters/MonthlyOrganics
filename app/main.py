@@ -332,6 +332,18 @@ def all_products():
         
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
+        # Get current user's cart quantities if logged in
+        user_cart = {}
+        if 'user_id' in session:
+            user_id = session['user_id']
+            cursor.execute("""
+                SELECT variation_id, quantity 
+                FROM cart_items 
+                WHERE user_id = %s
+            """, (user_id,))
+            user_cart = {row['variation_id']: row['quantity'] for row in cursor.fetchall()}
+            logging.info(f"Found cart items for user {user_id}: {user_cart}")
+        
         # Fetch all categories with their products and variations
         query = """
         SELECT 
@@ -374,11 +386,13 @@ def all_products():
                 
                 # Add variation if exists
                 if row['variation_id']:
+                    cart_quantity = user_cart.get(row['variation_id'], 0)
                     categories_data[category_id]['products'][product_id]['variations'].append({
                         'id': row['variation_id'],
                         'name': row['variation_name'],
                         'price': float(row['mrp']),
-                        'stock': row['stock_quantity']
+                        'stock': row['stock_quantity'],
+                        'cart_quantity': cart_quantity
                     })
         
         # Convert to list format for template
