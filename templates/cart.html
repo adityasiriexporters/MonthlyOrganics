@@ -75,7 +75,7 @@
                 <div class="p-4">
                     <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
                     
-                    <div class="space-y-2">
+                    <div class="space-y-2" id="order-totals">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Subtotal</span>
                             <span class="text-gray-900">₹{{ "%.2f"|format(subtotal) }}</span>
@@ -162,9 +162,9 @@ document.body.addEventListener('htmx:afterSettle', function(evt) {
         fetch('/cart-totals')
             .then(response => response.text())
             .then(html => {
-                const orderSummary = document.getElementById('order-summary');
-                if (orderSummary) {
-                    orderSummary.outerHTML = html;
+                const orderTotals = document.getElementById('order-totals');
+                if (orderTotals) {
+                    orderTotals.outerHTML = html;
                     console.log('Cart totals updated successfully');
                 }
             })

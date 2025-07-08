@@ -564,36 +564,23 @@ def cart_totals():
         cursor.close()
         conn.close()
         
-        # Return just the order summary HTML
+        # Return just the totals section without buttons
         return f'''
-        <div class="bg-white shadow-sm mt-4" id="order-summary">
-            <div class="p-4">
-                <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
-                
-                <div class="space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Subtotal</span>
-                        <span class="font-medium">₹{subtotal:.2f}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Delivery Fee</span>
-                        <span class="font-medium">₹{delivery_fee:.2f}</span>
-                    </div>
-                    <div class="border-t pt-2 mt-2">
-                        <div class="flex justify-between">
-                            <span class="font-medium text-gray-900">Total</span>
-                            <span class="font-bold text-lg text-primary">₹{total:.2f}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-4 space-y-2">
-                    <button class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
-                        Proceed to Checkout
-                    </button>
-                    <button class="w-full border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-                        Continue Shopping
-                    </button>
+        <div class="space-y-2" id="order-totals">
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Subtotal</span>
+                <span class="text-gray-900">₹{subtotal:.2f}</span>
+            </div>
+            
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Delivery Fee</span>
+                <span class="text-gray-900">₹{delivery_fee:.2f}</span>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-2 mt-2">
+                <div class="flex justify-between font-medium">
+                    <span class="text-gray-900">Total</span>
+                    <span class="text-gray-900">₹{total:.2f}</span>
                 </div>
             </div>
         </div>
