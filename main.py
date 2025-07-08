@@ -501,16 +501,14 @@ def update_cart(variation_id, action):
                         <div class="flex items-center space-x-2 bg-gray-50 rounded-lg px-2 py-1">
                             <button hx-post="/update-cart/{variation_id}/decr" 
                                     hx-target="closest .cart-item-wrapper"
-                                    hx-swap="outerHTML settle:100ms"
-                                    hx-on::after-request="fetch('/cart-totals').then(r => r.text()).then(html => document.getElementById('order-summary').outerHTML = html)"
+                                    hx-swap="outerHTML"
                                     class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
                                 -
                             </button>
                             <span class="px-2 font-medium text-gray-800 min-w-[24px] text-center">{item['quantity']}</span>
                             <button hx-post="/update-cart/{variation_id}/incr" 
                                     hx-target="closest .cart-item-wrapper"
-                                    hx-swap="outerHTML settle:100ms"
-                                    hx-on::after-request="fetch('/cart-totals').then(r => r.text()).then(html => document.getElementById('order-summary').outerHTML = html)"
+                                    hx-swap="outerHTML"
                                     class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
                                 +
                             </button>
