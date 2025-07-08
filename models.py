@@ -21,9 +21,9 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     
-    # Relationships
-    subscriptions = db.relationship('Subscription', backref='user', lazy=True, cascade='all, delete-orphan')
-    addresses = db.relationship('Address', backref='user', lazy=True, cascade='all, delete-orphan')
+    # Relationships - kept for future expansion
+    # subscriptions = db.relationship('Subscription', backref='user', lazy=True, cascade='all, delete-orphan')
+    # addresses = db.relationship('Address', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<User {self.email}>'
@@ -32,45 +32,11 @@ class User(db.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
-class Address(db.Model):
-    """Address model for user delivery addresses."""
-    __tablename__ = 'addresses'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    address_line1 = db.Column(db.String(255), nullable=False)
-    address_line2 = db.Column(db.String(255), nullable=True)
-    city = db.Column(db.String(100), nullable=False)
-    state = db.Column(db.String(50), nullable=False)
-    postal_code = db.Column(db.String(20), nullable=False)
-    country = db.Column(db.String(50), nullable=False, default='United States')
-    is_default = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
-    def __repr__(self):
-        return f'<Address {self.address_line1}, {self.city}>'
+# Removed Address model - not needed for current e-commerce functionality
+# Will be added back when implementing address management feature
 
-class Subscription(db.Model):
-    """Subscription model for monthly organic produce deliveries."""
-    __tablename__ = 'subscriptions'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    plan_type = db.Column(db.String(50), nullable=False)  # 'small', 'medium', 'large', 'family'
-    status = db.Column(db.String(20), nullable=False, default='active')  # 'active', 'paused', 'cancelled'
-    monthly_price = db.Column(db.Numeric(10, 2), nullable=False)
-    start_date = db.Column(db.Date, nullable=False)
-    next_delivery_date = db.Column(db.Date, nullable=True)
-    delivery_address_id = db.Column(db.Integer, db.ForeignKey('addresses.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    # Relationships
-    delivery_address = db.relationship('Address', foreign_keys=[delivery_address_id])
-    deliveries = db.relationship('Delivery', backref='subscription', lazy=True, cascade='all, delete-orphan')
-    
-    def __repr__(self):
-        return f'<Subscription {self.plan_type} for User {self.user_id}>'
+# Removed Subscription model - not needed for current e-commerce functionality  
+# Will be added back when implementing subscription features
 
 class Product(db.Model):
     """Product model for organic produce items."""
@@ -91,43 +57,11 @@ class Product(db.Model):
     def __repr__(self):
         return f'<Product {self.name}>'
 
-class Delivery(db.Model):
-    """Delivery model for tracking monthly deliveries."""
-    __tablename__ = 'deliveries'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    subscription_id = db.Column(db.Integer, db.ForeignKey('subscriptions.id'), nullable=False)
-    delivery_date = db.Column(db.Date, nullable=False)
-    estimated_delivery_time = db.Column(db.String(50), nullable=True)
-    actual_delivery_time = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(20), nullable=False, default='scheduled')  # 'scheduled', 'in_transit', 'delivered', 'failed'
-    tracking_number = db.Column(db.String(100), nullable=True)
-    delivery_notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    # Relationships
-    delivery_items = db.relationship('DeliveryItem', backref='delivery', lazy=True, cascade='all, delete-orphan')
-    
-    def __repr__(self):
-        return f'<Delivery {self.id} for Subscription {self.subscription_id}>'
+# Removed Delivery model - not needed for current e-commerce functionality
+# Will be added back when implementing delivery tracking features
 
-class DeliveryItem(db.Model):
-    """DeliveryItem model for tracking individual products in deliveries."""
-    __tablename__ = 'delivery_items'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    delivery_id = db.Column(db.Integer, db.ForeignKey('deliveries.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    quantity = db.Column(db.Integer, nullable=False, default=1)
-    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
-    total_price = db.Column(db.Numeric(10, 2), nullable=False)
-    
-    # Relationships
-    product = db.relationship('Product', backref='delivery_items')
-    
-    def __repr__(self):
-        return f'<DeliveryItem {self.quantity}x {self.product.name if self.product else "Unknown"}>'
+# Removed DeliveryItem model - not needed for current e-commerce functionality
+# Will be added back when implementing delivery tracking features
 
 # Database initialization function
 def init_db(app):
