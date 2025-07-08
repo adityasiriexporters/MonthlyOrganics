@@ -45,8 +45,29 @@ with app.app_context():
 @app.route('/')
 def index():
     """Main index route that renders the homepage template."""
+    from services.database import AddressService
+    
     logger.info("Rendering homepage")
-    return render_template('index.html')
+    
+    # Get user addresses if logged in
+    selected_address = None
+    user_addresses = []
+    
+    if 'user_id' in session:
+        try:
+            user_id = session['user_id']
+            user_addresses = AddressService.get_user_addresses(user_id)
+            default_address = AddressService.get_default_address(user_id)
+            
+            if default_address:
+                selected_address = f"{default_address['nickname']} - {default_address['locality']}, {default_address['city']}"
+            
+        except Exception as e:
+            logger.error(f"Error loading addresses for homepage: {e}")
+    
+    return render_template('index.html', 
+                         selected_address=selected_address,
+                         user_addresses=user_addresses)
 
 @app.route('/profile')
 def profile():
@@ -119,14 +140,93 @@ def profile_settings():
     return render_template('profile.html')
 
 @app.route('/addresses')
+@login_required
 def addresses():
-    """Addresses page route - placeholder."""
-    return render_template('profile.html')
+    """Saved addresses page route."""
+    from services.database import AddressService
+    
+    try:
+        user_id = session['user_id']
+        user_addresses = AddressService.get_user_addresses(user_id)
+        
+        logger.info(f"Found {len(user_addresses)} addresses for user {user_id}")
+        
+        return render_template('addresses.html', addresses=user_addresses)
+        
+    except Exception as e:
+        logger.error(f"Error loading addresses: {e}")
+        flash('An error occurred while loading your addresses. Please try again.', 'error')
+        return redirect(url_for('profile'))
 
-@app.route('/add-address')
+@app.route('/addresses/add')
+@login_required
 def add_address():
-    """Add address page route - placeholder."""
-    return render_template('profile.html')
+    """Add address page route."""
+    import os
+    google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+    return render_template('add_address.html', google_maps_api_key=google_maps_api_key)
+
+@app.route('/addresses/create', methods=['POST'])
+@login_required
+def create_address():
+    """Create new address."""
+    from services.database import AddressService
+    
+    try:
+        user_id = session['user_id']
+        
+        # Validate required fields
+        required_fields = ['nickname', 'house_number', 'floor_door', 'contact_number', 
+                          'latitude', 'longitude', 'locality', 'city', 'pincode']
+        
+        address_data = {}
+        for field in required_fields:
+            value = request.form.get(field, '').strip()
+            if not value:
+                flash(f'{field.replace("_", " ").title()} is required.', 'error')
+                return render_template('add_address.html')
+            address_data[field] = value
+        
+        # Optional fields
+        address_data['block_name'] = request.form.get('block_name', '').strip()
+        address_data['nearby_landmark'] = request.form.get('nearby_landmark', '').strip()
+        address_data['address_notes'] = request.form.get('address_notes', '').strip()
+        address_data['is_default'] = request.form.get('is_default') == 'on'
+        
+        # Create address
+        address_id = AddressService.create_address(user_id, address_data)
+        
+        if address_id:
+            flash('Address saved successfully!', 'success')
+            return redirect(url_for('addresses'))
+        else:
+            flash('Error saving address. Please try again.', 'error')
+            return render_template('add_address.html')
+            
+    except Exception as e:
+        logger.error(f"Error creating address: {e}")
+        flash('An error occurred while saving the address. Please try again.', 'error')
+        return render_template('add_address.html')
+
+@app.route('/addresses/set-default/<int:address_id>', methods=['POST'])
+@login_required
+def set_default_address(address_id):
+    """Set address as default via HTMX."""
+    from services.database import AddressService
+    
+    try:
+        user_id = session['user_id']
+        
+        if AddressService.set_default_address(user_id, address_id):
+            # Return updated addresses list for HTMX
+            user_addresses = AddressService.get_user_addresses(user_id)
+            return render_template('partials/address_list.html', addresses=user_addresses)
+        else:
+            return '<div class="text-red-500 text-sm">Error setting default address</div>', 400
+            
+    except Exception as e:
+        logger.error(f"Error setting default address: {e}")
+        return '<div class="text-red-500 text-sm">Error setting default address</div>', 500
 
 @app.route('/health')
 def health_check():

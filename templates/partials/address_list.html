@@ -1,0 +1,61 @@
+{% for address in addresses %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <!-- Address Header -->
+                <div class="flex items-center space-x-2 mb-2">
+                    <h3 class="font-semibold text-gray-900">{{ address.nickname }}</h3>
+                    {% if address.is_default %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Default
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Address Details -->
+                <div class="text-sm text-gray-600 space-y-1">
+                    <p>{{ address.full_address }}</p>
+                    <p class="text-xs text-gray-500">Contact: {{ address.contact_number }}</p>
+                    {% if address.nearby_landmark %}
+                        <p class="text-xs text-gray-500">Near: {{ address.nearby_landmark }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-col space-y-2 ml-4">
+                {% if not address.is_default %}
+                    <button hx-post="{{ url_for('set_default_address', address_id=address.id) }}"
+                            hx-target="#addresses-list"
+                            hx-indicator="#loading-indicator"
+                            class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200 transition-colors">
+                        Set Default
+                    </button>
+                {% endif %}
+                
+                <button class="text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                    Edit
+                </button>
+            </div>
+        </div>
+
+        {% if address.address_notes %}
+            <div class="mt-3 pt-3 border-t border-gray-100">
+                <p class="text-xs text-gray-500 italic">{{ address.address_notes }}</p>
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}
+
+<!-- Loading Indicator -->
+<div id="loading-indicator" class="htmx-indicator">
+    <div class="text-center py-4">
+        <div class="inline-flex items-center space-x-2 text-gray-500">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm">Updating...</span>
+        </div>
+    </div>
+</div>

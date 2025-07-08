@@ -216,3 +216,145 @@ class UserService:
             logger.error(f"Error creating user: {e}")
             db.session.rollback()
             return None
+
+
+class AddressService:
+    """Service for address-related database operations"""
+    
+    @staticmethod
+    def get_user_addresses(user_id: int) -> List[Dict]:
+        """Get all addresses for a user"""
+        from models import Address
+        addresses = Address.query.filter_by(user_id=user_id).order_by(
+            Address.is_default.desc(), Address.created_at.desc()
+        ).all()
+        return [
+            {
+                'id': addr.id,
+                'nickname': addr.nickname,
+                'house_number': addr.house_number,
+                'block_name': addr.block_name,
+                'floor_door': addr.floor_door,
+                'contact_number': addr.contact_number,
+                'latitude': addr.latitude,
+                'longitude': addr.longitude,
+                'locality': addr.locality,
+                'city': addr.city,
+                'pincode': addr.pincode,
+                'nearby_landmark': addr.nearby_landmark,
+                'address_notes': addr.address_notes,
+                'is_default': addr.is_default,
+                'full_address': addr.full_address
+            }
+            for addr in addresses
+        ]
+    
+    @staticmethod
+    def get_default_address(user_id: int) -> Optional[Dict]:
+        """Get user's default address"""
+        from models import Address
+        address = Address.query.filter_by(user_id=user_id, is_default=True).first()
+        if address:
+            return {
+                'id': address.id,
+                'nickname': address.nickname,
+                'full_address': address.full_address,
+                'locality': address.locality,
+                'city': address.city
+            }
+        return None
+    
+    @staticmethod
+    def create_address(user_id: int, address_data: Dict) -> Optional[int]:
+        """Create new address for user"""
+        from models import Address, db
+        
+        try:
+            # If this is set as default, unset other default addresses first
+            if address_data.get('is_default', False):
+                AddressService.unset_default_addresses(user_id)
+            
+            address = Address(
+                user_id=user_id,
+                nickname=address_data['nickname'],
+                house_number=address_data['house_number'],
+                block_name=address_data.get('block_name'),
+                floor_door=address_data['floor_door'],
+                contact_number=address_data['contact_number'],
+                latitude=float(address_data['latitude']),
+                longitude=float(address_data['longitude']),
+                locality=address_data['locality'],
+                city=address_data['city'],
+                pincode=address_data['pincode'],
+                nearby_landmark=address_data.get('nearby_landmark'),
+                address_notes=address_data.get('address_notes'),
+                is_default=address_data.get('is_default', False)
+            )
+            
+            db.session.add(address)
+            db.session.commit()
+            return address.id
+            
+        except Exception as e:
+            logger.error(f"Error creating address: {e}")
+            db.session.rollback()
+            return None
+    
+    @staticmethod
+    def unset_default_addresses(user_id: int) -> bool:
+        """Unset all default addresses for user"""
+        from models import Address, db
+        try:
+            Address.query.filter_by(user_id=user_id).update({'is_default': False})
+            db.session.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error unsetting default addresses: {e}")
+            db.session.rollback()
+            return False
+    
+    @staticmethod
+    def set_default_address(user_id: int, address_id: int) -> bool:
+        """Set an address as default for user"""
+        from models import Address, db
+        try:
+            # First unset all default addresses
+            AddressService.unset_default_addresses(user_id)
+            
+            # Then set the specified address as default
+            address = Address.query.filter_by(id=address_id, user_id=user_id).first()
+            if address:
+                address.is_default = True
+                db.session.commit()
+                return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error setting default address: {e}")
+            db.session.rollback()
+            return False
+    
+    @staticmethod
+    def get_address_by_id(user_id: int, address_id: int) -> Optional[Dict]:
+        """Get specific address by ID for user"""
+        from models import Address
+        address = Address.query.filter_by(id=address_id, user_id=user_id).first()
+        if address:
+            return {
+                'id': address.id,
+                'nickname': address.nickname,
+                'house_number': address.house_number,
+                'block_name': address.block_name,
+                'floor_door': address.floor_door,
+                'contact_number': address.contact_number,
+                'latitude': address.latitude,
+                'longitude': address.longitude,
+                'locality': address.locality,
+                'city': address.city,
+                'pincode': address.pincode,
+                'nearby_landmark': address.nearby_landmark,
+                'address_notes': address.address_notes,
+                'is_default': address.is_default,
+                'full_address': address.full_address
+            }
+        return None

@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Address - Monthly Organics{% endblock %}
+
+{% block extra_head %}
+<!-- Google Maps API with Places -->
+<script>
+    let map;
+    let marker;
+    let geocoder;
+    let infoWindow;
+
+    function initMap() {
+        // Default location (India center - New Delhi)
+        const defaultLocation = { lat: 28.6139, lng: 77.2090 };
+        
+        // Initialize map
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 13,
+            center: defaultLocation,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+        });
+        
+        // Initialize geocoder and info window
+        geocoder = new google.maps.Geocoder();
+        infoWindow = new google.maps.InfoWindow();
+        
+        // Try to get user's current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    map.setCenter(pos);
+                    map.setZoom(15);
+                },
+                () => {
+                    // Geolocation failed, keep default location
+                    console.log('Geolocation failed, using default location');
+                }
+            );
+        }
+        
+        // Add click listener to map
+        map.addListener('click', function(event) {
+            placeMarkerAndUpdateForm(event.latLng);
+        });
+        
+        // Initialize search box
+        const searchBox = new google.maps.places.SearchBox(document.getElementById('map-search'));
+        
+        // Bias the SearchBox results towards current map's viewport
+        map.addListener('bounds_changed', function() {
+            searchBox.setBounds(map.getBounds());
+        });
+        
+        // Listen for the event fired when the user selects a prediction
+        searchBox.addListener('places_changed', function() {
+            const places = searchBox.getPlaces();
+            
+            if (places.length === 0) return;
+            
+            const place = places[0];
+            
+            if (!place.geometry || !place.geometry.location) return;
+            
+            // Clear existing marker
+            if (marker) {
+                marker.setMap(null);
+            }
+            
+            // Create new marker
+            marker = new google.maps.Marker({
+                position: place.geometry.location,
+                map: map,
+                draggable: true,
+                title: place.name
+            });
+            
+            // Update form with coordinates
+            updateFormCoordinates(place.geometry.location);
+            
+            // Reverse geocode to get detailed address
+            reverseGeocode(place.geometry.location);
+            
+            // Add drag listener
+            addMarkerDragListener();
+            
+            // Center map on the place
+            map.setCenter(place.geometry.location);
+            map.setZoom(17);
+        });
+    }
+    
+    function placeMarkerAndUpdateForm(latLng) {
+        // Clear existing marker
+        if (marker) {
+            marker.setMap(null);
+        }
+        
+        // Create new marker
+        marker = new google.maps.Marker({
+            position: latLng,
+            map: map,
+            draggable: true,
+            title: 'Selected Location'
+        });
+        
+        // Update form coordinates
+        updateFormCoordinates(latLng);
+        
+        // Reverse geocode to get address details
+        reverseGeocode(latLng);
+        
+        // Add drag listener
+        addMarkerDragListener();
+        
+        // Show confirmation popup
+        showLocationConfirmation(latLng);
+    }
+    
+    function addMarkerDragListener() {
+        marker.addListener('dragend', function(event) {
+            updateFormCoordinates(event.latLng);
+            reverseGeocode(event.latLng);
+        });
+    }
+    
+    function updateFormCoordinates(latLng) {
+        document.getElementById('latitude').value = latLng.lat().toFixed(6);
+        document.getElementById('longitude').value = latLng.lng().toFixed(6);
+    }
+    
+    function reverseGeocode(latLng) {
+        geocoder.geocode({ location: latLng }, function(results, status) {
+            if (status === 'OK' && results[0]) {
+                updateFormFromGeocode(results[0]);
+                
+                // Update search box with formatted address
+                document.getElementById('map-search').value = results[0].formatted_address;
+            } else {
+                console.error('Geocoder failed due to: ' + status);
+            }
+        });
+    }
+    
+    function updateFormFromGeocode(result) {
+        const components = result.address_components;
+        let locality = '';
+        let city = '';
+        let pincode = '';
+        
+        components.forEach(function(component) {
+            const types = component.types;
+            
+            if (types.includes('sublocality_level_1') || types.includes('sublocality')) {
+                locality = component.long_name;
+            } else if (types.includes('neighborhood')) {
+                if (!locality) locality = component.long_name;
+            } else if (types.includes('locality')) {
+                city = component.long_name;
+                if (!locality) locality = component.long_name;
+            } else if (types.includes('administrative_area_level_2')) {
+                if (!city) city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+                if (!city) city = component.long_name;
+            } else if (types.includes('postal_code')) {
+                pincode = component.long_name;
+            }
+        });
+        
+        // Update form fields
+        if (locality) {
+            document.getElementById('locality').value = locality;
+        }
+        if (city) {
+            document.getElementById('city').value = city;
+        }
+        if (pincode) {
+            document.getElementById('pincode').value = pincode;
+        }
+        
+        // Show success message
+        showAddressUpdateNotification(locality, city, pincode);
+    }
+    
+    function showLocationConfirmation(latLng) {
+        const content = `
+            <div class="p-2">
+                <h4 class="font-semibold text-gray-900 mb-1">Location Selected</h4>
+                <p class="text-sm text-gray-600 mb-2">Coordinates: ${latLng.lat().toFixed(6)}, ${latLng.lng().toFixed(6)}</p>
+                <p class="text-xs text-gray-500">You can drag this marker to adjust the location</p>
+            </div>
+        `;
+        
+        infoWindow.setContent(content);
+        infoWindow.open(map, marker);
+        
+        // Close info window after 3 seconds
+        setTimeout(() => {
+            infoWindow.close();
+        }, 3000);
+    }
+    
+    function showAddressUpdateNotification(locality, city, pincode) {
+        const notification = document.getElementById('address-notification');
+        if (notification) {
+            notification.innerHTML = `
+                <div class="bg-green-50 border border-green-200 rounded-md p-3 mb-3">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-green-800">Address details updated</h3>
+                            <div class="mt-1 text-sm text-green-700">
+                                <p>Locality: ${locality || 'Not found'}</p>
+                                <p>City: ${city || 'Not found'}</p>
+                                <p>Pincode: ${pincode || 'Not found'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Hide notification after 5 seconds
+            setTimeout(() => {
+                notification.innerHTML = '';
+            }, 5000);
+        }
+    }
+    
+    function showConfirmDialog() {
+        const lat = document.getElementById('latitude').value;
+        const lng = document.getElementById('longitude').value;
+        
+        if (!lat || !lng) {
+            alert('Please select a location on the map first!');
+            return false;
+        }
+        
+        const locality = document.getElementById('locality').value;
+        const city = document.getElementById('city').value;
+        
+        return confirm(`Confirm saving address at:\n${locality}, ${city}\nCoordinates: ${lat}, ${lng}`);
+    }
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMap"></script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pb-20 md:pb-0 bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-md mx-auto px-4 py-4">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('addresses') }}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-xl font-bold text-gray-900">Add New Address</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-md mx-auto px-4 py-4">
+                {% for category, message in messages %}
+                    <div class="mb-3 p-3 rounded-lg {% if category == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-green-50 text-green-800 border border-green-200{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Form -->
+    <div class="max-w-md mx-auto px-4 py-6">
+        <form action="{{ url_for('create_address') }}" method="POST" onsubmit="return showConfirmDialog();" class="space-y-6">
+            <!-- Nickname -->
+            <div>
+                <label for="nickname" class="block text-sm font-medium text-gray-700 mb-1">
+                    Nick Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="nickname" name="nickname" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="e.g., Home, Office, Mom's Place">
+            </div>
+
+            <!-- House/Plot/Building -->
+            <div>
+                <label for="house_number" class="block text-sm font-medium text-gray-700 mb-1">
+                    House No/Plot No/Building/Community Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="house_number" name="house_number" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="Building name and house number">
+            </div>
+
+            <!-- Block Name -->
+            <div>
+                <label for="block_name" class="block text-sm font-medium text-gray-700 mb-1">
+                    Block Name/No
+                </label>
+                <input type="text" id="block_name" name="block_name"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="Block or wing name/number">
+            </div>
+
+            <!-- Floor/Door -->
+            <div>
+                <label for="floor_door" class="block text-sm font-medium text-gray-700 mb-1">
+                    Floor/Door Number <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="floor_door" name="floor_door" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="Floor and door/flat number">
+            </div>
+
+            <!-- Contact Number -->
+            <div>
+                <label for="contact_number" class="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Number <span class="text-red-500">*</span>
+                </label>
+                <input type="tel" id="contact_number" name="contact_number" required
+                       pattern="[0-9]{10}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="10-digit mobile number">
+            </div>
+
+            <!-- Map Section -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Pin Location on Map <span class="text-red-500">*</span>
+                </label>
+                
+                <!-- Map Search -->
+                <input type="text" id="map-search" 
+                       class="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="Search for your location...">
+                
+                <!-- Address Update Notification -->
+                <div id="address-notification"></div>
+                
+                <!-- Map Container -->
+                <div id="map" class="w-full h-64 border border-gray-300 rounded-md mb-3"></div>
+                
+                <!-- Instructions -->
+                <p class="text-xs text-gray-500 mb-3">
+                    Click on the map or search above to pin your exact location. You can also drag the marker to adjust.
+                </p>
+                
+                <!-- Hidden coordinates -->
+                <input type="hidden" id="latitude" name="latitude" required>
+                <input type="hidden" id="longitude" name="longitude" required>
+            </div>
+
+            <!-- Locality -->
+            <div>
+                <label for="locality" class="block text-sm font-medium text-gray-700 mb-1">
+                    Locality <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="locality" name="locality" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="Area/Locality name">
+                <p class="text-xs text-gray-500 mt-1">This will be auto-filled from map but you can edit it</p>
+            </div>
+
+            <!-- City -->
+            <div>
+                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
+                    City <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="city" name="city" required readonly
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none"
+                       placeholder="Auto-filled from map">
+                <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+            </div>
+
+            <!-- Pincode -->
+            <div>
+                <label for="pincode" class="block text-sm font-medium text-gray-700 mb-1">
+                    Pincode <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="pincode" name="pincode" required readonly
+                       pattern="[0-9]{6}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none"
+                       placeholder="Auto-filled from map">
+                <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+            </div>
+
+            <!-- Nearby Landmark -->
+            <div>
+                <label for="nearby_landmark" class="block text-sm font-medium text-gray-700 mb-1">
+                    Nearby Landmark
+                </label>
+                <input type="text" id="nearby_landmark" name="nearby_landmark"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                       placeholder="Any nearby landmark for easy identification">
+            </div>
+
+            <!-- Address Notes -->
+            <div>
+                <label for="address_notes" class="block text-sm font-medium text-gray-700 mb-1">
+                    Address Notes
+                </label>
+                <textarea id="address_notes" name="address_notes" rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                          placeholder="Any additional delivery instructions or notes"></textarea>
+            </div>
+
+            <!-- Set as Default -->
+            <div class="flex items-center">
+                <input type="checkbox" id="is_default" name="is_default"
+                       class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                <label for="is_default" class="ml-2 block text-sm text-gray-700">
+                    Set as default address
+                </label>
+            </div>
+
+            <!-- Save Button -->
+            <div class="pt-4">
+                <button type="submit"
+                        class="w-full bg-primary text-white py-3 px-4 rounded-md font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors">
+                    Save Address
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

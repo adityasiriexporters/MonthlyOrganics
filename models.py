@@ -32,8 +32,46 @@ class User(db.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
-# Removed Address model - not needed for current e-commerce functionality
-# Will be added back when implementing address management feature
+class Address(db.Model):
+    """Address model for user delivery addresses."""
+    __tablename__ = 'addresses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    nickname = db.Column(db.String(50), nullable=False)  # Mandatory
+    house_number = db.Column(db.String(100), nullable=False)  # Mandatory
+    block_name = db.Column(db.String(100), nullable=True)
+    floor_door = db.Column(db.String(50), nullable=False)  # Mandatory
+    contact_number = db.Column(db.String(20), nullable=False)  # Mandatory
+    latitude = db.Column(db.Float, nullable=False)  # Mandatory - from map
+    longitude = db.Column(db.Float, nullable=False)  # Mandatory - from map
+    locality = db.Column(db.String(100), nullable=False)  # Mandatory - from map, editable
+    city = db.Column(db.String(100), nullable=False)  # From map, non-editable
+    pincode = db.Column(db.String(10), nullable=False)  # From map, non-editable
+    nearby_landmark = db.Column(db.String(200), nullable=True)
+    address_notes = db.Column(db.Text, nullable=True)
+    is_default = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('addresses', lazy=True, cascade='all, delete-orphan'))
+    
+    def __repr__(self):
+        return f'<Address {self.nickname} - {self.user_id}>'
+    
+    @property
+    def full_address(self):
+        """Get formatted full address string."""
+        address_parts = [
+            self.house_number,
+            self.block_name,
+            self.floor_door,
+            self.locality,
+            self.city,
+            self.pincode
+        ]
+        return ', '.join([part for part in address_parts if part])
 
 # Removed Subscription model - not needed for current e-commerce functionality  
 # Will be added back when implementing subscription features
