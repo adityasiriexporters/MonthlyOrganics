@@ -51,6 +51,19 @@ def store():
 def products_by_category(category_id):
     """HTMX route that returns products for a specific category."""
     try:
+        from flask import session
+        
+        # Get user cart items if logged in
+        user_cart = {}
+        if 'user_id' in session:
+            cart_query = """
+                SELECT variation_id, quantity 
+                FROM cart_items 
+                WHERE user_id = %s
+            """
+            cart_items = DatabaseService.execute_query(cart_query, (session['user_id'],))
+            user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
+        
         query = """
             SELECT 
                 p.id as product_id,
@@ -67,10 +80,35 @@ def products_by_category(category_id):
             WHERE p.category_id = %s
             ORDER BY p.name, pv.variation_name
         """
-        products = DatabaseService.execute_query(query, (category_id,))
+        raw_products = DatabaseService.execute_query(query, (category_id,))
+        
+        # Group products with their variations
+        products = {}
+        for row in (raw_products or []):
+            prod_id = row['product_id']
+            if prod_id not in products:
+                products[prod_id] = {
+                    'id': prod_id,
+                    'name': row['product_name'],
+                    'description': row['description'],
+                    'is_best_seller': row['is_best_seller'],
+                    'variations': []
+                }
+            
+            if row['variation_id']:
+                variation = {
+                    'id': row['variation_id'],
+                    'name': row['variation_name'],
+                    'price': float(row['mrp']),
+                    'stock': row['stock_quantity'] or 0,
+                    'cart_quantity': user_cart.get(row['variation_id'], 0)
+                }
+                products[prod_id]['variations'].append(variation)
+        
+        products_list = list(products.values())
         
         from flask import render_template
-        return render_template('partials/product_list.html', products=products or [])
+        return render_template('partials/product_list.html', products=products_list)
         
     except Exception as e:
         logger.error(f"Error loading products for category {category_id}: {e}")
@@ -79,28 +117,87 @@ def products_by_category(category_id):
 def all_products():
     """Route that returns all products grouped by categories for the store page.""" 
     try:
+        from flask import session
+        
+        # Get user cart items if logged in
+        user_cart = {}
+        if 'user_id' in session:
+            cart_query = """
+                SELECT variation_id, quantity 
+                FROM cart_items 
+                WHERE user_id = %s
+            """
+            cart_items = DatabaseService.execute_query(cart_query, (session['user_id'],))
+            user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
+        
+        # Get all products with variations, grouped by category
         query = """
             SELECT 
+                c.id as category_id,
+                c.name as category_name,
                 p.id as product_id,
                 p.name as product_name,
                 p.description,
-                p.category_id,
                 p.is_best_seller,
                 pv.id as variation_id,
                 pv.variation_name,
                 pv.mrp,
-                pv.stock_quantity,
-                c.name as category_name
-            FROM products p
+                pv.stock_quantity
+            FROM categories c
+            LEFT JOIN products p ON c.id = p.category_id
             LEFT JOIN product_variations pv ON p.id = pv.product_id
-            LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.category_id IS NOT NULL
+            WHERE p.id IS NOT NULL
             ORDER BY c.name, p.name, pv.variation_name
         """
-        products_data = DatabaseService.execute_query(query)
+        
+        raw_data = DatabaseService.execute_query(query)
+        
+        # Group data by categories and products
+        categories_with_products = {}
+        
+        for row in (raw_data or []):
+            cat_id = row['category_id']
+            cat_name = row['category_name']
+            prod_id = row['product_id']
+            
+            # Initialize category if not exists
+            if cat_id not in categories_with_products:
+                categories_with_products[cat_id] = {
+                    'id': cat_id,
+                    'name': cat_name,
+                    'products': {}
+                }
+            
+            # Initialize product if not exists
+            if prod_id not in categories_with_products[cat_id]['products']:
+                categories_with_products[cat_id]['products'][prod_id] = {
+                    'id': prod_id,
+                    'name': row['product_name'],
+                    'description': row['description'],
+                    'is_best_seller': row['is_best_seller'],
+                    'variations': []
+                }
+            
+            # Add variation if it exists
+            if row['variation_id']:
+                variation = {
+                    'id': row['variation_id'],
+                    'name': row['variation_name'],
+                    'price': float(row['mrp']),
+                    'stock': row['stock_quantity'] or 0,
+                    'cart_quantity': user_cart.get(row['variation_id'], 0)
+                }
+                categories_with_products[cat_id]['products'][prod_id]['variations'].append(variation)
+        
+        # Convert to list format expected by template
+        final_categories = []
+        for cat_data in categories_with_products.values():
+            if cat_data['products']:  # Only include categories with products
+                cat_data['products'] = list(cat_data['products'].values())
+                final_categories.append(cat_data)
         
         from flask import render_template
-        return render_template('partials/all_products.html', products_data=products_data or [])
+        return render_template('partials/all_products.html', categories_with_products=final_categories)
         
     except Exception as e:
         logger.error(f"Error loading all products: {e}")
