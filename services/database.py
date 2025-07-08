@@ -1,40 +1,77 @@
 """
 Database service layer for Monthly Organics
-Centralizes database operations and connection management
+Centralizes database operations and connection management with connection pooling
 """
 import os
 import logging
 import psycopg2
 import psycopg2.extras
+from psycopg2 import pool
 from typing import Optional, Dict, List, Any
+import threading
 
 logger = logging.getLogger(__name__)
 
 class DatabaseService:
-    """Centralized database service for connection management and common queries"""
+    """Centralized database service with connection pooling for better performance"""
     
-    @staticmethod
-    def get_connection() -> Optional[psycopg2.extensions.connection]:
-        """Get database connection with proper error handling"""
-        try:
-            database_url = os.environ.get("DATABASE_URL")
-            if not database_url:
-                logger.error("DATABASE_URL environment variable not set")
-                return None
+    _connection_pool = None
+    _pool_lock = threading.Lock()
+    
+    @classmethod
+    def initialize_pool(cls):
+        """Initialize connection pool once"""
+        if cls._connection_pool is None:
+            with cls._pool_lock:
+                if cls._connection_pool is None:  # Double-check locking
+                    try:
+                        database_url = os.environ.get("DATABASE_URL")
+                        if not database_url:
+                            logger.error("DATABASE_URL environment variable not set")
+                            return False
+                        
+                        # Create connection pool with 5-20 connections
+                        cls._connection_pool = psycopg2.pool.ThreadedConnectionPool(
+                            minconn=2,
+                            maxconn=10,
+                            dsn=database_url
+                        )
+                        logger.info("Database connection pool initialized successfully")
+                        return True
+                    except Exception as e:
+                        logger.error(f"Failed to initialize connection pool: {e}")
+                        return False
+        return True
+    
+    @classmethod
+    def get_connection(cls) -> Optional[psycopg2.extensions.connection]:
+        """Get database connection from pool with proper error handling"""
+        if not cls.initialize_pool():
+            return None
             
-            conn = psycopg2.connect(database_url)
+        try:
+            conn = cls._connection_pool.getconn()
             return conn
         except Exception as e:
-            logger.error(f"Database connection failed: {e}")
+            logger.error(f"Failed to get connection from pool: {e}")
             return None
     
-    @staticmethod
-    def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = True) -> Any:
-        """Execute query with proper connection management"""
+    @classmethod
+    def return_connection(cls, conn: psycopg2.extensions.connection):
+        """Return connection to pool"""
+        if cls._connection_pool and conn:
+            try:
+                cls._connection_pool.putconn(conn)
+            except Exception as e:
+                logger.error(f"Failed to return connection to pool: {e}")
+    
+    @classmethod
+    def execute_query(cls, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = True) -> Any:
+        """Execute query with connection pool management for better performance"""
         conn = None
         cursor = None
         try:
-            conn = DatabaseService.get_connection()
+            conn = cls.get_connection()
             if not conn:
                 return None
                 
@@ -60,7 +97,7 @@ class DatabaseService:
             if cursor:
                 cursor.close()
             if conn:
-                conn.close()
+                cls.return_connection(conn)  # Return to pool instead of closing
 
 class CartService:
     """Service for cart-related database operations"""

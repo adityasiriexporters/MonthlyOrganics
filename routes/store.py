@@ -119,18 +119,9 @@ def all_products():
     try:
         from flask import session
         
-        # Get user cart items if logged in
-        user_cart = {}
-        if 'user_id' in session:
-            cart_query = """
-                SELECT variation_id, quantity 
-                FROM cart_items 
-                WHERE user_id = %s
-            """
-            cart_items = DatabaseService.execute_query(cart_query, (session['user_id'],))
-            user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
+        # Cart quantities are now included in the main query above for better performance
         
-        # Get all products with variations, grouped by category
+        # Optimized single query to get all data including cart quantities
         query = """
             SELECT 
                 c.id as category_id,
@@ -142,15 +133,18 @@ def all_products():
                 pv.id as variation_id,
                 pv.variation_name,
                 pv.mrp,
-                pv.stock_quantity
+                pv.stock_quantity,
+                COALESCE(ci.quantity, 0) as cart_quantity
             FROM categories c
             LEFT JOIN products p ON c.id = p.category_id
             LEFT JOIN product_variations pv ON p.id = pv.product_id
+            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_id = %s
             WHERE p.id IS NOT NULL
             ORDER BY c.name, p.name, pv.variation_name
         """
         
-        raw_data = DatabaseService.execute_query(query)
+        user_id = session.get('user_id', 0)
+        raw_data = DatabaseService.execute_query(query, (user_id,))
         
         # Group data by categories and products
         categories_with_products = {}
@@ -185,7 +179,7 @@ def all_products():
                     'name': row['variation_name'],
                     'price': float(row['mrp']),
                     'stock': row['stock_quantity'] or 0,
-                    'cart_quantity': user_cart.get(row['variation_id'], 0)
+                    'cart_quantity': row['cart_quantity']
                 }
                 categories_with_products[cat_id]['products'][prod_id]['variations'].append(variation)
         
