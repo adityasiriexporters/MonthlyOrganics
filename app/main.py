@@ -38,14 +38,17 @@ def get_db_connection():
         
         # Create tables if they don't exist
         create_tables_sql = [
-            # Users table
+            # Users table (matches models.py structure)
             """
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                mobile_number VARCHAR(15) UNIQUE NOT NULL,
-                wallet_balance DECIMAL(10, 2) DEFAULT 0.00,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                email VARCHAR(120) UNIQUE NOT NULL,
+                first_name VARCHAR(50) NOT NULL,
+                last_name VARCHAR(50) NOT NULL,
+                phone VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE NOT NULL
             );
             """,
             

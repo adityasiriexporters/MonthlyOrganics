@@ -110,6 +110,7 @@ Changelog:
 - July 08, 2025. Resolved "cursor already closed" errors in cart update operations by fixing database connection management
 - July 08, 2025. Corrected decimal type mismatch in cart calculations preventing cart page from loading properly
 - July 08, 2025. Fixed critical product mismatch bug in cart display where wrong products were shown due to incorrect table join (ecommerce_products vs products)
+- July 08, 2025. Database consolidation: Safely removed duplicate tables (ecommerce_products, ecommerce_users) and updated schema to use single consistent table structure
 ```
 
 ## User Preferences
