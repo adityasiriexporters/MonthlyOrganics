@@ -156,29 +156,81 @@
 {% endwith %}
 
 <script>
-// Cart totals update with onclick handlers
-console.log('Cart page loaded with onclick cart totals update');
+// Cart totals - Ultra-reliable multi-approach system
+console.log('Cart page loaded with reliable cart totals system');
 
-// Listen for HTMX events 
+// Approach 1: Direct click events with smart delay
+window.updateCartTotalsReliable = function() {
+    console.log('Reliable cart totals update initiated');
+    
+    // Try multiple delays to catch different timing scenarios
+    const delays = [150, 300, 500];
+    
+    delays.forEach((delay, index) => {
+        setTimeout(() => {
+            console.log(`Attempt ${index + 1}: Fetching cart totals (${delay}ms delay)`);
+            fetch('/cart-totals', {
+                credentials: 'same-origin',
+                cache: 'no-cache'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.text();
+            })
+            .then(html => {
+                const totals = document.getElementById('order-totals');
+                if (totals && html.trim()) {
+                    totals.innerHTML = html;
+                    console.log(`SUCCESS: Cart totals updated on attempt ${index + 1}`);
+                }
+            })
+            .catch(error => {
+                console.error(`Attempt ${index + 1} failed:`, error);
+                if (index === delays.length - 1) {
+                    console.log('All attempts failed, using fallback method');
+                    window.fallbackCartTotalsUpdate();
+                }
+            });
+        }, delay);
+    });
+};
+
+// Approach 2: Fallback function for emergency updates
+window.fallbackCartTotalsUpdate = function() {
+    console.log('Fallback cart totals update triggered');
+    
+    // Use HTMX to directly update the totals section
+    const totalsElement = document.getElementById('order-totals');
+    if (totalsElement && window.htmx) {
+        htmx.ajax('GET', '/cart-totals', {
+            target: '#order-totals',
+            swap: 'innerHTML'
+        });
+        console.log('Fallback: HTMX cart totals update sent');
+    } else {
+        console.error('Fallback failed: Missing elements or HTMX');
+    }
+};
+
+// Approach 3: HTMX event listener as backup
 document.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.requestConfig.path.includes('/update-cart/')) {
-        console.log('Cart item update completed via HTMX');
+        console.log('HTMX cart update detected - triggering backup totals update');
+        setTimeout(() => {
+            window.updateCartTotalsReliable();
+        }, 100);
     }
 });
 
-// Global function to update cart totals (called by onclick handlers)
-window.updateCartTotals = function() {
-    console.log('Global updateCartTotals called');
+// Emergency manual update function accessible from console
+window.manualUpdateCartTotals = function() {
+    console.log('Manual cart totals update called');
     fetch('/cart-totals', {credentials: 'same-origin'})
         .then(r => r.text())
         .then(html => {
-            const totals = document.getElementById('order-totals');
-            if (totals) {
-                totals.innerHTML = html;
-                console.log('Cart totals updated via global function');
-            }
-        })
-        .catch(e => console.error('Global cart totals update failed:', e));
+            document.getElementById('order-totals').innerHTML = html;
+            console.log('Manual update completed');
+        });
 };
 </script>
 

@@ -28,7 +28,7 @@ def render_cart_item(item_data: dict) -> str:
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
                                 hx-trigger="click"
-                                onclick="setTimeout(() => { console.log('Decr: Updating cart totals'); fetch('/cart-totals', {credentials: 'same-origin'}).then(r => r.text()).then(html => { const totals = document.getElementById('order-totals'); if (totals) { totals.innerHTML = html; console.log('Cart totals updated successfully'); } }).catch(e => console.error('Cart totals update failed:', e)); }, 200);"
+                                onclick="window.updateCartTotalsReliable();"
                                 class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm">
                             -
                         </button>
@@ -37,7 +37,7 @@ def render_cart_item(item_data: dict) -> str:
                                 hx-target="closest .cart-item-wrapper"
                                 hx-swap="outerHTML"
                                 hx-trigger="click"
-                                onclick="setTimeout(() => { console.log('Incr: Updating cart totals'); fetch('/cart-totals', {credentials: 'same-origin'}).then(r => r.text()).then(html => { const totals = document.getElementById('order-totals'); if (totals) { totals.innerHTML = html; console.log('Cart totals updated successfully'); } }).catch(e => console.error('Cart totals update failed:', e)); }, 200);"
+                                onclick="window.updateCartTotalsReliable();"
                                 class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm">
                             +
                         </button>
