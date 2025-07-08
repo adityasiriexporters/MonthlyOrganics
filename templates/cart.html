@@ -156,15 +156,30 @@
 {% endwith %}
 
 <script>
-// Cart totals update with direct fetch approach
-console.log('Cart page loaded with direct fetch cart totals update');
+// Cart totals update with onclick handlers
+console.log('Cart page loaded with onclick cart totals update');
 
 // Listen for HTMX events 
 document.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.requestConfig.path.includes('/update-cart/')) {
-        console.log('Cart item update completed');
+        console.log('Cart item update completed via HTMX');
     }
 });
+
+// Global function to update cart totals (called by onclick handlers)
+window.updateCartTotals = function() {
+    console.log('Global updateCartTotals called');
+    fetch('/cart-totals', {credentials: 'same-origin'})
+        .then(r => r.text())
+        .then(html => {
+            const totals = document.getElementById('order-totals');
+            if (totals) {
+                totals.innerHTML = html;
+                console.log('Cart totals updated via global function');
+            }
+        })
+        .catch(e => console.error('Global cart totals update failed:', e));
+};
 </script>
 
 {% endblock %}

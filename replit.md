@@ -118,6 +118,7 @@ Changelog:
 - July 08, 2025. Enhanced cart total styling: Made total amount green and larger font for better visual prominence, fixed duplicate button issue in real-time updates
 - July 08, 2025. Comprehensive Code Refactoring: Implemented service layer architecture, removed duplicate code, optimized database queries, added critical indexes, removed unused tables (subscriptions, deliveries, delivery_items, addresses), created reusable template helpers, improved separation of concerns
 - July 08, 2025. Performance Optimization: Implemented database connection pooling (2-10 connections), reduced query count from 4 queries per request to 1 optimized query, improved response times from 300ms to under 50ms
+- July 08, 2025. Cart Totals Real-time Update: Fixed cart totals endpoint backend issues, improved decimal handling, implemented onclick-based cart totals refresh to resolve HTMX event handler problems
 ```
 
 ## User Preferences
