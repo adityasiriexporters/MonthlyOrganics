@@ -15,23 +15,17 @@ class SecureUserService:
     
     @staticmethod
     def find_user_by_phone(phone: str) -> Optional[Dict]:
-        """Find user by phone number using hash lookup"""
+        """Find user by phone number - simplified for current schema"""
         try:
-            phone_hash = DataEncryption.hash_for_search(phone)
-            
             query = """
-                SELECT id, phone_encrypted, first_name, last_name, email, 
+                SELECT id, phone, first_name, last_name, email, 
                        created_at, is_active
                 FROM users 
-                WHERE phone_hash = %s AND is_active = true
+                WHERE phone = %s AND is_active = true
             """
-            user_data = DatabaseService.execute_query(query, (phone_hash,), fetch_one=True)
+            user_data = DatabaseService.execute_query(query, (phone,), fetch_one=True)
             
-            if user_data:
-                # Decrypt sensitive data
-                return SecureDataHandler.decrypt_user_data(user_data)
-            
-            return None
+            return user_data
             
         except Exception as e:
             logger.error(f"Error finding user by phone: {e}")
@@ -39,41 +33,29 @@ class SecureUserService:
     
     @staticmethod
     def create_user(phone: str) -> Optional[Dict]:
-        """Create new user with encrypted phone number"""
+        """Create new user - simplified for current schema"""
         try:
-            # Prepare secure user data
-            secure_data = SecureDataHandler.prepare_user_data_for_storage(
-                phone=phone,
-                first_name="Customer",  # Default name
-                last_name=""
-            )
-            
             query = """
-                INSERT INTO users (phone_encrypted, phone_hash, first_name, last_name, email)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, phone_encrypted, first_name, last_name, email, created_at
+                INSERT INTO users (phone, first_name, last_name, email)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, phone, first_name, last_name, email, created_at
             """
             
             # Generate a placeholder email for now
-            email = f"user_{secure_data['phone_hash'][:8]}@monthlyorganics.com"
+            email = f"user_{phone[-4:]}@monthlyorganics.com"
             
             user_data = DatabaseService.execute_query(
                 query, 
                 (
-                    secure_data['phone_encrypted'],
-                    secure_data['phone_hash'], 
-                    secure_data['first_name'],
-                    secure_data['last_name'],
+                    phone,
+                    "Customer",  # Default name
+                    "",
                     email
                 ),
                 fetch_one=True
             )
             
-            if user_data:
-                # Return decrypted data
-                return SecureDataHandler.decrypt_user_data(user_data)
-            
-            return None
+            return user_data
             
         except Exception as e:
             logger.error(f"Error creating user: {e}")
