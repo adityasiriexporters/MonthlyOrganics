@@ -135,14 +135,14 @@ class SecureDataHandler:
         """Prepare address data for secure storage"""
         secure_data = address_data.copy()
         
-        # Encrypt sensitive fields
+        # Encrypt sensitive fields while keeping originals during transition
         sensitive_fields = ['house_number', 'floor_door', 'contact_number', 'nearby_landmark']
         
         for field in sensitive_fields:
             if field in secure_data and secure_data[field]:
                 secure_data[f'{field}_encrypted'] = DataEncryption.encrypt_address_field(secure_data[field])
-                # Remove plaintext version
-                del secure_data[field]
+                # Keep plaintext version during database transition period
+                # TODO: Remove plaintext fields after migration is complete
         
         # Keep non-sensitive fields as-is for search/display
         # locality, city, pincode are needed for delivery logistics

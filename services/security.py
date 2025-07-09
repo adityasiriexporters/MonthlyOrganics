@@ -125,13 +125,18 @@ class SecureAddressService:
                     (user_id,)
                 )
             
+            # During transition: populate both old and new columns
             query = """
                 INSERT INTO addresses (
-                    user_id, nickname, house_number_encrypted, block_name,
-                    floor_door_encrypted, contact_number_encrypted, latitude, longitude,
-                    locality, city, pincode, nearby_landmark_encrypted, 
+                    user_id, nickname, 
+                    house_number, house_number_encrypted, 
+                    block_name,
+                    floor_door, floor_door_encrypted, 
+                    contact_number, contact_number_encrypted, 
+                    latitude, longitude, locality, city, pincode, 
+                    nearby_landmark, nearby_landmark_encrypted, 
                     address_notes, is_default
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """
             
@@ -140,15 +145,21 @@ class SecureAddressService:
                 (
                     user_id,
                     secure_data['nickname'],
+                    # Old columns (for backward compatibility)
+                    secure_data.get('house_number', ''),
                     secure_data.get('house_number_encrypted'),
                     secure_data.get('block_name', ''),
+                    secure_data.get('floor_door', ''),
                     secure_data.get('floor_door_encrypted'),
+                    secure_data.get('contact_number', ''),
                     secure_data.get('contact_number_encrypted'),
+                    # Location and other fields
                     secure_data['latitude'],
                     secure_data['longitude'],
                     secure_data['locality'],
                     secure_data['city'],
                     secure_data['pincode'],
+                    secure_data.get('nearby_landmark', ''),
                     secure_data.get('nearby_landmark_encrypted', ''),
                     secure_data.get('address_notes', ''),
                     secure_data['is_default']
