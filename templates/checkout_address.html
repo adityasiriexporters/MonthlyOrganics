@@ -926,20 +926,26 @@ function hideLocationSelected() {
     document.getElementById('openMapBtn').style.display = 'block';
 }
 
-// Remove duplicate function - this is now handled in the DOMContentLoaded event
-
-// Handle proceed to pay button
+// Initialize everything when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Set up form validation
+    setupFormValidation();
+    setupMapFunctionality();
+    
+    // Set up address selection handler
+    const addressSelect = document.getElementById('addressSelect');
+    if (addressSelect) {
+        addressSelect.addEventListener('change', handleAddressSelection);
+        handleAddressSelection(); // Initialize with current selection
+    }
+    
+    // Set up proceed to pay button
     const proceedBtn = document.getElementById('proceedToPayBtn');
     if (proceedBtn) {
         proceedBtn.addEventListener('click', function() {
-            // TODO: Implement payment flow
             alert('Payment integration coming soon!');
         });
     }
-    
-    // Initialize everything after page load
-    initializeProceedButton();
     
     // Check if this is a confirmation step
     const urlParams = new URLSearchParams(window.location.search);
