@@ -508,8 +508,8 @@ function reverseGeocode(location) {
                 city = locality;
             }
             
-            // Update confirmation modal text
-            document.getElementById('selectedLocationText').textContent = formattedAddress;
+            // Update confirmation modal text (will be set when modal opens)
+            // document.getElementById('locationConfirmText').textContent = formattedAddress;
             
             // Pre-fill form fields (will be populated when location is confirmed)
             window.pendingLocationData = {
