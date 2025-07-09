@@ -612,6 +612,7 @@ function setupFormValidation() {
     inputs.forEach(input => {
         input.addEventListener('input', validateForm);
         input.addEventListener('change', validateForm);
+        input.addEventListener('blur', validateForm);
     });
     
     // Add validation for radio buttons
@@ -619,6 +620,13 @@ function setupFormValidation() {
     radioButtons.forEach(radio => {
         radio.addEventListener('change', validateForm);
     });
+    
+    // Add validation for custom label input
+    const customLabel = document.getElementById('custom_label');
+    if (customLabel) {
+        customLabel.addEventListener('input', validateForm);
+        customLabel.addEventListener('change', validateForm);
+    }
 }
 
 function validateForm() {
@@ -627,7 +635,7 @@ function validateForm() {
     const oneTimeBtn = document.getElementById('oneTimeUseBtn');
     
     const requiredFields = [
-        'house_number', 'floor_door', 'locality'
+        'house_number', 'floor_door', 'locality', 'receiver_name', 'contact_number'
     ];
     
     let isValid = true;
@@ -661,6 +669,15 @@ function validateForm() {
         }
     } else {
         document.getElementById('nickname').value = 'My Home';
+    }
+    
+    // Check contact number format
+    const contactNumber = form.querySelector('[name="contact_number"]');
+    if (contactNumber && contactNumber.value.trim()) {
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(contactNumber.value.trim())) {
+            isValid = false;
+        }
     }
     
     // Enable/disable buttons
@@ -890,6 +907,17 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Payment integration coming soon!');
         });
     }
+    
+    // Initialize form validation after page load
+    setTimeout(function() {
+        setupFormValidation();
+        setupMapFunctionality();
+        setupAddressSelection();
+        showInitialView();
+        
+        // Initial validation to set button states
+        setTimeout(validateForm, 100);
+    }, 100);
 });
 </script>
 

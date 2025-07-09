@@ -483,7 +483,7 @@ def checkout_save_address():
         address_id = form_data.get('address_id')  # For editing existing address
         
         # Validate required fields
-        required_fields = ['house_number', 'floor_door', 'locality', 'nickname']
+        required_fields = ['house_number', 'floor_door', 'locality', 'nickname', 'receiver_name', 'contact_number']
         missing_fields = [field for field in required_fields if not form_data.get(field)]
         
         if missing_fields:
@@ -515,7 +515,8 @@ def checkout_save_address():
             'nearby_landmark': form_data.get('nearby_landmark', ''),
             'contact_number': form_data.get('contact_number', ''),
             'address_notes': form_data.get('address_notes', ''),
-            'receiver_name': form_data.get('receiver_name', '')
+            'receiver_name': form_data.get('receiver_name', ''),
+            'is_default': False  # Default to false for checkout addresses
         }
         
         if action == 'save':
