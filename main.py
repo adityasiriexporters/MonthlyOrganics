@@ -547,7 +547,7 @@ def checkout_save_address():
             session['checkout_address_id'] = None  # Clear any saved address selection
             flash('Address set for one-time use.', 'success')
         
-        # Redirect to next checkout step (payment page when implemented)
+        # Redirect to confirmation step
         return redirect(url_for('checkout_address') + '?step=confirm')
         
     except Exception as e:

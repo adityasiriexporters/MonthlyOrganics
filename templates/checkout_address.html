@@ -465,9 +465,16 @@ let isEditingMode = false;
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    initializeAddressSelection();
     setupFormValidation();
     setupMapFunctionality();
+    checkForConfirmedAddress();
+    
+    // Set up address selection change handler
+    const addressSelect = document.getElementById('addressSelect');
+    if (addressSelect) {
+        addressSelect.addEventListener('change', handleAddressSelection);
+        handleAddressSelection(); // Initialize with current selection
+    }
 });
 
 // Address Selection Functions
@@ -490,8 +497,7 @@ function showSelectedAddress(addressId) {
     document.getElementById('addressForm').style.display = 'none';
     document.getElementById('selectedAddressDisplay').classList.remove('hidden');
     document.getElementById('editCheckboxContainer').classList.remove('hidden');
-    document.getElementById('confirmSection').classList.remove('hidden');
-    document.getElementById('proceedToPaySection').classList.remove('hidden');
+    showConfirmationSection();
     
     // Get address data from selected option
     const select = document.getElementById('addressSelect');
@@ -522,14 +528,37 @@ function showNewAddressForm() {
     document.getElementById('mapSection').style.display = 'block';
     document.getElementById('selectedAddressDisplay').classList.add('hidden');
     document.getElementById('editCheckboxContainer').classList.add('hidden');
-    document.getElementById('confirmSection').classList.add('hidden');
-    document.getElementById('proceedToPaySection').classList.add('hidden');
+    hideConfirmationSection();
     
     // Clear address ID
     document.getElementById('address_id').value = '';
     
     // Reset form
     resetAddressForm();
+}
+
+function hideConfirmationSection() {
+    document.getElementById('confirmSection').classList.add('hidden');
+    document.getElementById('proceedToPaySection').classList.add('hidden');
+}
+
+function checkForConfirmedAddress() {
+    // Check URL parameters for confirmation step
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('step') === 'confirm') {
+        showConfirmationSection();
+    }
+}
+
+function showConfirmationSection() {
+    // Show confirmation section
+    document.getElementById('confirmSection').classList.remove('hidden');
+    document.getElementById('proceedToPaySection').classList.remove('hidden');
+    
+    // Auto-scroll to confirmation
+    setTimeout(() => {
+        document.getElementById('confirmSection').scrollIntoView({ behavior: 'smooth' });
+    }, 100);
 }
 
 function toggleEditing() {
