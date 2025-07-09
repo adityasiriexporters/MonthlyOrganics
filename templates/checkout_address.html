@@ -281,6 +281,31 @@
                 </div>
             </div>
 
+            <!-- Receiver Details Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- Receiver Name (Required) -->
+                    <div>
+                        <label for="receiver_name" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Name
+                        </label>
+                        <input type="text" id="receiver_name" name="receiver_name" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Receiver Phone (Required) -->
+                    <div>
+                        <label for="contact_number" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Phone Number
+                        </label>
+                        <input type="tel" id="contact_number" name="contact_number" pattern="[0-9]{10}" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+            </div>
+
             <!-- Address Label Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
@@ -313,38 +338,17 @@
                 </div>
             </div>
 
-            <!-- Receiver Details Section -->
+            <!-- Additional Notes -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h3>
                 
-                <div class="space-y-4">
-                    <!-- Receiver Name -->
-                    <div>
-                        <label for="receiver_name" class="block text-sm font-medium text-gray-700">
-                            Receiver's Name
-                        </label>
-                        <input type="text" id="receiver_name" name="receiver_name"
-                               class="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
-                    </div>
-                    
-                    <!-- Receiver Phone -->
-                    <div>
-                        <label for="contact_number" class="block text-sm font-medium text-gray-700">
-                            Receiver's Phone Number
-                        </label>
-                        <input type="tel" id="contact_number" name="contact_number" pattern="[0-9]{10}" 
-                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
-                    </div>
-                    
-                    <!-- Address Notes -->
-                    <div>
-                        <label for="address_notes" class="block text-sm font-medium text-gray-700">
-                            Address Notes (Optional)
-                        </label>
-                        <textarea id="address_notes" name="address_notes" rows="3" 
-                                  class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary"
-                                  placeholder="Any additional delivery instructions..."></textarea>
-                    </div>
+                <div>
+                    <label for="address_notes" class="block text-sm font-medium text-gray-700">
+                        Address Notes
+                    </label>
+                    <textarea id="address_notes" name="address_notes" rows="3" 
+                              class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary"
+                              placeholder="Any additional delivery instructions..."></textarea>
                 </div>
             </div>
 

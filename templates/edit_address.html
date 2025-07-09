@@ -105,6 +105,33 @@
                        placeholder="Enter address label">
             </div>
 
+            <!-- Receiver Details -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- Receiver Name (Required) -->
+                    <div>
+                        <label for="receiver_name" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Name
+                        </label>
+                        <input type="text" id="receiver_name" name="receiver_name" required
+                               value="{{ address.receiver_name if address.receiver_name and address.receiver_name != 'Customer' else '' }}"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Receiver Phone (Required) -->
+                    <div>
+                        <label for="contact_number" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Phone Number
+                        </label>
+                        <input type="tel" id="contact_number" name="contact_number" pattern="[0-9]{10}" required
+                               value="{{ address.contact_number or '' }}"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+            </div>
+
             <!-- Additional Notes -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h3>

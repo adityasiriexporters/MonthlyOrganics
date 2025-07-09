@@ -36,6 +36,7 @@ class FormValidator:
             'house_number': 'House number',
             'floor_door': 'Floor/Door',
             'contact_number': 'Contact number',
+            'receiver_name': 'Receiver\'s name',
             'locality': 'Locality',
             'city': 'City',
             'pincode': 'Pincode'

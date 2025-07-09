@@ -203,7 +203,7 @@ def save_address():
             'block_name': FormValidator.sanitize_string(request.form.get('block_name', '')),
             'floor_door': FormValidator.sanitize_string(request.form.get('floor_door', '')),
             'contact_number': FormValidator.sanitize_string(request.form.get('contact_number', '')),
-
+            'receiver_name': FormValidator.sanitize_string(request.form.get('receiver_name', '')),
             'latitude': float(request.form.get('latitude', 0)),
             'longitude': float(request.form.get('longitude', 0)),
             'locality': FormValidator.sanitize_string(request.form.get('locality', '')),
@@ -319,7 +319,7 @@ def update_address(address_id):
         logger.info(f"Updating address {address_id} with data: {form_data}")
         
         # Validate required fields
-        required_fields = ['house_number', 'floor_door', 'locality', 'nickname']
+        required_fields = ['house_number', 'floor_door', 'locality', 'nickname', 'receiver_name', 'contact_number']
         missing_fields = [field for field in required_fields if not form_data.get(field)]
         
         if missing_fields:
