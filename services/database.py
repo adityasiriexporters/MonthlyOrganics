@@ -44,60 +44,115 @@ class DatabaseService:
         return True
     
     @classmethod
+    def _is_connection_healthy(cls, conn: psycopg2.extensions.connection) -> bool:
+        """Check if a database connection is healthy"""
+        try:
+            if conn.closed:
+                return False
+            
+            # Test the connection with a simple query
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+            
+            return True
+        except Exception:
+            return False
+    
+    @classmethod
     def get_connection(cls) -> Optional[psycopg2.extensions.connection]:
-        """Get database connection from pool with proper error handling"""
+        """Get database connection from pool with proper error handling and health checks"""
         if not cls.initialize_pool():
             return None
             
-        try:
-            conn = cls._connection_pool.getconn()
-            return conn
-        except Exception as e:
-            logger.error(f"Failed to get connection from pool: {e}")
-            return None
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                conn = cls._connection_pool.getconn()
+                if conn is None:
+                    continue
+                
+                # Check if connection is healthy
+                if cls._is_connection_healthy(conn):
+                    return conn
+                else:
+                    # Connection is unhealthy, remove it from pool and try again
+                    logger.warning(f"Unhealthy connection detected on attempt {attempt + 1}, removing from pool")
+                    cls._connection_pool.putconn(conn, close=True)
+                    
+            except Exception as e:
+                logger.error(f"Failed to get connection from pool (attempt {attempt + 1}): {e}")
+                if attempt == max_retries - 1:
+                    return None
+                    
+        return None
     
     @classmethod
-    def return_connection(cls, conn: psycopg2.extensions.connection):
-        """Return connection to pool"""
+    def return_connection(cls, conn: psycopg2.extensions.connection, close_conn: bool = False):
+        """Return connection to pool or close it if it's unhealthy"""
         if cls._connection_pool and conn:
             try:
-                cls._connection_pool.putconn(conn)
+                if close_conn or not cls._is_connection_healthy(conn):
+                    cls._connection_pool.putconn(conn, close=True)
+                else:
+                    cls._connection_pool.putconn(conn)
             except Exception as e:
                 logger.error(f"Failed to return connection to pool: {e}")
     
     @classmethod
     def execute_query(cls, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = True) -> Any:
-        """Execute query with connection pool management for better performance"""
-        conn = None
-        cursor = None
-        try:
-            conn = cls.get_connection()
-            if not conn:
+        """Execute query with connection pool management and retry logic"""
+        max_retries = 2
+        
+        for attempt in range(max_retries):
+            conn = None
+            cursor = None
+            connection_failed = False
+            
+            try:
+                conn = cls.get_connection()
+                if not conn:
+                    logger.error(f"Failed to get connection on attempt {attempt + 1}")
+                    continue
+                    
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                cursor.execute(query, params)
+                
+                if fetch_one:
+                    result = cursor.fetchone()
+                elif fetch_all:
+                    result = cursor.fetchall()
+                else:
+                    result = None
+                    
+                conn.commit()
+                return result
+                
+            except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+                # Connection-related errors - retry with new connection
+                logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+                connection_failed = True
+                if conn:
+                    conn.rollback()
+                    
+            except Exception as e:
+                # Other errors - don't retry
+                logger.error(f"Query execution failed: {e}")
+                if conn:
+                    conn.rollback()
                 return None
                 
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cursor.execute(query, params)
-            
-            if fetch_one:
-                result = cursor.fetchone()
-            elif fetch_all:
-                result = cursor.fetchall()
-            else:
-                result = None
-                
-            conn.commit()
-            return result
-            
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"Query execution failed: {e}")
-            return None
-        finally:
-            if cursor:
-                cursor.close()
-            if conn:
-                cls.return_connection(conn)  # Return to pool instead of closing
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except:
+                        pass
+                if conn:
+                    cls.return_connection(conn, close_conn=connection_failed)
+                    
+        logger.error(f"Query failed after {max_retries} attempts")
+        return None
 
 class CartService:
     """Service for cart-related database operations"""
