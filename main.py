@@ -182,13 +182,17 @@ def save_address():
     try:
         user_id = session['user_id']
         
-        # Get form data
+        # Log all form data for debugging
+        logger.info(f"Received form data: {dict(request.form)}")
+        
+        # Get form data with more robust handling
         address_data = {
             'nickname': FormValidator.sanitize_string(request.form.get('nickname', '')),
             'house_number': FormValidator.sanitize_string(request.form.get('house_number', '')),
             'block_name': FormValidator.sanitize_string(request.form.get('block_name', '')),
             'floor_door': FormValidator.sanitize_string(request.form.get('floor_door', '')),
             'contact_number': FormValidator.sanitize_string(request.form.get('contact_number', '')),
+
             'latitude': float(request.form.get('latitude', 0)),
             'longitude': float(request.form.get('longitude', 0)),
             'locality': FormValidator.sanitize_string(request.form.get('locality', '')),
@@ -199,15 +203,22 @@ def save_address():
             'is_default': request.form.get('is_default') == 'on'
         }
         
+        logger.info(f"Processed address data: {address_data}")
+        
         # Validate address data using FormValidator
         is_valid, errors = FormValidator.validate_address_data(address_data)
+        logger.info(f"Validation result: valid={is_valid}, errors={errors}")
+        
         if not is_valid:
             for error in errors:
                 flash(error, 'error')
             return redirect(url_for('add_address'))
         
         # Save address using SecureAddressService
+        logger.info(f"Attempting to save address for user {user_id}")
         address_id = SecureAddressService.create_address(user_id, address_data)
+        logger.info(f"Address creation result: {address_id}")
+        
         SecurityAuditLogger.log_data_access(user_id, "CREATE", "address", bool(address_id))
         
         if address_id:
@@ -219,6 +230,8 @@ def save_address():
             
     except Exception as e:
         logger.error(f"Error saving address: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         flash('An error occurred while saving the address. Please try again.', 'error')
         return redirect(url_for('add_address'))
 
