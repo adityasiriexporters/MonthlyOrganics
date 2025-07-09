@@ -24,7 +24,19 @@
     }
     #mapModal #map {
         padding-top: 80px; /* Account for header */
-        padding-bottom: 140px; /* Account for controls */
+        padding-bottom: 200px; /* Account for controls + mobile nav */
+    }
+    /* Map controls positioning */
+    .map-controls {
+        bottom: 80px; /* Above mobile navigation bar */
+    }
+    @media (min-width: 768px) {
+        .map-controls {
+            bottom: 20px; /* Normal position on desktop */
+        }
+        #mapModal #map {
+            padding-bottom: 160px; /* Less padding on desktop */
+        }
     }
 </style>
 {% endblock %}
@@ -268,7 +280,7 @@
     <div id="map" class="w-full h-full"></div>
     
     <!-- Map Controls - Fixed at bottom -->
-    <div class="absolute bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-10">
+    <div class="absolute left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-10 map-controls">
         <!-- Location Status -->
         <div id="locationStatus" class="text-sm text-gray-600 mb-4 text-center">
             Tap on the map to select your location or use current location
