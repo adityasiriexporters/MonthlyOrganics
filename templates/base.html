@@ -64,65 +64,23 @@
             <!-- Top Row - Address Selection -->
             <div class="bg-primary/5 border-b border-primary/10">
                 <div class="max-w-md mx-auto px-4 py-2">
-                    <div x-data="{ open: false }" class="relative">
-                        <button @click="open = !open" class="flex items-center justify-between w-full py-1">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                                {% if selected_address %}
-                                    <span class="text-sm font-medium text-gray-900">{{ selected_address }}</span>
-                                {% else %}
-                                    <span class="text-sm font-medium text-primary">+ Add Address</span>
-                                {% endif %}
-                            </div>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
-                        </button>
-
-                        <!-- Dropdown Menu -->
-                        <div x-show="open" 
-                             x-transition:enter="transition ease-out duration-100"
-                             x-transition:enter-start="transform opacity-0 scale-95"
-                             x-transition:enter-end="transform opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="transform opacity-100 scale-100"
-                             x-transition:leave-end="transform opacity-0 scale-95"
-                             @click.away="open = false"
-                             class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-                            
-                            <!-- Add Address Option -->
-                            <a href="{{ url_for('add_address') }}" 
-                               class="flex items-center space-x-2 px-4 py-3 text-sm text-primary font-medium hover:bg-primary/5 border-b border-gray-100">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                <span>+ Add Address</span>
-                            </a>
-
-                            <!-- User Addresses -->
-                            {% if user_addresses %}
-                                {% for address in user_addresses %}
-                                    <a href="#" 
-                                       onclick="setDefaultAddress({{ address.id }})"
-                                       class="block px-4 py-3 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <div class="font-medium text-gray-900">{{ address.nickname }}</div>
-                                                <div class="text-gray-500 text-xs">{{ address.locality }}, {{ address.city }}</div>
-                                            </div>
-                                            {% if address.is_default %}
-                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    Default
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                    </a>
-                                {% endfor %}
+                            {% if selected_address %}
+                                <span class="text-sm font-medium text-gray-900">{{ selected_address }}</span>
+                            {% else %}
+                                <a href="/addresses/add" class="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    + Add Address
+                                </a>
                             {% endif %}
                         </div>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
                 </div>
             </div>
@@ -249,30 +207,6 @@
     
     <!-- Local JavaScript -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    
-    <script>
-        // Set default address function for homepage dropdown
-        function setDefaultAddress(addressId) {
-            fetch(`/addresses/set-default/${addressId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Reload page to update address display
-                    window.location.reload();
-                } else {
-                    alert('Error setting default address');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error setting default address');
-            });
-        }
-    </script>
     
     {% block extra_scripts %}{% endblock %}
 </body>
