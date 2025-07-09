@@ -104,7 +104,9 @@ class SecureAddressService:
             if secure_data.get('is_default'):
                 DatabaseService.execute_query(
                     "UPDATE addresses SET is_default = false WHERE user_id = %s",
-                    (user_id,)
+                    (user_id,),
+                    fetch_one=False,
+                    fetch_all=False
                 )
             
             # Encrypted insertion for security
@@ -153,16 +155,21 @@ class SecureAddressService:
             # First unset all defaults for this user
             DatabaseService.execute_query(
                 "UPDATE addresses SET is_default = false WHERE user_id = %s",
-                (user_id,)
+                (user_id,),
+                fetch_one=False,
+                fetch_all=False
             )
             
             # Set the specified address as default
             result = DatabaseService.execute_query(
                 "UPDATE addresses SET is_default = true WHERE id = %s AND user_id = %s",
-                (address_id, user_id)
+                (address_id, user_id),
+                fetch_one=False,
+                fetch_all=False
             )
             
-            return True
+            # Check if any rows were affected
+            return result is not None and result > 0
             
         except Exception as e:
             logger.error(f"Error setting default address: {e}")
@@ -179,7 +186,9 @@ class SecureAddressService:
             if secure_data.get('is_default'):
                 DatabaseService.execute_query(
                     "UPDATE addresses SET is_default = false WHERE user_id = %s AND id != %s",
-                    (user_id, address_id)
+                    (user_id, address_id),
+                    fetch_one=False,
+                    fetch_all=False
                 )
             
             query = """
@@ -218,10 +227,13 @@ class SecureAddressService:
                     secure_data.get('is_default', False),
                     address_id,
                     user_id
-                )
+                ),
+                fetch_one=False,
+                fetch_all=False
             )
             
-            return True
+            # Check if any rows were affected
+            return result is not None and result > 0
             
         except Exception as e:
             logger.error(f"Error updating address: {e}")
@@ -233,9 +245,13 @@ class SecureAddressService:
         try:
             result = DatabaseService.execute_query(
                 "DELETE FROM addresses WHERE id = %s AND user_id = %s",
-                (address_id, user_id)
+                (address_id, user_id),
+                fetch_one=False,
+                fetch_all=False
             )
-            return True
+            
+            # Check if any rows were affected
+            return result is not None and result > 0
             
         except Exception as e:
             logger.error(f"Error deleting address: {e}")

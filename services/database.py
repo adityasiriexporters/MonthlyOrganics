@@ -118,12 +118,20 @@ class DatabaseService:
                 cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
                 cursor.execute(query, params)
                 
-                if fetch_one:
-                    result = cursor.fetchone()
-                elif fetch_all:
-                    result = cursor.fetchall()
+                # Check if this is a SELECT query that should return results
+                query_upper = query.strip().upper()
+                is_select_query = query_upper.startswith('SELECT') or 'RETURNING' in query_upper
+                
+                if is_select_query:
+                    if fetch_one:
+                        result = cursor.fetchone()
+                    elif fetch_all:
+                        result = cursor.fetchall()
+                    else:
+                        result = None
                 else:
-                    result = None
+                    # For UPDATE, DELETE, INSERT without RETURNING, return rowcount
+                    result = cursor.rowcount
                     
                 conn.commit()
                 return result
