@@ -365,7 +365,7 @@
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Location</h3>
-            <div id="selectedLocationText" class="text-sm text-gray-600 mb-6"></div>
+            <div id="locationConfirmText" class="text-sm text-gray-600 mb-6"></div>
             <div class="flex space-x-3">
                 <button id="cancelLocationConfirm" 
                         class="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
@@ -580,6 +580,13 @@ function closeMapModal() {
 
 function confirmLocationSelection() {
     if (selectedLocation) {
+        // Set location text in confirmation modal
+        const confirmText = document.getElementById('locationConfirmText');
+        if (window.pendingLocationData?.formattedAddress) {
+            confirmText.textContent = window.pendingLocationData.formattedAddress;
+        } else {
+            confirmText.textContent = `Location: ${selectedLocation.lat().toFixed(6)}, ${selectedLocation.lng().toFixed(6)}`;
+        }
         document.getElementById('locationConfirmModal').classList.remove('hidden');
     }
 }
