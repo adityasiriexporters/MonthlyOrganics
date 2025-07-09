@@ -133,6 +133,7 @@ Changelog:
 - July 09, 2025. Smart Label Management: Implemented incremental label naming system that automatically generates unique labels (e.g., My Home 1, My Home 2) when users select duplicate address labels, preventing naming conflicts
 - July 09, 2025. Database Connection Pooling Fix: Enhanced connection pooling with proper health checks, retry logic, and error handling to prevent empty saved addresses page issues
 - July 09, 2025. Address Management Bug Fixes: Fixed update address, delete address, and set default address functionality in saved addresses page; removed address dropdown from homepage and store page headers per scope change
+- July 09, 2025. Critical Database Fixes: Fixed all address management button failures by updating database query handler to properly handle UPDATE/DELETE operations, ensuring address editing, deletion, and default setting work correctly
 ```
 
 ## User Preferences
