@@ -314,8 +314,8 @@ def checkout_address():
             flash('Your cart is empty. Please add items before checkout.', 'error')
             return redirect(url_for('cart'))
         
-        # Calculate cart totals
-        subtotal = sum(item['total_price'] for item in cart_items)
+        # Calculate cart totals (convert to float to handle decimal.Decimal)
+        subtotal = float(sum(item['total_price'] for item in cart_items))
         delivery_fee = 50.00  # Fixed delivery fee
         total = subtotal + delivery_fee
         
