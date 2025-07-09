@@ -131,6 +131,8 @@ Changelog:
 - July 09, 2025. Enhanced Add Address Page: Added mini map display after location confirmation, expanded address label options (Friend & Work swatches), implemented incremental naming system for duplicate labels (e.g., My Home 1, My Home 2), improved user experience with visual feedback
 - July 09, 2025. Implemented Address Editing: Added complete address editing functionality with edit page, update routes, and form validation, allowing users to modify saved addresses from the saved addresses page
 - July 09, 2025. Smart Label Management: Implemented incremental label naming system that automatically generates unique labels (e.g., My Home 1, My Home 2) when users select duplicate address labels, preventing naming conflicts
+- July 09, 2025. Database Connection Pooling Fix: Enhanced connection pooling with proper health checks, retry logic, and error handling to prevent empty saved addresses page issues
+- July 09, 2025. Address Management Bug Fixes: Fixed update address, delete address, and set default address functionality in saved addresses page; removed address dropdown from homepage and store page headers per scope change
 ```
 
 ## User Preferences

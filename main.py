@@ -84,34 +84,7 @@ def index():
     """Main index route that renders the homepage template."""
     logger.info("Rendering homepage")
     
-    # Get user addresses if logged in
-    user_addresses = []
-    selected_address = None
-    
-    if 'user_id' in session:
-        try:
-            user_id = session['user_id']
-            user_addresses = SecureAddressService.get_user_addresses(user_id)
-            SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
-            
-            # Get default address or first address
-            for addr in user_addresses:
-                if addr['is_default']:
-                    selected_address = addr
-                    break
-            
-            # If no default, use first address
-            if not selected_address and user_addresses:
-                selected_address = user_addresses[0]
-                
-        except Exception as e:
-            logger.error(f"Error loading addresses for homepage: {e}")
-            user_addresses = []
-            selected_address = None
-    
-    return render_template('index.html', 
-                         user_addresses=user_addresses,
-                         selected_address=selected_address)
+    return render_template('index.html')
 
 @app.route('/profile')
 def profile():
@@ -364,9 +337,21 @@ def update_address(address_id):
             flash('Invalid location coordinates.', 'error')
             return redirect(url_for('edit_address', address_id=address_id))
         
+        # Generate incremental label if nickname already exists (only for editing existing address)
+        requested_nickname = form_data.get('nickname')
+        
+        # For editing, we don't need incremental naming unless they're changing to a conflicting name
+        # Get existing addresses excluding current one
+        existing_addresses = SecureAddressService.get_user_addresses(user_id)
+        existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
+        
+        final_nickname = requested_nickname
+        if requested_nickname.lower() in existing_nicknames:
+            final_nickname = generate_incremental_label(user_id, requested_nickname)
+        
         # Prepare address data
         address_data = {
-            'nickname': form_data.get('nickname'),
+            'nickname': final_nickname,
             'house_number': form_data.get('house_number'),
             'block_name': form_data.get('block_name', ''),
             'floor_door': form_data.get('floor_door'),
