@@ -8,9 +8,11 @@ from decimal import Decimal
 
 # Import services and utilities
 from models import db, init_db
-from services.database import CartService, UserService, AddressService
+from services.database import CartService
+from services.security import SecureUserService, SecureAddressService, SecurityAuditLogger
 from utils.decorators import login_required
 from validators.forms import FormValidator
+from utils.encryption import DataEncryption
 from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
     render_add_to_cart_button, render_cart_totals
@@ -55,7 +57,8 @@ def index():
     if 'user_id' in session:
         try:
             user_id = session['user_id']
-            user_addresses = AddressService.get_user_addresses(user_id)
+            user_addresses = SecureAddressService.get_user_addresses(user_id)
+            SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
             
             # Get default address or first address
             for addr in user_addresses:
@@ -153,8 +156,9 @@ def addresses():
     try:
         user_id = session['user_id']
         
-        # Get user's addresses using AddressService
-        user_addresses = AddressService.get_user_addresses(user_id)
+        # Get user's addresses using SecureAddressService
+        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
         logger.info(f"Found {len(user_addresses)} addresses for user {user_id}")
         
         return render_template('addresses.html', addresses=user_addresses)
@@ -202,8 +206,9 @@ def save_address():
                 flash(error, 'error')
             return redirect(url_for('add_address'))
         
-        # Save address using AddressService
-        address_id = AddressService.create_address(user_id, address_data)
+        # Save address using SecureAddressService
+        address_id = SecureAddressService.create_address(user_id, address_data)
+        SecurityAuditLogger.log_data_access(user_id, "CREATE", "address", bool(address_id))
         
         if address_id:
             flash('Address saved successfully!', 'success')
@@ -224,7 +229,8 @@ def set_default_address(address_id):
     try:
         user_id = session['user_id']
         
-        if AddressService.set_default_address(address_id, user_id):
+        if SecureAddressService.set_default_address(address_id, user_id):
+            SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_default")
             flash('Default address updated successfully!', 'success')
         else:
             flash('Error updating default address.', 'error')
@@ -242,7 +248,8 @@ def delete_address(address_id):
     try:
         user_id = session['user_id']
         
-        if AddressService.delete_address(address_id, user_id):
+        if SecureAddressService.delete_address(address_id, user_id):
+            SecurityAuditLogger.log_data_access(user_id, "DELETE", "address")
             flash('Address deleted successfully!', 'success')
         else:
             flash('Error deleting address.', 'error')
@@ -259,7 +266,8 @@ def api_addresses():
     """API endpoint to get user addresses for dropdown."""
     try:
         user_id = session['user_id']
-        user_addresses = AddressService.get_user_addresses(user_id)
+        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
         
         # Convert to simple list for JSON response
         addresses_list = []
@@ -282,6 +290,24 @@ def api_addresses():
 def health_check():
     """Health check endpoint for monitoring."""
     return {"status": "healthy", "message": "Monthly Organics is running"}
+
+@app.route('/admin/migrate-data', methods=['POST'])
+def migrate_data():
+    """Manual endpoint to migrate existing data to encrypted format"""
+    try:
+        from utils.data_migration import DataMigration
+        
+        # Run migration
+        if DataMigration.run_full_migration():
+            # Verify migration
+            DataMigration.verify_migration()
+            return {"status": "success", "message": "Data migration completed successfully"}
+        else:
+            return {"status": "error", "message": "Data migration completed with errors"}, 500
+            
+    except Exception as e:
+        logger.error(f"Manual data migration error: {e}")
+        return {"status": "error", "message": f"Migration failed: {str(e)}"}, 500
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -371,20 +397,33 @@ def verify_otp():
             flash(f'Invalid OTP. You have {4 - session["otp_attempts"]} attempts remaining.', 'error')
             return redirect(url_for('verify'))
         
-        # OTP is correct - find or create user using UserService
-        user = UserService.find_user_by_phone(mobile_number)
+        # OTP is correct - find or create user using SecureUserService
+        user = SecureUserService.find_user_by_phone(mobile_number)
         
         if user:
-            user_id = user.id
-            logger.info(f"Existing user logged in: {mobile_number}")
+            user_id = user['id']
+            SecurityAuditLogger.log_authentication_event(
+                DataEncryption.hash_for_search(mobile_number)[:8], 
+                "LOGIN_EXISTING_USER"
+            )
+            logger.info(f"Existing user logged in")
         else:
             # Create new user
-            user = UserService.create_user(mobile_number)
+            user = SecureUserService.create_user(mobile_number)
             if not user:
+                SecurityAuditLogger.log_authentication_event(
+                    DataEncryption.hash_for_search(mobile_number)[:8], 
+                    "USER_CREATION_FAILED", 
+                    False
+                )
                 flash('Error creating user account. Please try again.', 'error')
                 return redirect(url_for('login'))
-            user_id = user.id
-            logger.info(f"New user created: {mobile_number}")
+            user_id = user['id']
+            SecurityAuditLogger.log_authentication_event(
+                DataEncryption.hash_for_search(mobile_number)[:8], 
+                "NEW_USER_CREATED"
+            )
+            logger.info(f"New user created")
         
         # Login user
         session['user_id'] = user_id
