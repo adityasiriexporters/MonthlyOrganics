@@ -95,6 +95,20 @@
             </button>
         </div>
 
+        <!-- Selected Location Map Display -->
+        <div id="selectedLocationMap" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 hidden">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Selected Location</h3>
+            <div id="miniMap" style="height: 200px; width: 100%; border-radius: 8px;"></div>
+            <div class="mt-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span id="selectedLocationText">Location confirmed</span>
+                </div>
+                <button type="button" onclick="openMapModal()" class="text-primary hover:text-primary/80 text-sm font-medium">
+                    Change Location
+                </button>
+            </div>
+        </div>
+
         <!-- Address Form -->
         <form id="addressForm" method="POST" action="{{ url_for('save_address') }}" 
               class="space-y-6" style="display: none;">
@@ -181,12 +195,28 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
                 
                 <div class="space-y-4">
-                    <!-- Predefined Labels -->
-                    <div class="flex space-x-2">
+                    <!-- Predefined Labels - Row 1 -->
+                    <div class="grid grid-cols-2 gap-2">
                         <label class="flex-1">
                             <input type="radio" name="label_type" value="home" class="sr-only" onchange="toggleCustomLabel()">
                             <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
                                 <span class="text-sm font-medium">My Home</span>
+                            </div>
+                        </label>
+                        <label class="flex-1">
+                            <input type="radio" name="label_type" value="work" class="sr-only" onchange="toggleCustomLabel()">
+                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
+                                <span class="text-sm font-medium">Work</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- Predefined Labels - Row 2 -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex-1">
+                            <input type="radio" name="label_type" value="friend" class="sr-only" onchange="toggleCustomLabel()">
+                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
+                                <span class="text-sm font-medium">Friend</span>
                             </div>
                         </label>
                         <label class="flex-1">
@@ -334,11 +364,15 @@
 let map;
 let marker;
 let geocoder;
+let miniMap;
+let miniMarker;
 let selectedLocation = null;
+let existingAddresses = [];
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
+    loadExistingAddresses();
 });
 
 function initMap() {
@@ -565,7 +599,8 @@ function setupEventListeners() {
             document.getElementById('pincode').value = window.pendingLocationData.pincode;
         }
         
-        // Show the form
+        // Show mini map and form
+        showMiniMap();
         document.getElementById('addressForm').style.display = 'block';
         
         // Scroll to form
@@ -587,10 +622,12 @@ function setupEventListeners() {
         // Clear form data
         document.getElementById('addressForm').reset();
         
-        // Clear location data
+        // Clear location data and hide mini map
         selectedLocation = null;
+        window.pendingLocationData = null;
         document.getElementById('latitude').value = '0';
         document.getElementById('longitude').value = '0';
+        document.getElementById('selectedLocationMap').classList.add('hidden');
         
         // Reset confirm button
         document.getElementById('confirmLocation').disabled = true;
@@ -611,7 +648,10 @@ function setupEventListeners() {
 }
 
 function toggleCustomLabel() {
-    const labelType = document.querySelector('input[name="label_type"]:checked').value;
+    const selectedInput = document.querySelector('input[name="label_type"]:checked');
+    if (!selectedInput) return;
+    
+    const labelType = selectedInput.value;
     const customLabelDiv = document.getElementById('customLabelDiv');
     const customLabelInput = document.getElementById('custom_label');
     const nicknameInput = document.getElementById('nickname');
@@ -622,7 +662,7 @@ function toggleCustomLabel() {
         option.classList.add('border-gray-300');
     });
     
-    const selectedOption = document.querySelector('input[name="label_type"]:checked').parentElement.querySelector('.radio-option');
+    const selectedOption = selectedInput.parentElement.querySelector('.radio-option');
     selectedOption.classList.remove('border-gray-300');
     selectedOption.classList.add('border-primary', 'bg-primary/5');
     
@@ -634,7 +674,36 @@ function toggleCustomLabel() {
         customLabelDiv.classList.add('hidden');
         customLabelInput.required = false;
         customLabelInput.value = '';
-        nicknameInput.value = labelType === 'home' ? 'My Home' : '';
+        
+        // Set nickname based on selection with incremental numbering
+        let baseNickname = '';
+        switch(labelType) {
+            case 'home':
+                baseNickname = 'My Home';
+                break;
+            case 'work':
+                baseNickname = 'Work';
+                break;
+            case 'friend':
+                baseNickname = 'Friend';
+                break;
+        }
+        
+        // Generate incremental label if base already exists
+        const finalNickname = generateIncrementalLabel(baseNickname);
+        nicknameInput.value = finalNickname;
+        
+        // Update the display text if incremental
+        if (finalNickname !== baseNickname) {
+            const displaySpan = selectedOption.querySelector('span');
+            const originalText = displaySpan.textContent;
+            displaySpan.textContent = finalNickname;
+            
+            // Reset text after a delay to show original label for next use
+            setTimeout(() => {
+                displaySpan.textContent = originalText;
+            }, 3000);
+        }
     }
 }
 
@@ -672,5 +741,102 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Mini Map Functions
+function showMiniMap() {
+    if (selectedLocation) {
+        const mapContainer = document.getElementById('selectedLocationMap');
+        mapContainer.classList.remove('hidden');
+        
+        // Store coordinates for form submission
+        document.getElementById('latitude').value = selectedLocation.lat();
+        document.getElementById('longitude').value = selectedLocation.lng();
+        
+        // Initialize mini map
+        setTimeout(() => {
+            miniMap = new google.maps.Map(document.getElementById('miniMap'), {
+                zoom: 15,
+                center: selectedLocation,
+                disableDefaultUI: true,
+                gestureHandling: 'none', // Disable interaction
+                clickableIcons: false
+            });
+            
+            // Add marker to mini map
+            miniMarker = new google.maps.Marker({
+                position: selectedLocation,
+                map: miniMap,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="15" cy="15" r="8" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+                            <circle cx="15" cy="15" r="3" fill="#ffffff"/>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(30, 30),
+                    anchor: new google.maps.Point(15, 15)
+                }
+            });
+        }, 100);
+        
+        // Update location text
+        const locationText = document.getElementById('selectedLocationText');
+        if (window.pendingLocationData?.formattedAddress) {
+            locationText.textContent = window.pendingLocationData.formattedAddress;
+        } else {
+            locationText.textContent = `${selectedLocation.lat().toFixed(6)}, ${selectedLocation.lng().toFixed(6)}`;
+        }
+    }
+}
+
+// Load existing addresses for incremental naming
+function loadExistingAddresses() {
+    fetch('/api/addresses', {
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        existingAddresses = data.addresses || [];
+        console.log('Loaded existing addresses:', existingAddresses);
+    })
+    .catch(error => {
+        console.error('Error loading existing addresses:', error);
+        existingAddresses = [];
+    });
+}
+
+// Generate incremental address label
+function generateIncrementalLabel(baseLabel) {
+    if (!existingAddresses || existingAddresses.length === 0) {
+        return baseLabel;
+    }
+    
+    // Count existing labels with the same base
+    const baseLabelLower = baseLabel.toLowerCase();
+    let maxNumber = 0;
+    let hasBase = false;
+    
+    existingAddresses.forEach(address => {
+        const nickname = address.nickname.toLowerCase();
+        
+        if (nickname === baseLabelLower) {
+            hasBase = true;
+        } else if (nickname.startsWith(baseLabelLower + ' ')) {
+            // Extract number from labels like "My Home 2", "Work 3", etc.
+            const numberPart = nickname.substring(baseLabelLower.length + 1);
+            const number = parseInt(numberPart);
+            if (!isNaN(number) && number > maxNumber) {
+                maxNumber = number;
+            }
+        }
+    });
+    
+    // If base label exists, start numbering
+    if (hasBase || maxNumber > 0) {
+        return baseLabel + ' ' + (maxNumber + 1);
+    }
+    
+    return baseLabel;
+}
 </script>
 {% endblock %}
