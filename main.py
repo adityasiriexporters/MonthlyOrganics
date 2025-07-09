@@ -297,6 +297,127 @@ def api_addresses():
         logger.error(f"Error fetching addresses API: {e}")
         return {'addresses': []}
 
+@app.route('/checkout/address')
+@login_required
+def checkout_address():
+    """Checkout address selection and management page."""
+    try:
+        user_id = session['user_id']
+        
+        # Get user's addresses using SecureAddressService
+        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
+        
+        # Get cart items and totals for display
+        cart_items = CartService.get_cart_items(user_id)
+        if not cart_items:
+            flash('Your cart is empty. Please add items before checkout.', 'error')
+            return redirect(url_for('cart'))
+        
+        # Calculate cart totals
+        subtotal = sum(item['total_price'] for item in cart_items)
+        delivery_fee = 50.00  # Fixed delivery fee
+        total = subtotal + delivery_fee
+        
+        logger.info(f"Loading checkout address page for user {user_id} with {len(cart_items)} items")
+        
+        return render_template('checkout_address.html', 
+                             addresses=user_addresses,
+                             cart_items=cart_items,
+                             subtotal=subtotal,
+                             delivery_fee=delivery_fee,
+                             total=total,
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        
+    except Exception as e:
+        logger.error(f"Error loading checkout address page: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('cart'))
+
+@app.route('/checkout/save-address', methods=['POST'])
+@login_required
+def checkout_save_address():
+    """Save or update address during checkout and proceed to next step."""
+    try:
+        user_id = session['user_id']
+        
+        # Get form data
+        form_data = request.form.to_dict()
+        action = form_data.get('action')  # 'save' or 'one_time'
+        address_id = form_data.get('address_id')  # For editing existing address
+        
+        # Validate required fields
+        required_fields = ['house_number', 'floor_door', 'locality', 'nickname']
+        missing_fields = [field for field in required_fields if not form_data.get(field)]
+        
+        if missing_fields:
+            flash(f'Please fill in all required fields: {", ".join(missing_fields)}', 'error')
+            return redirect(url_for('checkout_address'))
+        
+        # Validate coordinates
+        try:
+            latitude = float(form_data.get('latitude', 0))
+            longitude = float(form_data.get('longitude', 0))
+            if latitude == 0 or longitude == 0:
+                flash('Please select a location on the map.', 'error')
+                return redirect(url_for('checkout_address'))
+        except (ValueError, TypeError):
+            flash('Invalid location coordinates.', 'error')
+            return redirect(url_for('checkout_address'))
+        
+        # Prepare address data
+        address_data = {
+            'nickname': form_data.get('nickname'),
+            'house_number': form_data.get('house_number'),
+            'block_name': form_data.get('block_name', ''),
+            'floor_door': form_data.get('floor_door'),
+            'locality': form_data.get('locality'),
+            'city': form_data.get('city'),
+            'pincode': form_data.get('pincode'),
+            'latitude': latitude,
+            'longitude': longitude,
+            'nearby_landmark': form_data.get('nearby_landmark', ''),
+            'contact_number': form_data.get('contact_number', ''),
+            'address_notes': form_data.get('address_notes', ''),
+            'receiver_name': form_data.get('receiver_name', '')
+        }
+        
+        if action == 'save':
+            # Save address permanently
+            if address_id:
+                # Update existing address
+                if SecureAddressService.update_address(int(address_id), user_id, address_data):
+                    SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
+                    session['checkout_address_id'] = int(address_id)
+                    flash('Address updated successfully!', 'success')
+                else:
+                    flash('Error updating address.', 'error')
+                    return redirect(url_for('checkout_address'))
+            else:
+                # Create new address
+                new_address_id = SecureAddressService.create_address(user_id, address_data)
+                if new_address_id:
+                    SecurityAuditLogger.log_data_access(user_id, "CREATE", "address")
+                    session['checkout_address_id'] = new_address_id
+                    flash('Address saved successfully!', 'success')
+                else:
+                    flash('Error saving address.', 'error')
+                    return redirect(url_for('checkout_address'))
+        
+        elif action == 'one_time':
+            # Store address data in session for one-time use
+            session['checkout_one_time_address'] = address_data
+            session['checkout_address_id'] = None  # Clear any saved address selection
+            flash('Address set for one-time use.', 'success')
+        
+        # Redirect to next checkout step (payment page when implemented)
+        return redirect(url_for('checkout_address') + '?step=confirm')
+        
+    except Exception as e:
+        logger.error(f"Error saving checkout address: {e}")
+        flash('An error occurred while saving the address. Please try again.', 'error')
+        return redirect(url_for('checkout_address'))
+
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""

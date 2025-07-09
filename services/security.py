@@ -185,6 +185,65 @@ class SecureAddressService:
             return False
     
     @staticmethod
+    def update_address(address_id: int, user_id: int, address_data: Dict) -> bool:
+        """Update an existing address with encrypted sensitive data"""
+        try:
+            # Prepare secure address data
+            secure_data = SecureDataHandler.prepare_address_data_for_storage(address_data)
+            
+            # If this is set as default, unset other defaults first
+            if secure_data.get('is_default'):
+                DatabaseService.execute_query(
+                    "UPDATE addresses SET is_default = false WHERE user_id = %s AND id != %s",
+                    (user_id, address_id)
+                )
+            
+            query = """
+                UPDATE addresses SET
+                    nickname = %s,
+                    house_number_encrypted = %s,
+                    block_name = %s,
+                    floor_door_encrypted = %s,
+                    contact_number_encrypted = %s,
+                    latitude = %s,
+                    longitude = %s,
+                    locality = %s,
+                    city = %s,
+                    pincode = %s,
+                    nearby_landmark_encrypted = %s,
+                    address_notes = %s,
+                    is_default = %s
+                WHERE id = %s AND user_id = %s
+            """
+            
+            result = DatabaseService.execute_query(
+                query,
+                (
+                    secure_data['nickname'],
+                    secure_data.get('house_number_encrypted'),
+                    secure_data.get('block_name', ''),
+                    secure_data.get('floor_door_encrypted'),
+                    secure_data.get('contact_number_encrypted'),
+                    secure_data['latitude'],
+                    secure_data['longitude'],
+                    secure_data['locality'],
+                    secure_data['city'],
+                    secure_data['pincode'],
+                    secure_data.get('nearby_landmark_encrypted', ''),
+                    secure_data.get('address_notes', ''),
+                    secure_data.get('is_default', False),
+                    address_id,
+                    user_id
+                )
+            )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating address: {e}")
+            return False
+    
+    @staticmethod
     def delete_address(address_id: int, user_id: int) -> bool:
         """Delete an address (secure deletion)"""
         try:
