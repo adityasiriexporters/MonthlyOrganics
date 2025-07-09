@@ -463,7 +463,8 @@ def checkout_address():
                              subtotal=subtotal,
                              delivery_fee=delivery_fee,
                              total=total,
-                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'),
+                             checkout_one_time_address=session.get('checkout_one_time_address'))
         
     except Exception as e:
         logger.error(f"Error loading checkout address page: {e}")
