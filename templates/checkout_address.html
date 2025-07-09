@@ -898,6 +898,30 @@ function initializeAddressSelection() {
     }
 }
 
+// Setup address selection event listeners
+function setupAddressSelection() {
+    const addressSelect = document.getElementById('addressSelect');
+    if (addressSelect) {
+        addressSelect.addEventListener('change', function() {
+            handleAddressSelection();
+        });
+    }
+}
+
+// Show initial view based on selection
+function showInitialView() {
+    const select = document.getElementById('addressSelect');
+    if (select && select.value) {
+        if (select.value === 'add_new') {
+            showNewAddressForm();
+        } else {
+            showSelectedAddress(select.value);
+        }
+    } else {
+        showNewAddressForm();
+    }
+}
+
 // Handle proceed to pay button
 document.addEventListener('DOMContentLoaded', function() {
     const proceedBtn = document.getElementById('proceedToPayBtn');
@@ -916,7 +940,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showInitialView();
         
         // Initial validation to set button states
-        setTimeout(validateForm, 100);
+        setTimeout(function() {
+            if (typeof validateForm === 'function') {
+                validateForm();
+            }
+        }, 100);
     }, 100);
 });
 </script>
