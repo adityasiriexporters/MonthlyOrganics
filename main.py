@@ -222,7 +222,7 @@ def save_address():
         flash('An error occurred while saving the address. Please try again.', 'error')
         return redirect(url_for('add_address'))
 
-@app.route('/set-default-address/<int:address_id>')
+@app.route('/set-default-address/<int:address_id>', methods=['GET', 'POST'])
 @login_required
 def set_default_address(address_id):
     """Set an address as default."""
@@ -231,13 +231,24 @@ def set_default_address(address_id):
         
         if SecureAddressService.set_default_address(address_id, user_id):
             SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_default")
-            flash('Default address updated successfully!', 'success')
+            
+            # Return JSON for AJAX calls, redirect for normal calls
+            if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
+                return jsonify({'success': True, 'message': 'Default address updated successfully!'})
+            else:
+                flash('Default address updated successfully!', 'success')
         else:
-            flash('Error updating default address.', 'error')
+            if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
+                return jsonify({'success': False, 'message': 'Error updating default address.'})
+            else:
+                flash('Error updating default address.', 'error')
             
     except Exception as e:
         logger.error(f"Error setting default address: {e}")
-        flash('An error occurred. Please try again.', 'error')
+        if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'An error occurred. Please try again.'})
+        else:
+            flash('An error occurred. Please try again.', 'error')
     
     return redirect(url_for('addresses'))
 

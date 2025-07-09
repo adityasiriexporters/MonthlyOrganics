@@ -38,10 +38,37 @@ def store():
         """
         products_data = DatabaseService.execute_query(query)
         
+        # Get user addresses and selected address (same as homepage)
+        selected_address = None
+        user_addresses = []
+        
+        from flask import session
+        if 'user_id' in session:
+            try:
+                from services.security import SecureAddressService, SecurityAuditLogger
+                user_id = session['user_id']
+                user_addresses = SecureAddressService.get_user_addresses(user_id)
+                SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
+                
+                # Get default address or first address
+                for addr in user_addresses:
+                    if addr.get('is_default'):
+                        selected_address = addr
+                        break
+                
+                # If no default, use first address
+                if not selected_address and user_addresses:
+                    selected_address = user_addresses[0]
+                    
+            except Exception as e:
+                logger.error(f"Error loading addresses for store page: {e}")
+        
         from flask import render_template
         return render_template('store.html', 
                              categories=categories or [],
-                             products_data=products_data or [])
+                             products_data=products_data or [],
+                             selected_address=selected_address,
+                             user_addresses=user_addresses)
         
     except Exception as e:
         logger.error(f"Error loading store page: {e}")
