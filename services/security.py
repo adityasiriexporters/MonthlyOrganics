@@ -87,9 +87,9 @@ class SecureAddressService:
         """Get user addresses with decryption"""
         try:
             query = """
-                SELECT id, user_id, nickname, house_number_encrypted, block_name,
-                       floor_door_encrypted, contact_number_encrypted, latitude, longitude,
-                       locality, city, pincode, nearby_landmark_encrypted, 
+                SELECT id, user_id, nickname, house_number, block_name,
+                       floor_door, contact_number, latitude, longitude,
+                       locality, city, pincode, nearby_landmark, 
                        address_notes, is_default, created_at
                 FROM addresses 
                 WHERE user_id = %s 
@@ -98,12 +98,8 @@ class SecureAddressService:
             addresses = DatabaseService.execute_query(query, (user_id,))
             
             if addresses:
-                # Decrypt sensitive data for each address
-                decrypted_addresses = []
-                for addr in addresses:
-                    decrypted_addr = SecureDataHandler.decrypt_address_data(addr)
-                    decrypted_addresses.append(decrypted_addr)
-                return decrypted_addresses
+                # No decryption needed - return addresses as-is
+                return addresses
             
             return []
             
@@ -203,16 +199,16 @@ class SecureAddressService:
             query = """
                 UPDATE addresses SET
                     nickname = %s,
-                    house_number_encrypted = %s,
+                    house_number = %s,
                     block_name = %s,
-                    floor_door_encrypted = %s,
-                    contact_number_encrypted = %s,
+                    floor_door = %s,
+                    contact_number = %s,
                     latitude = %s,
                     longitude = %s,
                     locality = %s,
                     city = %s,
                     pincode = %s,
-                    nearby_landmark_encrypted = %s,
+                    nearby_landmark = %s,
                     address_notes = %s,
                     is_default = %s
                 WHERE id = %s AND user_id = %s
@@ -222,16 +218,16 @@ class SecureAddressService:
                 query,
                 (
                     secure_data['nickname'],
-                    secure_data.get('house_number_encrypted'),
+                    secure_data.get('house_number', ''),
                     secure_data.get('block_name', ''),
-                    secure_data.get('floor_door_encrypted'),
-                    secure_data.get('contact_number_encrypted'),
+                    secure_data.get('floor_door', ''),
+                    secure_data.get('contact_number', ''),
                     secure_data['latitude'],
                     secure_data['longitude'],
                     secure_data['locality'],
                     secure_data['city'],
                     secure_data['pincode'],
-                    secure_data.get('nearby_landmark_encrypted', ''),
+                    secure_data.get('nearby_landmark', ''),
                     secure_data.get('address_notes', ''),
                     secure_data.get('is_default', False),
                     address_id,
