@@ -66,6 +66,8 @@ class DataEncryption:
             return base64.urlsafe_b64encode(encrypted_data).decode()
         except Exception as e:
             logger.error(f"Encryption failed: {e}")
+            import traceback
+            logger.error(f"Encryption traceback: {traceback.format_exc()}")
             return None
     
     @classmethod
