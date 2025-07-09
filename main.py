@@ -9,7 +9,8 @@ from decimal import Decimal
 # Import services and utilities
 from models import db, init_db
 from services.database import CartService, UserService, AddressService
-from utils.decorators import login_required, validate_mobile_number, validate_otp
+from utils.decorators import login_required
+from validators.forms import FormValidator
 from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
     render_add_to_cart_button, render_cart_totals
@@ -179,31 +180,26 @@ def save_address():
         
         # Get form data
         address_data = {
-            'nickname': request.form.get('nickname', '').strip(),
-            'house_number': request.form.get('house_number', '').strip(),
-            'block_name': request.form.get('block_name', '').strip(),
-            'floor_door': request.form.get('floor_door', '').strip(),
-            'contact_number': request.form.get('contact_number', '').strip(),
+            'nickname': FormValidator.sanitize_string(request.form.get('nickname', '')),
+            'house_number': FormValidator.sanitize_string(request.form.get('house_number', '')),
+            'block_name': FormValidator.sanitize_string(request.form.get('block_name', '')),
+            'floor_door': FormValidator.sanitize_string(request.form.get('floor_door', '')),
+            'contact_number': FormValidator.sanitize_string(request.form.get('contact_number', '')),
             'latitude': float(request.form.get('latitude', 0)),
             'longitude': float(request.form.get('longitude', 0)),
-            'locality': request.form.get('locality', '').strip(),
-            'city': request.form.get('city', '').strip(),
-            'pincode': request.form.get('pincode', '').strip(),
-            'nearby_landmark': request.form.get('nearby_landmark', '').strip(),
-            'address_notes': request.form.get('address_notes', '').strip(),
+            'locality': FormValidator.sanitize_string(request.form.get('locality', '')),
+            'city': FormValidator.sanitize_string(request.form.get('city', '')),
+            'pincode': FormValidator.sanitize_string(request.form.get('pincode', '')),
+            'nearby_landmark': FormValidator.sanitize_string(request.form.get('nearby_landmark', '')),
+            'address_notes': FormValidator.sanitize_string(request.form.get('address_notes', '')),
             'is_default': request.form.get('is_default') == 'on'
         }
         
-        # Validate required fields
-        required_fields = ['nickname', 'house_number', 'floor_door', 'contact_number', 'locality', 'city', 'pincode']
-        for field in required_fields:
-            if not address_data[field]:
-                flash(f'{field.replace("_", " ").title()} is required.', 'error')
-                return redirect(url_for('add_address'))
-        
-        # Validate latitude and longitude
-        if address_data['latitude'] == 0 or address_data['longitude'] == 0:
-            flash('Please select a location on the map.', 'error')
+        # Validate address data using FormValidator
+        is_valid, errors = FormValidator.validate_address_data(address_data)
+        if not is_valid:
+            for error in errors:
+                flash(error, 'error')
             return redirect(url_for('add_address'))
         
         # Save address using AddressService
@@ -309,8 +305,8 @@ def send_otp():
     try:
         mobile_number = request.form.get('mobile_number', '').strip()
         
-        # Validate mobile number format using utility function
-        if not validate_mobile_number(mobile_number):
+        # Validate mobile number format
+        if not FormValidator.validate_mobile_number(mobile_number):
             flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
             return redirect(url_for('login'))
         
@@ -322,8 +318,8 @@ def send_otp():
         session['mobile_number'] = mobile_number
         session['otp_attempts'] = 0
         
-        # For testing - print OTP to console
-        print(f"OTP for {mobile_number} is: {otp} (TEST MODE)")
+        # For testing - log OTP (will be replaced with SMS service)
+        logger.info(f"OTP for {mobile_number} is: {otp} (TEST MODE)")
         
         return redirect(url_for('verify'))
         
@@ -365,8 +361,8 @@ def verify_otp():
             flash('Too many failed attempts. Please try again.', 'error')
             return redirect(url_for('login'))
         
-        # Validate OTP format using utility function
-        if not validate_otp(submitted_otp):
+        # Validate OTP format
+        if not FormValidator.validate_otp(submitted_otp):
             flash('Please enter a valid 6-digit OTP.', 'error')
             return redirect(url_for('verify'))
         

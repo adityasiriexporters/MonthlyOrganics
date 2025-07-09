@@ -33,11 +33,16 @@ The architecture separates concerns between the main application entry point (`m
 
 ### Database Schema
 
-The application defines the following core models:
+The application uses the following database structure:
 
-1. **User Model**: Stores customer information including email, name, phone, and status
-2. **Address Model**: Manages delivery addresses with support for multiple addresses per user
-3. **Subscription Model**: (Referenced but not fully implemented in current codebase)
+1. **Users Table**: Customer information (id, email, first_name, last_name, phone, timestamps)
+2. **Addresses Table**: Delivery addresses with geolocation (user_id, nickname, coordinates, address fields)
+3. **Categories Table**: Product categories (id, name, icon_url)
+4. **Products Table**: Product information (id, name, description, category_id, is_best_seller)
+5. **Product Variations Table**: Product variants with pricing (id, product_id, variation_name, mrp, stock)
+6. **Cart Items Table**: Shopping cart data (id, user_id, variation_id, quantity)
+7. **Orders Table**: Order records (id, user_id, total_amount, status, timestamps)
+8. **Order Items Table**: Order line items (id, order_id, variation_id, quantity, price)
 
 ## Data Flow
 
@@ -120,6 +125,8 @@ Changelog:
 - July 08, 2025. Performance Optimization: Implemented database connection pooling (2-10 connections), reduced query count from 4 queries per request to 1 optimized query, improved response times from 300ms to under 50ms
 - July 08, 2025. Cart Totals Real-time Update: Fixed cart totals endpoint backend issues, improved decimal handling, implemented onclick-based cart totals refresh to resolve HTMX event handler problems
 - July 08, 2025. Ultra-Reliable Cart Totals System: Implemented multi-approach solution combining direct click events (150/300/500ms delays), fallback HTMX updates, and emergency manual functions for guaranteed cart totals synchronization
+- July 09, 2025. Address System Enhancement: Implemented full-screen map modal for address selection with proper mobile navigation handling and touch gesture support
+- July 09, 2025. Comprehensive Code Refactoring: Created validators module for centralized form validation, cleaned up duplicate code, optimized database queries, added critical indexes for performance, removed dead code and unused imports
 ```
 
 ## User Preferences
