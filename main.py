@@ -167,7 +167,8 @@ def addresses():
 @login_required
 def add_address():
     """Add address page route."""
-    return render_template('add_address.html')
+    return render_template('add_address.html', 
+                         google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
 
 @app.route('/save-address', methods=['POST'])
 @login_required
