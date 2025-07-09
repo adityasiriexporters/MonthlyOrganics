@@ -38,6 +38,26 @@
             padding-bottom: 160px; /* Less padding on desktop */
         }
     }
+    
+    /* Form validation styles */
+    .radio-option.selected {
+        border-color: #22c55e;
+        background-color: #f0fdf4;
+    }
+    
+    .field-invalid {
+        border-color: #ef4444 !important;
+        background-color: #fef2f2 !important;
+    }
+    
+    .field-valid {
+        border-color: #22c55e !important;
+    }
+    
+    .save-button-disabled {
+        opacity: 0.6;
+        cursor: not-allowed !important;
+    }
 </style>
 {% endblock %}
 
@@ -284,7 +304,9 @@
             <!-- Submit Button -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <button type="submit" 
-                        class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        id="saveAddressBtn"
+                        class="w-full bg-gray-300 text-gray-500 py-3 px-4 rounded-lg font-medium cursor-not-allowed transition-colors"
+                        disabled>
                     Save Address
                 </button>
             </div>
@@ -373,6 +395,7 @@ let existingAddresses = [];
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadExistingAddresses();
+    setupFormValidation();
 });
 
 function initMap() {
@@ -705,6 +728,9 @@ function toggleCustomLabel() {
             }, 3000);
         }
     }
+    
+    // Trigger form validation after label selection
+    setTimeout(validateForm, 100);
 }
 
 // Update nickname when custom label changes
@@ -712,6 +738,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('custom_label')) {
         document.getElementById('custom_label').addEventListener('input', function() {
             document.getElementById('nickname').value = this.value;
+            // Trigger validation after custom label input
+            setTimeout(validateForm, 100);
         });
     }
 });
@@ -837,6 +865,136 @@ function generateIncrementalLabel(baseLabel) {
     }
     
     return baseLabel;
+}
+
+// Form Validation Functions
+function setupFormValidation() {
+    const form = document.getElementById('addressForm');
+    if (!form) return;
+    
+    // Get all required form fields
+    const requiredFields = [
+        'receiver_name',
+        'contact_number', 
+        'house_number',
+        'locality',
+        'city',
+        'pincode',
+        'nickname'
+    ];
+    
+    // Add event listeners to all required fields
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', validateForm);
+            field.addEventListener('blur', validateForm);
+        }
+    });
+    
+    // Add listener for address label selection
+    const labelInputs = document.querySelectorAll('input[name="label_type"]');
+    labelInputs.forEach(input => {
+        input.addEventListener('change', validateForm);
+    });
+    
+    // Add listener for custom label input
+    const customLabelInput = document.getElementById('custom_label');
+    if (customLabelInput) {
+        customLabelInput.addEventListener('input', validateForm);
+    }
+    
+    // Initial validation
+    validateForm();
+}
+
+function validateForm() {
+    const saveButton = document.getElementById('saveAddressBtn');
+    if (!saveButton) return;
+    
+    // Check if location is selected
+    if (!selectedLocation) {
+        disableSaveButton();
+        return;
+    }
+    
+    // Check required fields
+    const requiredFields = [
+        { id: 'receiver_name', name: 'Receiver Name' },
+        { id: 'contact_number', name: 'Contact Number' },
+        { id: 'house_number', name: 'House Number' },
+        { id: 'locality', name: 'Locality' },
+        { id: 'city', name: 'City' },
+        { id: 'pincode', name: 'Pincode' }
+    ];
+    
+    // Check if all required fields are filled
+    for (let field of requiredFields) {
+        const element = document.getElementById(field.id);
+        if (!element || !element.value.trim()) {
+            disableSaveButton();
+            return;
+        }
+    }
+    
+    // Check address label selection
+    const selectedLabel = document.querySelector('input[name="label_type"]:checked');
+    if (!selectedLabel) {
+        disableSaveButton();
+        return;
+    }
+    
+    // If "other" is selected, check custom label
+    if (selectedLabel.value === 'other') {
+        const customLabel = document.getElementById('custom_label');
+        if (!customLabel || !customLabel.value.trim()) {
+            disableSaveButton();
+            return;
+        }
+    }
+    
+    // Check contact number format (basic validation)
+    const contactNumber = document.getElementById('contact_number').value.trim();
+    if (contactNumber.length < 10 || !/^\d+$/.test(contactNumber)) {
+        disableSaveButton();
+        return;
+    }
+    
+    // Check pincode format (basic validation)
+    const pincode = document.getElementById('pincode').value.trim();
+    if (pincode.length !== 6 || !/^\d+$/.test(pincode)) {
+        disableSaveButton();
+        return;
+    }
+    
+    // All validations passed
+    enableSaveButton();
+}
+
+function enableSaveButton() {
+    const saveButton = document.getElementById('saveAddressBtn');
+    if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        saveButton.classList.add('bg-primary', 'text-white', 'hover:bg-primary/90', 'cursor-pointer');
+    }
+}
+
+function disableSaveButton() {
+    const saveButton = document.getElementById('saveAddressBtn');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.classList.remove('bg-primary', 'text-white', 'hover:bg-primary/90', 'cursor-pointer');
+        saveButton.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+    }
+}
+
+// Override the showMiniMap function to trigger validation
+const originalShowMiniMap = showMiniMap;
+function showMiniMap() {
+    originalShowMiniMap();
+    // Trigger form validation after location is set
+    setTimeout(validateForm, 100);
 }
 </script>
 {% endblock %}
