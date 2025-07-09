@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -21,6 +22,39 @@ from utils.template_helpers import (
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+def generate_incremental_label(user_id: int, requested_nickname: str) -> str:
+    """Generate incremental label for address nickname if it already exists."""
+    try:
+        # Get existing addresses for the user
+        existing_addresses = SecureAddressService.get_user_addresses(user_id)
+        existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses]
+        
+        # Check if the requested nickname already exists
+        if requested_nickname.lower() not in existing_nicknames:
+            return requested_nickname
+        
+        # Find the highest number for this base nickname
+        base_nickname = requested_nickname
+        pattern = re.compile(rf"^{re.escape(base_nickname.lower())}(?: (\d+))?$")
+        
+        max_number = 0
+        for nickname in existing_nicknames:
+            match = pattern.match(nickname)
+            if match:
+                number_str = match.group(1)
+                if number_str:
+                    max_number = max(max_number, int(number_str))
+                else:
+                    max_number = max(max_number, 1)  # Original name counts as 1
+        
+        # Generate new incremental name
+        new_number = max_number + 1
+        return f"{base_nickname} {new_number}"
+        
+    except Exception as e:
+        logger.error(f"Error generating incremental label: {e}")
+        return requested_nickname
 
 class Base(DeclarativeBase):
     pass
@@ -185,9 +219,13 @@ def save_address():
         # Log all form data for debugging
         logger.info(f"Received form data: {dict(request.form)}")
         
+        # Generate incremental label if nickname already exists
+        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
+        final_nickname = generate_incremental_label(user_id, requested_nickname)
+        
         # Get form data with more robust handling
         address_data = {
-            'nickname': FormValidator.sanitize_string(request.form.get('nickname', '')),
+            'nickname': final_nickname,
             'house_number': FormValidator.sanitize_string(request.form.get('house_number', '')),
             'block_name': FormValidator.sanitize_string(request.form.get('block_name', '')),
             'floor_door': FormValidator.sanitize_string(request.form.get('floor_door', '')),
@@ -264,6 +302,106 @@ def set_default_address(address_id):
             flash('An error occurred. Please try again.', 'error')
     
     return redirect(url_for('addresses'))
+
+@app.route('/edit-address/<int:address_id>')
+@login_required
+def edit_address(address_id):
+    """Edit address page."""
+    try:
+        user_id = session['user_id']
+        
+        # Get the specific address using SecureAddressService
+        addresses = SecureAddressService.get_user_addresses(user_id)
+        address = None
+        
+        for addr in addresses:
+            if addr['id'] == address_id:
+                address = addr
+                break
+        
+        if not address:
+            flash('Address not found.', 'error')
+            return redirect(url_for('addresses'))
+        
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "address")
+        
+        return render_template('edit_address.html', 
+                             address=address,
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        
+    except Exception as e:
+        logger.error(f"Error loading edit address page: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('addresses'))
+
+@app.route('/update-address/<int:address_id>', methods=['POST'])
+@login_required
+def update_address(address_id):
+    """Update an existing address."""
+    try:
+        user_id = session['user_id']
+        
+        # Get form data
+        form_data = request.form.to_dict()
+        logger.info(f"Updating address {address_id} with data: {form_data}")
+        
+        # Validate required fields
+        required_fields = ['house_number', 'floor_door', 'locality', 'nickname']
+        missing_fields = [field for field in required_fields if not form_data.get(field)]
+        
+        if missing_fields:
+            flash(f'Please fill in all required fields: {", ".join(missing_fields)}', 'error')
+            return redirect(url_for('edit_address', address_id=address_id))
+        
+        # Validate coordinates
+        try:
+            latitude = float(form_data.get('latitude', 0))
+            longitude = float(form_data.get('longitude', 0))
+            if latitude == 0 or longitude == 0:
+                flash('Invalid location coordinates.', 'error')
+                return redirect(url_for('edit_address', address_id=address_id))
+        except (ValueError, TypeError):
+            flash('Invalid location coordinates.', 'error')
+            return redirect(url_for('edit_address', address_id=address_id))
+        
+        # Prepare address data
+        address_data = {
+            'nickname': form_data.get('nickname'),
+            'house_number': form_data.get('house_number'),
+            'block_name': form_data.get('block_name', ''),
+            'floor_door': form_data.get('floor_door'),
+            'locality': form_data.get('locality'),
+            'city': form_data.get('city'),
+            'pincode': form_data.get('pincode'),
+            'latitude': latitude,
+            'longitude': longitude,
+            'nearby_landmark': form_data.get('nearby_landmark', ''),
+            'contact_number': form_data.get('contact_number', ''),
+            'address_notes': form_data.get('address_notes', ''),
+            'receiver_name': form_data.get('receiver_name', ''),
+            'is_default': bool(form_data.get('is_default'))
+        }
+        
+        # Validate address data
+        is_valid, errors = FormValidator.validate_address_data(address_data)
+        if not is_valid:
+            for error in errors:
+                flash(error, 'error')
+            return redirect(url_for('edit_address', address_id=address_id))
+        
+        # Update address using SecureAddressService
+        if SecureAddressService.update_address(address_id, user_id, address_data):
+            SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
+            flash('Address updated successfully!', 'success')
+            return redirect(url_for('addresses'))
+        else:
+            flash('Error updating address.', 'error')
+            return redirect(url_for('edit_address', address_id=address_id))
+        
+    except Exception as e:
+        logger.error(f"Error updating address: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('edit_address', address_id=address_id))
 
 @app.route('/delete-address/<int:address_id>')
 @login_required

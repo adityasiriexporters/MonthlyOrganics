@@ -68,6 +68,10 @@
 
                         <!-- Action Buttons -->
                         <div class="flex flex-col space-y-2 ml-4">
+                            <a href="{{ url_for('edit_address', address_id=address.id) }}" 
+                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                Edit
+                            </a>
                             {% if not address.is_default %}
                                 <a href="{{ url_for('set_default_address', address_id=address.id) }}" 
                                    class="text-primary hover:text-primary/80 text-sm font-medium">
