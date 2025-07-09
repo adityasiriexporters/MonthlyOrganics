@@ -132,10 +132,30 @@ class SecureDataHandler:
     
     @staticmethod
     def prepare_address_data_for_storage(address_data: dict) -> dict:
-        """Prepare address data for storage - simplified for now"""
-        # Return data as-is without encryption for simplicity
-        # TODO: Re-implement encryption after basic functionality works
-        return address_data.copy()
+        """Prepare address data for secure storage with encryption"""
+        secure_data = address_data.copy()
+        
+        # Encrypt sensitive fields
+        sensitive_fields = ['house_number', 'floor_door', 'contact_number', 'nearby_landmark']
+        
+        for field in sensitive_fields:
+            if field in secure_data and secure_data[field]:
+                encrypted_value = DataEncryption.encrypt_address_field(secure_data[field])
+                if encrypted_value:
+                    secure_data[f'{field}_encrypted'] = encrypted_value
+                else:
+                    # If encryption fails, use empty string
+                    secure_data[f'{field}_encrypted'] = ''
+                # Remove plaintext version for security
+                del secure_data[field]
+            else:
+                # Set empty encrypted field if no data provided
+                secure_data[f'{field}_encrypted'] = ''
+        
+        # Keep non-sensitive fields as-is for search/display
+        # locality, city, pincode are needed for delivery logistics
+        
+        return secure_data
     
     @staticmethod
     def decrypt_user_data(user_data: dict) -> dict:
