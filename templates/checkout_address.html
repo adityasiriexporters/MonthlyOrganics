@@ -551,6 +551,15 @@ function checkForConfirmedAddress() {
 }
 
 function showConfirmationSection() {
+    // Hide address selection form
+    const addressSelection = document.getElementById('addressSelection');
+    const addressForm = document.getElementById('addressForm');
+    const mapSection = document.getElementById('mapSection');
+    
+    if (addressSelection) addressSelection.style.display = 'none';
+    if (addressForm) addressForm.style.display = 'none';
+    if (mapSection) mapSection.style.display = 'none';
+    
     // Show confirmation section
     document.getElementById('confirmSection').classList.remove('hidden');
     document.getElementById('proceedToPaySection').classList.remove('hidden');
@@ -917,15 +926,7 @@ function hideLocationSelected() {
     document.getElementById('openMapBtn').style.display = 'block';
 }
 
-// Initialize address selection on page load
-function initializeAddressSelection() {
-    const select = document.getElementById('addressSelect');
-    if (select.value !== 'add_new') {
-        showSelectedAddress(select.value);
-    } else {
-        showNewAddressForm();
-    }
-}
+// Remove duplicate function - this is now handled in the DOMContentLoaded event
 
 // Handle proceed to pay button
 document.addEventListener('DOMContentLoaded', function() {
@@ -937,16 +938,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize form validation after page load
-    setTimeout(function() {
-        setupFormValidation();
-        setupMapFunctionality();
-        setupAddressSelection();
-        showInitialView();
-        
-        // Initial validation to set button states
-        setTimeout(validateForm, 100);
-    }, 100);
+    // Initialize everything after page load
+    initializeProceedButton();
+    
+    // Check if this is a confirmation step
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('step') === 'confirm') {
+        showConfirmationSection();
+    }
 });
 </script>
 
