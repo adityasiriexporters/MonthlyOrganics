@@ -380,12 +380,15 @@
         <div id="confirmSection" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 hidden">
             <h3 class="font-semibold text-gray-900 mb-4">Delivery Confirmation</h3>
             
-            <!-- One-time Address Display -->
-            <div id="oneTimeAddressDisplay" class="hidden mb-6">
-                <h4 class="text-sm font-medium text-gray-700 mb-3">Delivery Address (One-time use)</h4>
+            <!-- Unified Address Display -->
+            <div id="addressDisplaySection" class="mb-6">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Delivery Address</h4>
                 <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div id="oneTimeAddressDetails" class="text-sm text-gray-800">
+                    <div id="selectedAddressDetails" class="text-sm text-gray-800">
                         <!-- Address details will be populated by JavaScript -->
+                    </div>
+                    <div id="addressTypeLabel" class="text-xs text-gray-500 mt-2">
+                        <!-- Will show "Saved Address" or "One-time use" -->
                     </div>
                 </div>
             </div>
@@ -494,10 +497,15 @@ function handleAddressSelection() {
     
     console.log('Address selection changed:', selectedValue);
     
+    // Reset confirmation section when address changes
+    resetConfirmationSection();
+    
     if (selectedValue === 'add_new') {
         showNewAddressForm();
     } else {
         showSelectedAddress(selectedValue);
+        // Update confirmation section with selected saved address
+        updateConfirmationAddress(selectedValue, 'saved');
     }
 }
 
@@ -588,17 +596,41 @@ function checkAndDisplayOneTimeAddress() {
     const oneTimeAddress = {{ checkout_one_time_address|tojson if checkout_one_time_address else 'null' }};
     
     if (oneTimeAddress) {
-        displayOneTimeAddress(oneTimeAddress);
+        updateConfirmationAddress(oneTimeAddress, 'one_time');
     }
 }
 
-function displayOneTimeAddress(addressData) {
-    const oneTimeDisplay = document.getElementById('oneTimeAddressDisplay');
-    const oneTimeDetails = document.getElementById('oneTimeAddressDetails');
+function updateConfirmationAddress(addressData, type) {
+    const addressDetails = document.getElementById('selectedAddressDetails');
+    const addressTypeLabel = document.getElementById('addressTypeLabel');
+    const addressDisplaySection = document.getElementById('addressDisplaySection');
     
-    if (oneTimeDisplay && oneTimeDetails) {
-        // Build address display HTML
-        const addressHTML = `
+    if (!addressDetails || !addressTypeLabel || !addressDisplaySection) return;
+    
+    let addressHTML = '';
+    let typeLabel = '';
+    
+    if (type === 'saved') {
+        // Get data from selected option in dropdown
+        const select = document.getElementById('addressSelect');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (selectedOption && selectedOption.value !== 'add_new') {
+            addressHTML = `
+                <p><strong>${selectedOption.dataset.nickname}</strong></p>
+                <p>${selectedOption.dataset.house}${selectedOption.dataset.block ? ', ' + selectedOption.dataset.block : ''}</p>
+                <p>${selectedOption.dataset.floor}</p>
+                <p>${selectedOption.dataset.locality}, ${selectedOption.dataset.city} - ${selectedOption.dataset.pincode}</p>
+                ${selectedOption.dataset.landmark ? '<p>Near ' + selectedOption.dataset.landmark + '</p>' : ''}
+                <p><strong>Receiver:</strong> ${selectedOption.dataset.receiver}</p>
+                <p><strong>Phone:</strong> ${selectedOption.dataset.contact}</p>
+                ${selectedOption.dataset.notes ? '<p class="italic mt-2"><strong>Notes:</strong> ' + selectedOption.dataset.notes + '</p>' : ''}
+            `;
+            typeLabel = 'Saved Address';
+        }
+    } else if (type === 'one_time') {
+        // Use one-time address data
+        addressHTML = `
             <p><strong>${addressData.nickname}</strong></p>
             <p>${addressData.house_number}${addressData.block_name ? ', ' + addressData.block_name : ''}</p>
             <p>${addressData.floor_door}</p>
@@ -608,10 +640,33 @@ function displayOneTimeAddress(addressData) {
             <p><strong>Phone:</strong> ${addressData.contact_number}</p>
             ${addressData.address_notes ? '<p class="italic mt-2"><strong>Notes:</strong> ' + addressData.address_notes + '</p>' : ''}
         `;
-        
-        oneTimeDetails.innerHTML = addressHTML;
-        oneTimeDisplay.classList.remove('hidden');
+        typeLabel = 'One-time use';
     }
+    
+    if (addressHTML) {
+        addressDetails.innerHTML = addressHTML;
+        addressTypeLabel.textContent = typeLabel;
+        addressDisplaySection.classList.remove('hidden');
+    } else {
+        addressDisplaySection.classList.add('hidden');
+    }
+}
+
+function resetConfirmationSection() {
+    // Reset confirmation checkbox
+    const confirmCheckbox = document.getElementById('confirmAddress');
+    if (confirmCheckbox) {
+        confirmCheckbox.checked = false;
+    }
+    
+    // Hide address display in confirmation section
+    const addressDisplaySection = document.getElementById('addressDisplaySection');
+    if (addressDisplaySection) {
+        addressDisplaySection.classList.add('hidden');
+    }
+    
+    // Re-validate confirmation to update proceed button state
+    validateConfirmation();
 }
 
 function toggleEditing() {
