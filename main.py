@@ -8,7 +8,7 @@ from decimal import Decimal
 
 # Import services and utilities
 from models import db, init_db
-from services.database import CartService, UserService
+from services.database import CartService, UserService, AddressService
 from utils.decorators import login_required, validate_mobile_number, validate_otp
 from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
@@ -46,7 +46,34 @@ with app.app_context():
 def index():
     """Main index route that renders the homepage template."""
     logger.info("Rendering homepage")
-    return render_template('index.html')
+    
+    # Get user addresses if logged in
+    user_addresses = []
+    selected_address = None
+    
+    if 'user_id' in session:
+        try:
+            user_id = session['user_id']
+            user_addresses = AddressService.get_user_addresses(user_id)
+            
+            # Get default address or first address
+            for addr in user_addresses:
+                if addr['is_default']:
+                    selected_address = addr
+                    break
+            
+            # If no default, use first address
+            if not selected_address and user_addresses:
+                selected_address = user_addresses[0]
+                
+        except Exception as e:
+            logger.error(f"Error loading addresses for homepage: {e}")
+            user_addresses = []
+            selected_address = None
+    
+    return render_template('index.html', 
+                         user_addresses=user_addresses,
+                         selected_address=selected_address)
 
 @app.route('/profile')
 def profile():
@@ -119,14 +146,140 @@ def profile_settings():
     return render_template('profile.html')
 
 @app.route('/addresses')
+@login_required
 def addresses():
-    """Addresses page route - placeholder."""
-    return render_template('profile.html')
+    """Addresses page route."""
+    try:
+        user_id = session['user_id']
+        
+        # Get user's addresses using AddressService
+        user_addresses = AddressService.get_user_addresses(user_id)
+        logger.info(f"Found {len(user_addresses)} addresses for user {user_id}")
+        
+        return render_template('addresses.html', addresses=user_addresses)
+        
+    except Exception as e:
+        logger.error(f"Error loading addresses: {e}")
+        flash('An error occurred while loading addresses. Please try again.', 'error')
+        return redirect(url_for('profile'))
 
 @app.route('/add-address')
+@login_required
 def add_address():
-    """Add address page route - placeholder."""
-    return render_template('profile.html')
+    """Add address page route."""
+    return render_template('add_address.html')
+
+@app.route('/save-address', methods=['POST'])
+@login_required
+def save_address():
+    """Save new address."""
+    try:
+        user_id = session['user_id']
+        
+        # Get form data
+        address_data = {
+            'nickname': request.form.get('nickname', '').strip(),
+            'house_number': request.form.get('house_number', '').strip(),
+            'block_name': request.form.get('block_name', '').strip(),
+            'floor_door': request.form.get('floor_door', '').strip(),
+            'contact_number': request.form.get('contact_number', '').strip(),
+            'latitude': float(request.form.get('latitude', 0)),
+            'longitude': float(request.form.get('longitude', 0)),
+            'locality': request.form.get('locality', '').strip(),
+            'city': request.form.get('city', '').strip(),
+            'pincode': request.form.get('pincode', '').strip(),
+            'nearby_landmark': request.form.get('nearby_landmark', '').strip(),
+            'address_notes': request.form.get('address_notes', '').strip(),
+            'is_default': request.form.get('is_default') == 'on'
+        }
+        
+        # Validate required fields
+        required_fields = ['nickname', 'house_number', 'floor_door', 'contact_number', 'locality', 'city', 'pincode']
+        for field in required_fields:
+            if not address_data[field]:
+                flash(f'{field.replace("_", " ").title()} is required.', 'error')
+                return redirect(url_for('add_address'))
+        
+        # Validate latitude and longitude
+        if address_data['latitude'] == 0 or address_data['longitude'] == 0:
+            flash('Please select a location on the map.', 'error')
+            return redirect(url_for('add_address'))
+        
+        # Save address using AddressService
+        address_id = AddressService.create_address(user_id, address_data)
+        
+        if address_id:
+            flash('Address saved successfully!', 'success')
+            return redirect(url_for('addresses'))
+        else:
+            flash('Error saving address. Please try again.', 'error')
+            return redirect(url_for('add_address'))
+            
+    except Exception as e:
+        logger.error(f"Error saving address: {e}")
+        flash('An error occurred while saving the address. Please try again.', 'error')
+        return redirect(url_for('add_address'))
+
+@app.route('/set-default-address/<int:address_id>')
+@login_required
+def set_default_address(address_id):
+    """Set an address as default."""
+    try:
+        user_id = session['user_id']
+        
+        if AddressService.set_default_address(address_id, user_id):
+            flash('Default address updated successfully!', 'success')
+        else:
+            flash('Error updating default address.', 'error')
+            
+    except Exception as e:
+        logger.error(f"Error setting default address: {e}")
+        flash('An error occurred. Please try again.', 'error')
+    
+    return redirect(url_for('addresses'))
+
+@app.route('/delete-address/<int:address_id>')
+@login_required
+def delete_address(address_id):
+    """Delete an address."""
+    try:
+        user_id = session['user_id']
+        
+        if AddressService.delete_address(address_id, user_id):
+            flash('Address deleted successfully!', 'success')
+        else:
+            flash('Error deleting address.', 'error')
+            
+    except Exception as e:
+        logger.error(f"Error deleting address: {e}")
+        flash('An error occurred. Please try again.', 'error')
+    
+    return redirect(url_for('addresses'))
+
+@app.route('/api/addresses')
+@login_required
+def api_addresses():
+    """API endpoint to get user addresses for dropdown."""
+    try:
+        user_id = session['user_id']
+        user_addresses = AddressService.get_user_addresses(user_id)
+        
+        # Convert to simple list for JSON response
+        addresses_list = []
+        for addr in user_addresses:
+            addresses_list.append({
+                'id': addr['id'],
+                'nickname': addr['nickname'],
+                'locality': addr['locality'],
+                'city': addr['city'],
+                'is_default': addr['is_default']
+            })
+        
+        return {'addresses': addresses_list}
+        
+    except Exception as e:
+        logger.error(f"Error fetching addresses API: {e}")
+        return {'addresses': []}
 
 @app.route('/health')
 def health_check():

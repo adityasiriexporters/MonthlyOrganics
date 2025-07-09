@@ -216,3 +216,162 @@ class UserService:
             logger.error(f"Error creating user: {e}")
             db.session.rollback()
             return None
+
+class AddressService:
+    """Service for address-related database operations"""
+    
+    @staticmethod
+    def get_user_addresses(user_id: int) -> List[Dict]:
+        """Get all addresses for a user"""
+        query = """
+            SELECT 
+                id, nickname, house_number, block_name, floor_door, 
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            FROM addresses
+            WHERE user_id = %s
+            ORDER BY is_default DESC, created_at DESC
+        """
+        result = DatabaseService.execute_query(query, (user_id,))
+        return result if result else []
+    
+    @staticmethod
+    def get_default_address(user_id: int) -> Optional[Dict]:
+        """Get default address for a user"""
+        query = """
+            SELECT 
+                id, nickname, house_number, block_name, floor_door, 
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            FROM addresses
+            WHERE user_id = %s AND is_default = true
+            LIMIT 1
+        """
+        result = DatabaseService.execute_query(query, (user_id,), fetch_one=True)
+        return dict(result) if result else None
+    
+    @staticmethod
+    def create_address(user_id: int, address_data: Dict) -> Optional[int]:
+        """Create a new address for a user"""
+        query = """
+            INSERT INTO addresses (
+                user_id, nickname, house_number, block_name, floor_door,
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            RETURNING id
+        """
+        
+        # If this is set as default, first unset all other defaults
+        if address_data.get('is_default', False):
+            AddressService.unset_default_address(user_id)
+        
+        result = DatabaseService.execute_query(query, (
+            user_id,
+            address_data['nickname'],
+            address_data['house_number'],
+            address_data.get('block_name', ''),
+            address_data['floor_door'],
+            address_data['contact_number'],
+            address_data['latitude'],
+            address_data['longitude'],
+            address_data['locality'],
+            address_data['city'],
+            address_data['pincode'],
+            address_data.get('nearby_landmark', ''),
+            address_data.get('address_notes', ''),
+            address_data.get('is_default', False)
+        ), fetch_one=True)
+        
+        return result[0] if result else None
+    
+    @staticmethod
+    def update_address(address_id: int, user_id: int, address_data: Dict) -> bool:
+        """Update an existing address"""
+        query = """
+            UPDATE addresses SET
+                nickname = %s, house_number = %s, block_name = %s, floor_door = %s,
+                contact_number = %s, latitude = %s, longitude = %s, locality = %s, 
+                city = %s, pincode = %s, nearby_landmark = %s, address_notes = %s,
+                is_default = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND user_id = %s
+        """
+        
+        # If this is set as default, first unset all other defaults
+        if address_data.get('is_default', False):
+            AddressService.unset_default_address(user_id)
+        
+        result = DatabaseService.execute_query(query, (
+            address_data['nickname'],
+            address_data['house_number'],
+            address_data.get('block_name', ''),
+            address_data['floor_door'],
+            address_data['contact_number'],
+            address_data['latitude'],
+            address_data['longitude'],
+            address_data['locality'],
+            address_data['city'],
+            address_data['pincode'],
+            address_data.get('nearby_landmark', ''),
+            address_data.get('address_notes', ''),
+            address_data.get('is_default', False),
+            address_id,
+            user_id
+        ), fetch_all=False)
+        
+        return result is not None
+    
+    @staticmethod
+    def delete_address(address_id: int, user_id: int) -> bool:
+        """Delete an address"""
+        query = """
+            DELETE FROM addresses 
+            WHERE id = %s AND user_id = %s
+        """
+        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_all=False)
+        return result is not None
+    
+    @staticmethod
+    def unset_default_address(user_id: int) -> bool:
+        """Unset default flag for all addresses of a user"""
+        query = """
+            UPDATE addresses SET is_default = false 
+            WHERE user_id = %s AND is_default = true
+        """
+        result = DatabaseService.execute_query(query, (user_id,), fetch_all=False)
+        return result is not None
+    
+    @staticmethod
+    def set_default_address(address_id: int, user_id: int) -> bool:
+        """Set an address as default"""
+        # First unset all defaults
+        AddressService.unset_default_address(user_id)
+        
+        # Then set the new default
+        query = """
+            UPDATE addresses SET is_default = true, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND user_id = %s
+        """
+        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_all=False)
+        return result is not None
+    
+    @staticmethod
+    def get_address_by_id(address_id: int, user_id: int) -> Optional[Dict]:
+        """Get a specific address by ID"""
+        query = """
+            SELECT 
+                id, nickname, house_number, block_name, floor_door, 
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            FROM addresses
+            WHERE id = %s AND user_id = %s
+        """
+        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_one=True)
+        return dict(result) if result else None
