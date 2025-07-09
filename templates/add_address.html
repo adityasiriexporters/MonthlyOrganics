@@ -624,25 +624,19 @@ function setupEventListeners() {
         
         // Populate form fields
         if (window.pendingLocationData) {
-            document.getElementById('locality').value = window.pendingLocationData.locality || '';
-            document.getElementById('city').value = window.pendingLocationData.city || '';
-            document.getElementById('pincode').value = window.pendingLocationData.pincode || '';
+            document.getElementById('locality').value = window.pendingLocationData.locality;
+            document.getElementById('city').value = window.pendingLocationData.city;
+            document.getElementById('pincode').value = window.pendingLocationData.pincode;
         }
         
         // Show mini map and form
         showMiniMap();
-        const addressForm = document.getElementById('addressForm');
-        addressForm.style.display = 'block';
-        
-        // Trigger form validation
-        setTimeout(() => {
-            validateForm();
-        }, 100);
+        document.getElementById('addressForm').style.display = 'block';
         
         // Scroll to form
         setTimeout(() => {
-            addressForm.scrollIntoView({ behavior: 'smooth' });
-        }, 200);
+            document.getElementById('addressForm').scrollIntoView({ behavior: 'smooth' });
+        }, 100);
     });
     
     // Change location button
@@ -933,9 +927,12 @@ function validateForm() {
     
     // Check required fields
     const requiredFields = [
+        { id: 'receiver_name', name: 'Receiver Name' },
+        { id: 'contact_number', name: 'Contact Number' },
         { id: 'house_number', name: 'House Number' },
-        { id: 'floor_door', name: 'Floor/Door' },
-        { id: 'locality', name: 'Locality' }
+        { id: 'locality', name: 'Locality' },
+        { id: 'city', name: 'City' },
+        { id: 'pincode', name: 'Pincode' }
     ];
     
     // Check if all required fields are filled
@@ -963,16 +960,16 @@ function validateForm() {
         }
     }
     
-    // Optional: Check contact number format if provided
+    // Check contact number format (basic validation)
     const contactNumber = document.getElementById('contact_number').value.trim();
-    if (contactNumber && (contactNumber.length < 10 || !/^\d+$/.test(contactNumber))) {
+    if (contactNumber.length < 10 || !/^\d+$/.test(contactNumber)) {
         disableSaveButton();
         return;
     }
     
-    // Check pincode format (basic validation) - auto-filled field
+    // Check pincode format (basic validation)
     const pincode = document.getElementById('pincode').value.trim();
-    if (pincode && (pincode.length !== 6 || !/^\d+$/.test(pincode))) {
+    if (pincode.length !== 6 || !/^\d+$/.test(pincode)) {
         disableSaveButton();
         return;
     }
