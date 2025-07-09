@@ -631,12 +631,29 @@ function setupEventListeners() {
         
         // Show mini map and form
         showMiniMap();
-        document.getElementById('addressForm').style.display = 'block';
+        const formElement = document.getElementById('addressForm');
+        console.log('Form element found:', formElement);
+        if (formElement) {
+            formElement.style.display = 'block';
+            formElement.classList.remove('hidden');
+            console.log('Form displayed, current style:', formElement.style.cssText);
+        } else {
+            console.error('Form element not found');
+        }
         
-        // Scroll to form
+        // Scroll to form first, then validate later
         setTimeout(() => {
-            document.getElementById('addressForm').scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+            const formToScroll = document.getElementById('addressForm');
+            if (formToScroll) {
+                formToScroll.scrollIntoView({ behavior: 'smooth' });
+                console.log('Scrolled to form');
+            }
+            // Trigger form validation after a delay to ensure form is visible
+            setTimeout(() => {
+                validateForm();
+                console.log('Form validation triggered');
+            }, 100);
+        }, 200);
     });
     
     // Change location button
