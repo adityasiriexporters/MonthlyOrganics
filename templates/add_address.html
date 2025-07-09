@@ -7,14 +7,22 @@
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
 <style>
     #map {
-        height: 200px;
+        height: 80vh;
         width: 100%;
         border-radius: 8px;
         border: 1px solid #e5e7eb;
+        transition: height 0.3s ease;
+    }
+    #map.small {
+        height: 150px;
     }
     .required-field::after {
         content: " *";
         color: #ef4444;
+    }
+    .map-container {
+        position: relative;
+        z-index: 1;
     }
 </style>
 {% endblock %}
@@ -40,7 +48,7 @@
         {% endwith %}
 
         <!-- Location Map Section -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 map-container">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
                 <button id="changeLocationBtn" class="text-primary hover:text-primary/80 text-sm font-medium hidden">
@@ -317,10 +325,14 @@ function setMarker(location) {
     document.getElementById('longitude').value = location.lng();
     
     // Enable confirm button
-    document.getElementById('confirmLocation').disabled = false;
+    const confirmBtn = document.getElementById('confirmLocation');
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
     
     // Update status
     document.getElementById('locationStatus').textContent = 'Location selected. Click "Confirm Location" to continue.';
+    
+    console.log('Location selected:', location.lat(), location.lng());
     
     // Reverse geocode to get address
     reverseGeocode(location);
@@ -332,21 +344,37 @@ function reverseGeocode(location) {
             const addressComponents = results[0].address_components;
             const formattedAddress = results[0].formatted_address;
             
-            // Extract address components
+            // Extract address components with better fallback logic
             let locality = '';
             let city = '';
             let pincode = '';
             
             for (let component of addressComponents) {
-                if (component.types.includes('sublocality_level_1') || component.types.includes('locality')) {
-                    locality = component.long_name;
+                const types = component.types;
+                
+                // For locality - try multiple types
+                if (types.includes('sublocality_level_1') || 
+                    types.includes('sublocality_level_2') || 
+                    types.includes('locality')) {
+                    if (!locality) locality = component.long_name;
                 }
-                if (component.types.includes('administrative_area_level_2')) {
-                    city = component.long_name;
+                
+                // For city - try multiple administrative levels
+                if (types.includes('administrative_area_level_2') || 
+                    types.includes('administrative_area_level_3') ||
+                    types.includes('locality')) {
+                    if (!city) city = component.long_name;
                 }
-                if (component.types.includes('postal_code')) {
+                
+                // For pincode
+                if (types.includes('postal_code')) {
                     pincode = component.long_name;
                 }
+            }
+            
+            // Fallback: if city is still empty, use locality
+            if (!city && locality) {
+                city = locality;
             }
             
             // Update modal text
@@ -356,6 +384,10 @@ function reverseGeocode(location) {
             document.getElementById('locality').value = locality;
             document.getElementById('city').value = city;
             document.getElementById('pincode').value = pincode;
+            
+            console.log('Geocoding result:', { locality, city, pincode, formattedAddress });
+        } else {
+            console.error('Geocoding failed:', status);
         }
     });
 }
@@ -366,10 +398,7 @@ function getCurrentLocation() {
         
         navigator.geolocation.getCurrentPosition(
             function(position) {
-                const location = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
+                const location = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
                 
                 map.setCenter(location);
                 setMarker(location);
@@ -410,10 +439,15 @@ function setupEventListeners() {
         document.getElementById('changeLocationBtn').classList.remove('hidden');
         
         // Update map to smaller size
-        document.getElementById('map').style.height = '150px';
+        document.getElementById('map').classList.add('small');
         
         // Update status
         document.getElementById('locationStatus').textContent = 'Location confirmed. Fill in the address details below.';
+        
+        // Trigger map resize
+        setTimeout(() => {
+            google.maps.event.trigger(map, 'resize');
+        }, 300);
         
         // Scroll to form
         document.getElementById('addressForm').scrollIntoView({ behavior: 'smooth' });
@@ -428,13 +462,21 @@ function setupEventListeners() {
         document.getElementById('changeLocationBtn').classList.add('hidden');
         
         // Reset map size
-        document.getElementById('map').style.height = '200px';
+        document.getElementById('map').classList.remove('small');
         
         // Update status
         document.getElementById('locationStatus').textContent = 'Click on the map to select your location or allow location access';
         
         // Clear form
         document.getElementById('addressForm').reset();
+        
+        // Disable confirm button
+        document.getElementById('confirmLocation').disabled = true;
+        
+        // Trigger map resize
+        setTimeout(() => {
+            google.maps.event.trigger(map, 'resize');
+        }, 300);
         
         // Scroll to map
         document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
