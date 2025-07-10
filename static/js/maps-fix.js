@@ -208,13 +208,25 @@ class SinglePinManager {
                     
                     console.log('SinglePinManager: AdvancedMarkerElement created successfully and should be visible');
                     
-                    // Add a small delay to ensure marker is rendered
+                    // Add multiple checks to ensure marker is visible
                     setTimeout(() => {
-                        console.log('SinglePinManager: Marker visibility check after 100ms:', {
+                        const visibility = {
                             hasMarker: !!this.currentMarker,
                             isOnMap: this.currentMarker && this.currentMarker.map === this.map,
-                            position: this.currentMarker ? this.currentMarker.position : null
-                        });
+                            position: this.currentMarker ? this.currentMarker.position : null,
+                            element: this.currentMarker ? this.currentMarker.element : null,
+                            content: this.currentMarker ? this.currentMarker.content : null
+                        };
+                        
+                        console.log('SinglePinManager: Marker visibility check after 100ms:', visibility);
+                        
+                        // If marker seems invisible, try creating a legacy marker instead
+                        if (!visibility.hasMarker || !visibility.isOnMap) {
+                            console.warn('AdvancedMarkerElement appears to be invisible, falling back to legacy marker');
+                            this._createLegacyMarker(location, onDragEnd, resolve);
+                            return;
+                        }
+                        
                         resolve(this.currentMarker);
                     }, 100);
                     
@@ -235,6 +247,12 @@ class SinglePinManager {
      * Check if AdvancedMarkerElement can be used safely
      */
     _canUseAdvancedMarkerElement() {
+        // Temporarily disable AdvancedMarkerElement to force legacy marker usage
+        // This is to ensure we have visible markers while debugging
+        console.log('SinglePinManager: Temporarily forcing legacy marker usage for visibility');
+        return false;
+        
+        /* Original code commented out until AdvancedMarkerElement visibility is fixed
         const canUse = google.maps.marker && 
                       google.maps.marker.AdvancedMarkerElement && 
                       this.map && 
@@ -251,6 +269,7 @@ class SinglePinManager {
         });
         
         return canUse;
+        */
     }
 
     /**
@@ -267,7 +286,15 @@ class SinglePinManager {
                 title: 'Selected Location',
                 animation: google.maps.Animation.DROP,
                 optimized: false,
-                zIndex: 1000
+                zIndex: 1000,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 12,
+                    fillColor: '#dc2626',
+                    fillOpacity: 1,
+                    strokeColor: '#ffffff',
+                    strokeWeight: 3
+                }
             });
 
             // Verify legacy marker was created and is visible
