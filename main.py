@@ -234,7 +234,7 @@ def edit_address(address_id):
         flash('Error loading edit address page', 'error')
         return redirect(url_for('addresses'))
 
-@app.route('/edit-address/<int:address_id>', methods=['POST'])
+@app.route('/update-address/<int:address_id>', methods=['POST'])
 @login_required
 def update_address(address_id):
     """Update existing address with encryption."""
@@ -274,7 +274,7 @@ def set_default_address(address_id):
             # Return updated address HTML for HTMX
             address = AddressService.get_address_by_id(user_id, address_id)
             if address:
-                return render_template('partials/address_item.html', address=address)
+                return render_template('partials/address_card.html', address=address)
         
         return 'Failed to set default address', 500
         
