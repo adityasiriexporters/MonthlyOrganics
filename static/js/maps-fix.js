@@ -47,47 +47,24 @@ class SinglePinManager {
         this.clearMarkers();
         
         try {
-            // Check if AdvancedMarkerElement is available and properly loaded
-            if (google.maps.marker && google.maps.marker.AdvancedMarkerElement && this.map.getMapId) {
-                // Use new AdvancedMarkerElement API (recommended) - only if map has ID
-                this.currentMarker = new google.maps.marker.AdvancedMarkerElement({
-                    position: location,
-                    map: this.map,
-                    gmpDraggable: true,
-                    title: 'Selected Location'
-                });
+            // Temporarily force legacy marker for debugging - AdvancedMarkerElement has issues
+            // Use legacy Marker API for reliable functionality
+            this.currentMarker = new google.maps.Marker({
+                position: location,
+                map: this.map,
+                draggable: true,
+                title: 'Selected Location',
+                animation: google.maps.Animation.DROP,
+                optimized: false,
+                zIndex: 1000
+            });
 
-                // Add drag end listener with proper event handling for AdvancedMarkerElement
-                if (onDragEnd && typeof onDragEnd === 'function') {
-                    this.currentMarker.addListener('dragend', (event) => {
-                        // AdvancedMarkerElement dragend event structure
-                        const dragEvent = {
-                            latLng: this.currentMarker.position
-                        };
-                        onDragEnd(dragEvent);
-                    });
-                }
-                
-                console.log('Using AdvancedMarkerElement API');
-            } else {
-                // Use legacy Marker API (works without Map ID)
-                this.currentMarker = new google.maps.Marker({
-                    position: location,
-                    map: this.map,
-                    draggable: true,
-                    title: 'Selected Location',
-                    animation: google.maps.Animation.DROP,
-                    optimized: false,
-                    zIndex: 1000
-                });
-
-                // Add drag end listener for legacy marker
-                if (onDragEnd && typeof onDragEnd === 'function') {
-                    this.currentMarker.addListener('dragend', onDragEnd);
-                }
-                
-                console.log('Using legacy Marker API (AdvancedMarkerElement requires Map ID)');
+            // Add drag end listener for legacy marker
+            if (onDragEnd && typeof onDragEnd === 'function') {
+                this.currentMarker.addListener('dragend', onDragEnd);
             }
+            
+            console.log('Using legacy Marker API for maximum compatibility');
         } catch (error) {
             console.error('Error creating marker, using legacy fallback:', error);
             // Ultimate fallback to legacy API
@@ -141,34 +118,36 @@ class SinglePinManager {
             }, 100);
         }, { passive: true });
 
-        // Add map click listener with comprehensive debouncing
+        // Add map click listener with simplified debouncing
         this.map.addListener('click', (event) => {
+            console.log('Map clicked at:', event.latLng.lat(), event.latLng.lng());
+            
             // Don't process clicks during scroll or if already processing
             if (this.isScrolling || this.isProcessingClick) {
+                console.log('Click ignored - scrolling or processing');
                 return;
             }
 
             const currentTime = Date.now();
             
-            // Clear any pending timeout
-            if (this.clickTimeout) {
-                clearTimeout(this.clickTimeout);
-            }
-            
-            // Debounce clicks
+            // Simplified debouncing
             if (currentTime - this.lastClickTime < this.CLICK_DELAY) {
+                console.log('Click ignored - too fast');
                 return;
             }
             
             this.lastClickTime = currentTime;
             this.isProcessingClick = true;
             
-            // Set timeout to handle the click
-            this.clickTimeout = setTimeout(() => {
-                clickHandler(event.latLng || event.position);
+            // Process click immediately
+            try {
+                clickHandler(event.latLng);
+                console.log('Click handler executed successfully');
+            } catch (error) {
+                console.error('Error in click handler:', error);
+            } finally {
                 this.isProcessingClick = false;
-                this.clickTimeout = null;
-            }, 100); // Slightly longer delay for better UX
+            }
         });
     }
 

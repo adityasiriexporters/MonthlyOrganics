@@ -272,21 +272,28 @@ function addressForm() {
 
             // Add click listener through pin manager
             this.pinManager.addClickListener((latLng) => {
+                console.log('Map clicked, setting marker at:', latLng.lat(), latLng.lng());
                 this.setMarker(latLng);
             });
         },
 
         setMarker(location) {
+            console.log('setMarker called with location:', location.lat(), location.lng());
+            
             // Use pin manager to ensure single pin
             this.pinManager.setMarker(location, (event) => {
+                console.log('Drag end callback triggered');
+                
                 // Drag end callback - handle both AdvancedMarkerElement and legacy Marker
                 let dragLatLng;
                 if (event.latLng) {
                     // Legacy Marker event structure
                     dragLatLng = event.latLng;
+                    console.log('Using legacy marker event structure');
                 } else if (this.pinManager.currentMarker && this.pinManager.currentMarker.position) {
                     // AdvancedMarkerElement - get position directly
                     dragLatLng = this.pinManager.currentMarker.position;
+                    console.log('Using AdvancedMarkerElement position');
                 } else {
                     console.error('Unable to get drag position');
                     return;
@@ -296,6 +303,7 @@ function addressForm() {
                     lat: dragLatLng.lat(),
                     lng: dragLatLng.lng()
                 };
+                console.log('Updated selectedLocation to:', this.selectedLocation);
                 this.reverseGeocode(dragLatLng);
             });
 
@@ -304,6 +312,7 @@ function addressForm() {
                 lat: location.lat(),
                 lng: location.lng()
             };
+            console.log('Initial selectedLocation set to:', this.selectedLocation);
 
             // Get address from coordinates
             this.reverseGeocode(location);
