@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Address - Monthly Organics{% endblock %}
+
+{% block extra_head %}
+<!-- Google Maps JavaScript API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places"></script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-background" x-data="editAddressForm()">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
+        <div class="max-w-md mx-auto px-4 py-4">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('addresses') }}" class="text-gray-600 hover:text-gray-800">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-xl font-semibold text-gray-900">Edit Address</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container (Full Screen when active) -->
+    <div id="map-container" class="relative" x-show="!locationConfirmed" x-transition>
+        <div id="map" class="w-full h-screen"></div>
+        
+        <!-- Map Control Buttons -->
+        <div class="absolute bottom-24 left-4 right-4 z-10">
+            <div class="flex space-x-3">
+                <button @click="detectCurrentLocation()" 
+                        class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span>Detect Current Location</span>
+                </button>
+                
+                <button @click="confirmLocation()" 
+                        x-show="selectedLocation"
+                        class="flex-1 bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Confirm Location</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="max-w-md mx-auto">
+        <!-- Small Map Preview -->
+        <div class="relative bg-gray-100">
+            <div id="map-preview" class="w-full h-48"></div>
+            <button @click="changeLocation()" 
+                    class="absolute top-3 right-3 bg-white text-gray-700 px-3 py-1 rounded-md text-sm font-medium shadow-sm hover:bg-gray-50 transition-colors">
+                Change Location
+            </button>
+        </div>
+
+        <!-- Address Form -->
+        <form @submit.prevent="updateAddress()" class="p-4 space-y-6">
+            <!-- Address Section -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- House/Plot/Building -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            House No/Plot No/Building/Community Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formData.house_no"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="Enter house/building details"
+                               required>
+                    </div>
+
+                    <!-- Block Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Block Name/No</label>
+                        <input type="text" 
+                               x-model="formData.block_name"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="Enter block details (optional)">
+                    </div>
+
+                    <!-- Floor/Door -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Floor/Door Number <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formData.floor_door"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="e.g., 2nd Floor, Flat 201"
+                               required>
+                    </div>
+
+                    <!-- Locality (auto-filled from map) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Locality</label>
+                        <input type="text" 
+                               x-model="formData.locality"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="Auto-filled from map">
+                    </div>
+
+                    <!-- City (auto-filled, non-editable) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                        <input type="text" 
+                               x-model="formData.city"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                               placeholder="Auto-filled from map"
+                               readonly>
+                    </div>
+
+                    <!-- Pincode (auto-filled, non-editable) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                        <input type="text" 
+                               x-model="formData.pincode"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                               placeholder="Auto-filled from map"
+                               readonly>
+                    </div>
+
+                    <!-- Landmark -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nearby Landmark</label>
+                        <input type="text" 
+                               x-model="formData.landmark"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="e.g., Near Metro Station">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address Label Section -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Label</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Address Label <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           x-model="formData.address_label"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                           placeholder="e.g., Home, Office, Friend's Home"
+                           required>
+                </div>
+            </div>
+
+            <!-- Receiver Information Section -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver's Information</h3>
+                
+                <div class="space-y-4">
+                    <!-- Receiver Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Receiver's Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formData.receiver_name"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="Enter receiver's full name"
+                               required>
+                    </div>
+
+                    <!-- Receiver Phone -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Receiver's Phone Number <span class="text-red-500">*</span>
+                        </label>
+                        <input type="tel" 
+                               x-model="formData.receiver_phone"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                               placeholder="Enter 10-digit phone number"
+                               pattern="[6-9][0-9]{9}"
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Set as Default -->
+            <div class="flex items-center space-x-3">
+                <input type="checkbox" 
+                       x-model="formData.is_default"
+                       id="is_default"
+                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                <label for="is_default" class="text-sm font-medium text-gray-700">
+                    Set as default address
+                </label>
+            </div>
+
+            <!-- Update Button -->
+            <button type="submit" 
+                    class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="saving">
+                <span x-show="!saving">Update Address</span>
+                <span x-show="saving">Updating...</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function editAddressForm() {
+    return {
+        map: null,
+        marker: null,
+        previewMap: null,
+        previewMarker: null,
+        selectedLocation: null,
+        locationConfirmed: true, // Start with form visible for editing
+        saving: false,
+        addressId: {{ address.id }},
+        formData: {
+            house_no: '{{ address.house_no }}',
+            block_name: '{{ address.block_name }}',
+            floor_door: '{{ address.floor_door }}',
+            locality: '{{ address.locality }}',
+            city: '{{ address.city }}',
+            pincode: '{{ address.pincode }}',
+            landmark: '{{ address.landmark }}',
+            address_label: '{{ address.address_label }}',
+            receiver_name: '{{ address.receiver_name }}',
+            receiver_phone: '{{ address.receiver_phone }}',
+            is_default: {{ 'true' if address.is_default else 'false' }}
+        },
+
+        init() {
+            // Set existing location
+            this.selectedLocation = {
+                lat: {{ address.latitude }},
+                lng: {{ address.longitude }}
+            };
+            
+            this.initPreviewMap();
+        },
+
+        initMap() {
+            // Initialize full-screen map with existing location
+            this.map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 15,
+                center: this.selectedLocation,
+                disableDefaultUI: false,
+                zoomControl: true,
+                streetViewControl: false,
+                fullscreenControl: false
+            });
+
+            // Set existing marker
+            this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+
+            // Add click listener to map
+            this.map.addListener('click', (event) => {
+                this.setMarker(event.latLng);
+            });
+        },
+
+        setMarker(location) {
+            // Remove existing marker
+            if (this.marker) {
+                this.marker.setMap(null);
+            }
+
+            // Create new marker
+            this.marker = new google.maps.Marker({
+                position: location,
+                map: this.map,
+                draggable: true
+            });
+
+            // Update selected location
+            this.selectedLocation = {
+                lat: location.lat(),
+                lng: location.lng()
+            };
+
+            // Add drag listener to marker
+            this.marker.addListener('dragend', (event) => {
+                this.selectedLocation = {
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
+                };
+                this.reverseGeocode(event.latLng);
+            });
+
+            // Get address from coordinates
+            this.reverseGeocode(location);
+        },
+
+        detectCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const location = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        this.map.setCenter(location);
+                        this.setMarker(new google.maps.LatLng(location.lat, location.lng));
+                    },
+                    (error) => {
+                        alert('Error getting current location: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        },
+
+        reverseGeocode(location) {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: location }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    const addressComponents = results[0].address_components;
+                    
+                    // Parse address components
+                    let locality = '';
+                    let city = '';
+                    let pincode = '';
+                    
+                    addressComponents.forEach(component => {
+                        const types = component.types;
+                        if (types.includes('sublocality') || types.includes('neighborhood')) {
+                            locality = component.long_name;
+                        } else if (types.includes('locality') || types.includes('administrative_area_level_2')) {
+                            city = component.long_name;
+                        } else if (types.includes('postal_code')) {
+                            pincode = component.long_name;
+                        }
+                    });
+                    
+                    // Update form data
+                    this.formData.locality = locality;
+                    this.formData.city = city;
+                    this.formData.pincode = pincode;
+                }
+            });
+        },
+
+        confirmLocation() {
+            if (!this.selectedLocation) {
+                alert('Please select a location on the map');
+                return;
+            }
+            
+            this.locationConfirmed = true;
+            
+            // Update preview map
+            this.$nextTick(() => {
+                this.initPreviewMap();
+            });
+        },
+
+        initPreviewMap() {
+            this.previewMap = new google.maps.Map(document.getElementById('map-preview'), {
+                zoom: 16,
+                center: this.selectedLocation,
+                disableDefaultUI: true,
+                gestureHandling: 'none'
+            });
+
+            this.previewMarker = new google.maps.Marker({
+                position: this.selectedLocation,
+                map: this.previewMap
+            });
+        },
+
+        changeLocation() {
+            this.locationConfirmed = false;
+            this.initMap();
+        },
+
+        async updateAddress() {
+            if (!this.selectedLocation) {
+                alert('Please select a location on the map');
+                return;
+            }
+
+            // Validate required fields
+            const requiredFields = ['house_no', 'floor_door', 'address_label', 'receiver_name', 'receiver_phone'];
+            for (let field of requiredFields) {
+                if (!this.formData[field].trim()) {
+                    const fieldElement = document.querySelector(`input[x-model="formData.${field}"]`);
+                    fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    fieldElement.focus();
+                    alert('Please fill all mandatory fields');
+                    return;
+                }
+            }
+
+            this.saving = true;
+
+            try {
+                const addressData = {
+                    ...this.formData,
+                    latitude: this.selectedLocation.lat,
+                    longitude: this.selectedLocation.lng
+                };
+
+                const response = await fetch(`/edit-address/${this.addressId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(addressData)
+                });
+
+                if (response.ok) {
+                    window.location.href = '/addresses';
+                } else {
+                    const error = await response.text();
+                    alert('Error updating address: ' + error);
+                }
+            } catch (error) {
+                alert('Error updating address: ' + error.message);
+            } finally {
+                this.saving = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
