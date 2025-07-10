@@ -709,6 +709,104 @@ function toggleEditing() {
         // Populate form with existing data
         populateFormWithAddressData(selectedOption);
         
+        // Show address form and map section
+        document.getElementById('selectedAddressDisplay').classList.add('hidden');
+        document.getElementById('addressForm').style.display = 'block';
+        document.getElementById('mapSection').style.display = 'block';
+        hideConfirmationSection();
+    } else {
+        // Hide form and show selected address
+        document.getElementById('addressForm').style.display = 'none';
+        document.getElementById('mapSection').style.display = 'none';
+        document.getElementById('selectedAddressDisplay').classList.remove('hidden');
+        showConfirmationSection();
+    }
+}
+
+function populateFormWithAddressData(selectedOption) {
+    if (!selectedOption || selectedOption.value === 'add_new') return;
+    
+    // Set address ID for editing
+    document.getElementById('address_id').value = selectedOption.value;
+    
+    // Populate form fields
+    document.getElementById('house_number').value = selectedOption.dataset.house || '';
+    document.getElementById('block_name').value = selectedOption.dataset.block || '';
+    document.getElementById('floor_door').value = selectedOption.dataset.floor || '';
+    document.getElementById('locality').value = selectedOption.dataset.locality || '';
+    document.getElementById('city').value = selectedOption.dataset.city || '';
+    document.getElementById('pincode').value = selectedOption.dataset.pincode || '';
+    document.getElementById('nearby_landmark').value = selectedOption.dataset.landmark || '';
+    document.getElementById('receiver_name').value = selectedOption.dataset.receiver || '';
+    document.getElementById('contact_number').value = selectedOption.dataset.contact || '';
+    document.getElementById('address_notes').value = selectedOption.dataset.notes || '';
+    
+    // Set coordinates if available
+    if (selectedOption.dataset.lat && selectedOption.dataset.lng) {
+        selectedLocation = {
+            lat: parseFloat(selectedOption.dataset.lat),
+            lng: parseFloat(selectedOption.dataset.lng)
+        };
+        showLocationSelected(`${selectedOption.dataset.locality}, ${selectedOption.dataset.city}`);
+    }
+    
+    // Set nickname and label
+    const nickname = selectedOption.dataset.nickname || '';
+    document.getElementById('nickname').value = nickname;
+    
+    // Set appropriate radio button for label
+    const labelRadios = document.querySelectorAll('input[name="label_type"]');
+    let labelSet = false;
+    
+    for (let radio of labelRadios) {
+        if (radio.value === nickname.toLowerCase().replace(/\s+/g, '_')) {
+            radio.checked = true;
+            labelSet = true;
+            break;
+        }
+    }
+    
+    // If no standard label matches, use "other"
+    if (!labelSet) {
+        document.getElementById('label_other').checked = true;
+        document.getElementById('custom_label').value = nickname;
+        document.getElementById('customLabelDiv').classList.remove('hidden');
+    }
+    
+    toggleCustomLabel();
+    validateForm();
+}
+
+function resetAddressForm() {
+    // Clear all form fields
+    document.getElementById('address_id').value = '';
+    document.getElementById('house_number').value = '';
+    document.getElementById('block_name').value = '';
+    document.getElementById('floor_door').value = '';
+    document.getElementById('locality').value = '';
+    document.getElementById('city').value = '';
+    document.getElementById('pincode').value = '';
+    document.getElementById('nearby_landmark').value = '';
+    document.getElementById('receiver_name').value = '';
+    document.getElementById('contact_number').value = '';
+    document.getElementById('address_notes').value = '';
+    document.getElementById('custom_label').value = '';
+    
+    // Reset location
+    selectedLocation = null;
+    hideLocationSelected();
+    
+    // Reset label selection
+    document.getElementById('label_home').checked = true;
+    document.getElementById('customLabelDiv').classList.add('hidden');
+    toggleCustomLabel();
+    
+    // Show address form
+    document.getElementById('addressForm').style.display = 'block';
+    
+    validateForm();
+}
+        
         // Show address form
         document.getElementById('addressForm').style.display = 'block';
         document.getElementById('newAddressButtons').style.display = 'none';
@@ -772,6 +870,7 @@ function resetAddressForm() {
 // Form Validation Functions
 function setupFormValidation() {
     const form = document.getElementById('addressForm');
+    if (!form) return;
     const inputs = form.querySelectorAll('input[required], textarea[required]');
     
     inputs.forEach(input => {
@@ -856,7 +955,9 @@ function validateConfirmation() {
     const confirmCheckbox = document.getElementById('confirmAddress');
     const proceedBtn = document.getElementById('proceedToPayBtn');
     
-    proceedBtn.disabled = !confirmCheckbox.checked;
+    if (confirmCheckbox && proceedBtn) {
+        proceedBtn.disabled = !confirmCheckbox.checked;
+    }
 }
 
 // Label Functions
