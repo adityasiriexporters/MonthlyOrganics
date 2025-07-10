@@ -296,21 +296,25 @@ function addressForm() {
             }
         },
 
-        setMarkerModern(latLng) {
+        async setMarkerModern(latLng) {
             console.log('setMarkerModern called with:', latLng.lat(), latLng.lng());
             
-            // Use SinglePinManager to set marker (automatically handles cleanup)
+            // Use SinglePinManager with enhanced cleanup and delay
             if (this.pinManager) {
-                const marker = this.pinManager.setMarker(latLng, (event) => {
-                    console.log('Marker dragged to:', event.latLng.lat(), event.latLng.lng());
-                    this.selectedLocation = {
-                        lat: event.latLng.lat(),
-                        lng: event.latLng.lng()
-                    };
-                    this.reverseGeocode(event.latLng);
-                });
-                
-                console.log('Marker set using SinglePinManager with modern API');
+                try {
+                    const marker = await this.pinManager.setMarker(latLng, (event) => {
+                        console.log('Marker dragged to:', event.latLng.lat(), event.latLng.lng());
+                        this.selectedLocation = {
+                            lat: event.latLng.lat(),
+                            lng: event.latLng.lng()
+                        };
+                        this.reverseGeocode(event.latLng);
+                    });
+                    
+                    console.log('Marker set using SinglePinManager with enhanced modern API');
+                } catch (error) {
+                    console.error('Error setting marker:', error);
+                }
             }
 
             // Update selected location
@@ -418,16 +422,33 @@ function addressForm() {
                 zoom: 16,
                 center: this.selectedLocation,
                 disableDefaultUI: true,
-                gestureHandling: 'none'
+                gestureHandling: 'none',
+                mapId: '550e8400-e29b-41d4-a716-446655440001' // Unique Map ID for preview
             });
 
-            // Use standard Marker for preview (simpler, doesn't need advanced features)
-            this.previewMarker = new google.maps.Marker({
-                position: this.selectedLocation,
-                map: this.previewMap,
-                title: 'Selected Location',
-                draggable: false
-            });
+            // Use modern AdvancedMarkerElement for consistency
+            try {
+                if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+                    this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
+                        position: this.selectedLocation,
+                        map: this.previewMap,
+                        title: 'Selected Location',
+                        gmpDraggable: false
+                    });
+                    console.log('Preview map using AdvancedMarkerElement');
+                } else {
+                    throw new Error('AdvancedMarkerElement not available for preview');
+                }
+            } catch (error) {
+                console.warn('Preview map falling back to legacy Marker:', error.message);
+                // Fallback to legacy Marker for preview
+                this.previewMarker = new google.maps.Marker({
+                    position: this.selectedLocation,
+                    map: this.previewMap,
+                    title: 'Selected Location',
+                    draggable: false
+                });
+            }
         },
 
         changeLocation() {

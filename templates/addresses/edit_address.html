@@ -297,28 +297,24 @@ function editAddressForm() {
             });
         },
 
-        setMarker(location) {
-            // Use pin manager to ensure single pin
-            this.pinManager.setMarker(location, (event) => {
-                // Drag end callback - handle both AdvancedMarkerElement and legacy Marker
-                let dragLatLng;
-                if (event.latLng) {
-                    // Legacy Marker event structure
-                    dragLatLng = event.latLng;
-                } else if (this.pinManager.currentMarker && this.pinManager.currentMarker.position) {
-                    // AdvancedMarkerElement - get position directly
-                    dragLatLng = this.pinManager.currentMarker.position;
-                } else {
-                    console.error('Unable to get drag position');
-                    return;
-                }
-
-                this.selectedLocation = {
-                    lat: dragLatLng.lat(),
-                    lng: dragLatLng.lng()
-                };
-                this.reverseGeocode(dragLatLng);
-            });
+        async setMarker(location) {
+            console.log('setMarker called with:', location.lat(), location.lng());
+            
+            // Use enhanced pin manager to ensure single pin
+            try {
+                const marker = await this.pinManager.setMarker(location, (event) => {
+                    console.log('Edit marker dragged:', event.latLng.lat(), event.latLng.lng());
+                    this.selectedLocation = {
+                        lat: event.latLng.lat(),
+                        lng: event.latLng.lng()
+                    };
+                    this.reverseGeocode(event.latLng);
+                });
+                
+                console.log('Edit marker set successfully');
+            } catch (error) {
+                console.error('Error setting edit marker:', error);
+            }
 
             // Update selected location
             this.selectedLocation = {
@@ -337,16 +333,33 @@ function editAddressForm() {
                 zoom: 16,
                 center: this.selectedLocation,
                 disableDefaultUI: true,
-                gestureHandling: 'none'
+                gestureHandling: 'none',
+                mapId: '550e8400-e29b-41d4-a716-446655440002' // Unique Map ID for edit preview
             });
 
-            // Use standard Marker for preview (simpler, doesn't need advanced features)
-            this.previewMarker = new google.maps.Marker({
-                position: this.selectedLocation,
-                map: this.previewMap,
-                title: 'Selected Location',
-                draggable: false
-            });
+            // Use modern AdvancedMarkerElement for consistency
+            try {
+                if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+                    this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
+                        position: this.selectedLocation,
+                        map: this.previewMap,
+                        title: 'Selected Location',
+                        gmpDraggable: false
+                    });
+                    console.log('Edit preview map using AdvancedMarkerElement');
+                } else {
+                    throw new Error('AdvancedMarkerElement not available for edit preview');
+                }
+            } catch (error) {
+                console.warn('Edit preview map falling back to legacy Marker:', error.message);
+                // Fallback to legacy Marker for preview
+                this.previewMarker = new google.maps.Marker({
+                    position: this.selectedLocation,
+                    map: this.previewMap,
+                    title: 'Selected Location',
+                    draggable: false
+                });
+            }
         },
 
 
