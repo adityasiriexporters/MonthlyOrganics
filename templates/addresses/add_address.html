@@ -308,14 +308,17 @@ function addressForm() {
             this.currentMarker = null;
             console.log('All markers cleared');
             
-            // Small delay to ensure cleanup completes
+            // Force garbage collection and then create marker
             setTimeout(() => {
+                console.log('Creating new marker after cleanup delay');
+                
                 // Create new marker
                 this.currentMarker = new google.maps.Marker({
                     position: latLng,
                     map: this.map,
                     draggable: true,
-                    title: 'Selected Location'
+                    title: 'Selected Location',
+                    optimized: false // Disable optimization for better control
                 });
                 
                 // Add to tracking array
@@ -331,7 +334,7 @@ function addressForm() {
                     };
                     this.reverseGeocode(event.latLng);
                 });
-            }, 50); // Increased delay to ensure proper cleanup
+            }, 100); // Increased delay more
 
             // Update selected location
             this.selectedLocation = {
