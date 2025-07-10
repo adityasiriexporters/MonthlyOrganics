@@ -1,3 +1,11 @@
+{% if search_query %}
+    <!-- Search Results Header -->
+    <div class="bg-blue-50 border-b border-blue-200 p-4 mb-6">
+        <h2 class="text-lg font-medium text-blue-900">Search Results for "{{ search_query }}"</h2>
+        <p class="text-sm text-blue-700">Found {{ search_results_count }} products matching your search</p>
+    </div>
+{% endif %}
+
 {% if categories_with_products %}
     {% for category in categories_with_products %}
         {% if category.products %}

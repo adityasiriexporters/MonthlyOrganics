@@ -1,1 +1,1 @@
-# Routes package for Monthly Organics
+# Routes package initialization

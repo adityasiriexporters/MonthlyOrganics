@@ -58,10 +58,42 @@ def profile():
         return render_template('profile.html')
 
 # Import store functions from routes module
-from routes.store import store as store_view, products_by_category, all_products
+from routes.store import products_by_category, all_products
+from services.database import DatabaseService
+
+@app.route('/store')
+@login_required
+def store():
+    """Store page route that displays categories and products with search functionality."""
+    try:
+        # Get search query from URL parameters
+        search_query = request.args.get('search', '').strip()
+        
+        # Get all categories using direct database query with connection pooling
+        categories_query = """
+        SELECT id, name, description 
+        FROM categories 
+        ORDER BY name
+        """
+        categories = DatabaseService.execute_query(categories_query, fetch_all=True)
+        
+        # Convert to list of dictionaries for template
+        categories_list = []
+        for category in categories:
+            categories_list.append({
+                'id': category[0],
+                'name': category[1],
+                'description': category[2]
+            })
+        
+        return render_template('store.html', categories=categories_list, search_query=search_query)
+        
+    except Exception as e:
+        logger.error(f"Error loading store page: {e}")
+        flash('Error loading store page', 'error')
+        return redirect(url_for('index'))
 
 # Store routes 
-app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
