@@ -218,10 +218,7 @@
 function addressForm() {
     return {
         map: null,
-        currentMarker: null,
-        allMarkers: [], // Track all markers
-        previewMap: null,
-        previewMarker: null,
+        pinManager: null,
         selectedLocation: null,
         locationConfirmed: false,
         saving: false,
@@ -258,10 +255,10 @@ function addressForm() {
                 return;
             }
             
-            // Clean up existing marker
-            if (this.currentMarker) {
-                this.currentMarker.setMap(null);
-                this.currentMarker = null;
+            // Clean up existing pin manager
+            if (this.pinManager) {
+                this.pinManager.destroy();
+                this.pinManager = null;
             }
             
             // Initialize full-screen map
@@ -281,13 +278,16 @@ function addressForm() {
 
                 console.log('Map created successfully');
 
-                // Add direct click listener (simplified approach)
-                this.map.addListener('click', (event) => {
-                    console.log('MAP CLICKED! Location:', event.latLng.lat(), event.latLng.lng());
-                    this.setMarkerDirect(event.latLng);
+                // Initialize SinglePinManager with modern API
+                this.pinManager = new SinglePinManager(this.map);
+                
+                // Add click listener using SinglePinManager
+                this.pinManager.addClickListener((location) => {
+                    console.log('MAP CLICKED via SinglePinManager! Location:', location.lat(), location.lng());
+                    this.setMarkerModern(location);
                 });
 
-                console.log('Click listener added successfully');
+                console.log('SinglePinManager initialized and click listener added successfully');
                 
             } catch (error) {
                 console.error('Error creating map:', error);
@@ -295,38 +295,12 @@ function addressForm() {
             }
         },
 
-        setMarkerDirect(latLng) {
-            console.log('setMarkerDirect called with:', latLng.lat(), latLng.lng());
+        setMarkerModern(latLng) {
+            console.log('setMarkerModern called with:', latLng.lat(), latLng.lng());
             
-            // Clear ALL existing markers aggressively
-            console.log('Clearing all existing markers, count:', this.allMarkers.length);
-            this.allMarkers.forEach((marker, index) => {
-                console.log(`Removing marker ${index}`);
-                marker.setMap(null);
-            });
-            this.allMarkers = [];
-            this.currentMarker = null;
-            console.log('All markers cleared');
-            
-            // Force garbage collection and then create marker
-            setTimeout(() => {
-                console.log('Creating new marker after cleanup delay');
-                
-                // Create new marker
-                this.currentMarker = new google.maps.Marker({
-                    position: latLng,
-                    map: this.map,
-                    draggable: true,
-                    title: 'Selected Location',
-                    optimized: false // Disable optimization for better control
-                });
-                
-                // Add to tracking array
-                this.allMarkers.push(this.currentMarker);
-                console.log('New marker created and added to tracking array');
-                
-                // Add drag listener
-                this.currentMarker.addListener('dragend', (event) => {
+            // Use SinglePinManager to set marker (automatically handles cleanup)
+            if (this.pinManager) {
+                const marker = this.pinManager.setMarker(latLng, (event) => {
                     console.log('Marker dragged to:', event.latLng.lat(), event.latLng.lng());
                     this.selectedLocation = {
                         lat: event.latLng.lat(),
@@ -334,7 +308,9 @@ function addressForm() {
                     };
                     this.reverseGeocode(event.latLng);
                 });
-            }, 100); // Increased delay more
+                
+                console.log('Marker set using SinglePinManager with modern API');
+            }
 
             // Update selected location
             this.selectedLocation = {
@@ -361,7 +337,7 @@ function addressForm() {
                         this.map.setZoom(17); // Zoom in for better accuracy
                         
                         // Place marker at current location
-                        this.setMarkerDirect(new google.maps.LatLng(location.lat, location.lng));
+                        this.setMarkerModern(new google.maps.LatLng(location.lat, location.lng));
                     },
                     (error) => {
                         let errorMessage = 'Error getting current location: ';
@@ -463,8 +439,8 @@ function addressForm() {
                 
                 // Ensure marker exists at the selected location
                 this.$nextTick(() => {
-                    if (!this.currentMarker) {
-                        this.setMarkerDirect(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                    if (!this.pinManager.hasMarker()) {
+                        this.setMarkerModern(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
                     }
                 });
             }
