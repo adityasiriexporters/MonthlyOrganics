@@ -297,9 +297,11 @@ function addressForm() {
         setMarkerDirect(latLng) {
             console.log('setMarkerDirect called with:', latLng.lat(), latLng.lng());
             
-            // Clear existing marker
+            // Clear existing marker properly
             if (this.currentMarker) {
+                console.log('Removing existing marker');
                 this.currentMarker.setMap(null);
+                this.currentMarker = null;
             }
             
             // Create new marker
@@ -310,7 +312,7 @@ function addressForm() {
                 title: 'Selected Location'
             });
             
-            console.log('Marker created and placed');
+            console.log('New marker created and placed');
             
             // Add drag listener
             this.currentMarker.addListener('dragend', (event) => {
