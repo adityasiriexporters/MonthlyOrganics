@@ -124,6 +124,8 @@ class SinglePinManager {
      */
     _createMarker(location, onDragEnd = null) {
         return new Promise((resolve) => {
+            console.log('SinglePinManager: _createMarker called with location:', location.lat(), location.lng());
+            
             try {
                 // Try modern AdvancedMarkerElement API first
                 if (this._canUseAdvancedMarkerElement()) {
@@ -134,6 +136,14 @@ class SinglePinManager {
                         map: this.map,
                         title: 'Selected Location',
                         gmpDraggable: true
+                    });
+
+                    // Verify marker was created and has valid position
+                    console.log('AdvancedMarkerElement created:', {
+                        marker: this.currentMarker,
+                        position: this.currentMarker.position,
+                        map: this.currentMarker.map,
+                        visible: this.currentMarker.map === this.map
                     });
 
                     // Enhanced drag end listener for AdvancedMarkerElement
@@ -153,10 +163,20 @@ class SinglePinManager {
                         });
                     }
                     
-                    console.log('SinglePinManager: AdvancedMarkerElement created successfully');
-                    resolve(this.currentMarker);
+                    console.log('SinglePinManager: AdvancedMarkerElement created successfully and should be visible');
+                    
+                    // Add a small delay to ensure marker is rendered
+                    setTimeout(() => {
+                        console.log('SinglePinManager: Marker visibility check after 100ms:', {
+                            hasMarker: !!this.currentMarker,
+                            isOnMap: this.currentMarker && this.currentMarker.map === this.map,
+                            position: this.currentMarker ? this.currentMarker.position : null
+                        });
+                        resolve(this.currentMarker);
+                    }, 100);
                     
                 } else {
+                    console.log('SinglePinManager: AdvancedMarkerElement not available, using legacy');
                     // Fallback to legacy API
                     this._createLegacyMarker(location, onDragEnd, resolve);
                 }
@@ -172,11 +192,22 @@ class SinglePinManager {
      * Check if AdvancedMarkerElement can be used safely
      */
     _canUseAdvancedMarkerElement() {
-        return google.maps.marker && 
-               google.maps.marker.AdvancedMarkerElement && 
-               this.map && 
-               this.map.get('mapId') && 
-               this.mapReady;
+        const canUse = google.maps.marker && 
+                      google.maps.marker.AdvancedMarkerElement && 
+                      this.map && 
+                      this.map.get('mapId') && 
+                      this.mapReady;
+        
+        console.log('SinglePinManager: AdvancedMarkerElement availability check:', {
+            hasMarkerLibrary: !!google.maps.marker,
+            hasAdvancedMarkerElement: !!(google.maps.marker && google.maps.marker.AdvancedMarkerElement),
+            hasMap: !!this.map,
+            hasMapId: this.map ? this.map.get('mapId') : null,
+            isMapReady: this.mapReady,
+            canUse: canUse
+        });
+        
+        return canUse;
     }
 
     /**
@@ -184,7 +215,7 @@ class SinglePinManager {
      */
     _createLegacyMarker(location, onDragEnd, resolve) {
         try {
-            console.log('SinglePinManager: Using legacy Marker API');
+            console.log('SinglePinManager: Using legacy Marker API at location:', location.lat(), location.lng());
             
             this.currentMarker = new google.maps.Marker({
                 position: location,
@@ -194,6 +225,15 @@ class SinglePinManager {
                 animation: google.maps.Animation.DROP,
                 optimized: false,
                 zIndex: 1000
+            });
+
+            // Verify legacy marker was created and is visible
+            console.log('Legacy Marker created:', {
+                marker: this.currentMarker,
+                position: this.currentMarker.getPosition(),
+                map: this.currentMarker.getMap(),
+                visible: this.currentMarker.getVisible(),
+                zIndex: this.currentMarker.getZIndex()
             });
 
             // Add drag end listener for legacy marker
@@ -207,8 +247,17 @@ class SinglePinManager {
                 });
             }
             
-            console.log('SinglePinManager: Legacy Marker created successfully');
-            resolve(this.currentMarker);
+            console.log('SinglePinManager: Legacy Marker created successfully and should be visible');
+            
+            // Add a small delay to ensure marker is rendered
+            setTimeout(() => {
+                console.log('SinglePinManager: Legacy marker visibility check after 100ms:', {
+                    hasMarker: !!this.currentMarker,
+                    isVisible: this.currentMarker ? this.currentMarker.getVisible() : false,
+                    position: this.currentMarker ? this.currentMarker.getPosition() : null
+                });
+                resolve(this.currentMarker);
+            }, 100);
             
         } catch (legacyError) {
             console.error('SinglePinManager: Failed to create legacy marker:', legacyError);
