@@ -1055,14 +1055,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Set up form submission handlers
-    const addressForm = document.getElementById('addressForm');
-    if (addressForm) {
-        addressForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default form submission
-            handleFormSubmission();
-        });
-    }
+    // Remove problematic form submission handler that was blocking button clicks
     
     // Check if this is a confirmation step
     const urlParams = new URLSearchParams(window.location.search);
@@ -1071,92 +1064,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Handle form submission and show confirmation
-function handleFormSubmission() {
-    const form = document.getElementById('addressForm');
-    const formData = new FormData(form);
-    const action = formData.get('action');
-    
-    // Validate form before submission
-    if (!validateForm()) {
-        alert('Please fill all required fields correctly.');
-        return;
-    }
-    
-    // Show loading state
-    const submitBtns = form.querySelectorAll('button[type="submit"]');
-    submitBtns.forEach(btn => {
-        btn.disabled = true;
-        btn.textContent = btn.textContent.includes('Save') ? 'Saving...' : 'Processing...';
-    });
-    
-    // Submit form via fetch to handle response
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            // Form submitted successfully
-            // Update confirmation section with form data
-            updateConfirmationWithFormData(formData, action);
-            // Show confirmation section
-            showConfirmationSection();
-        } else {
-            throw new Error('Form submission failed');
-        }
-    })
-    .catch(error => {
-        console.error('Form submission error:', error);
-        alert('Failed to save address. Please try again.');
-        
-        // Restore button states
-        submitBtns.forEach(btn => {
-            btn.disabled = false;
-            btn.textContent = btn.textContent.replace('Saving...', 'Save').replace('Processing...', 'Use Once');
-        });
-    });
-}
-
-// Update confirmation section with form data
-function updateConfirmationWithFormData(formData, action) {
-    const addressDetails = document.getElementById('selectedAddressDetails');
-    const addressTypeLabel = document.getElementById('addressTypeLabel');
-    
-    if (!addressDetails || !addressTypeLabel) return;
-    
-    const nickname = formData.get('nickname') || formData.get('custom_label') || 'Address';
-    const receiverName = formData.get('receiver_name');
-    const houseNumber = formData.get('house_number');
-    const blockName = formData.get('block_name');
-    const floorDoor = formData.get('floor_door');
-    const locality = formData.get('locality');
-    const city = formData.get('city');
-    const pincode = formData.get('pincode');
-    const landmark = formData.get('nearby_landmark');
-    const contactNumber = formData.get('contact_number');
-    const notes = formData.get('address_notes');
-    
-    const addressHTML = `
-        <div class="font-medium text-gray-900">${receiverName}</div>
-        <div class="text-gray-700">
-            ${houseNumber}${blockName ? ', ' + blockName : ''}<br>
-            ${floorDoor}<br>
-            ${locality}, ${city} - ${pincode}
-        </div>
-        ${landmark ? '<div class="text-gray-600">Near ' + landmark + '</div>' : ''}
-        <div class="text-gray-600">Phone: ${contactNumber}</div>
-        ${notes ? '<div class="text-gray-600 italic mt-2">Notes: ' + notes + '</div>' : ''}
-    `;
-    
-    const typeLabel = action === 'save' ? 'Saved Address' : 'One-time use';
-    
-    addressDetails.innerHTML = addressHTML;
-    addressTypeLabel.textContent = typeLabel;
-}
+// Note: Removed form submission handler that was blocking normal form submission
 </script>
 
 {% endblock %}
