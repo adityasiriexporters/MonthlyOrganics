@@ -118,7 +118,7 @@
             
             <!-- Address Dropdown -->
             <div class="space-y-3">
-                <select id="addressSelect" onchange="handleAddressSelection()" 
+                <select id="addressSelect" 
                         class="w-full border border-gray-300 rounded-lg px-3 py-3 focus:ring-primary focus:border-primary text-sm">
                     <option value="add_new">+ Add New Address</option>
                     {% for address in addresses %}
@@ -486,16 +486,22 @@ let isEditingMode = false;
 // Address Selection Functions
 function handleAddressSelection() {
     const select = document.getElementById('addressSelect');
-    const selectedValue = select.value;
+    if (!select) {
+        console.error('Address select element not found');
+        return;
+    }
     
-    console.log('Address selection changed:', selectedValue);
+    const selectedValue = select.value;
+    console.log('Address selection changed to:', selectedValue);
     
     // Reset confirmation section when address changes
     resetConfirmationSection();
     
-    if (selectedValue === 'add_new') {
+    if (selectedValue === 'add_new' || selectedValue === '') {
+        console.log('Showing new address form');
         showNewAddressForm();
     } else if (selectedValue) {
+        console.log('Showing selected address with ID:', selectedValue);
         showSelectedAddress(selectedValue);
     }
 }
@@ -1133,8 +1139,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set up address selection handler
         const addressSelect = document.getElementById('addressSelect');
         if (addressSelect) {
+            // Remove any existing event listeners to avoid conflicts
+            addressSelect.removeEventListener('change', handleAddressSelection);
             addressSelect.addEventListener('change', handleAddressSelection);
-            handleAddressSelection(); // Initialize with current selection
+            
+            // Initialize with current selection if there's a default
+            setTimeout(() => {
+                handleAddressSelection();
+            }, 100);
         }
         
         // Set up proceed to pay button
