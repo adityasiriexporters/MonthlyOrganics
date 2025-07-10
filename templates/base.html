@@ -59,8 +59,33 @@
     
     <!-- Dynamic Header - Mobile First -->
     {% if request.path == '/' %}
-        <!-- Home Page Header (Single Row) -->
+        <!-- Home Page Header (Two Rows) -->
         <header class="bg-white shadow-sm border-b border-gray-200">
+            <!-- Top Row - Address Selection -->
+            <div class="bg-primary/5 border-b border-primary/10">
+                <div class="max-w-md mx-auto px-4 py-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            {% if selected_address %}
+                                <span class="text-sm font-medium text-gray-900">{{ selected_address }}</span>
+                            {% else %}
+                                <a href="/addresses/add" class="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    + Add Address
+                                </a>
+                            {% endif %}
+                        </div>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Row - Logo and Search -->
             <div class="max-w-md mx-auto px-4 py-3">
                 <div class="flex items-center space-x-3">
                     <!-- Logo -->
@@ -182,30 +207,6 @@
     
     <!-- Local JavaScript -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    
-    <!-- Address Selection Script -->
-    <script>
-        function selectAddress(addressId) {
-            // Set the selected address as default
-            fetch(`/set-default-address/${addressId}`, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Refresh the page to update the selected address
-                    window.location.reload();
-                } else {
-                    console.error('Failed to set default address');
-                }
-            })
-            .catch(error => {
-                console.error('Error setting default address:', error);
-            });
-        }
-    </script>
     
     {% block extra_scripts %}{% endblock %}
 </body>

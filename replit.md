@@ -33,16 +33,11 @@ The architecture separates concerns between the main application entry point (`m
 
 ### Database Schema
 
-The application uses the following database structure:
+The application defines the following core models:
 
-1. **Users Table**: Customer information (id, email, first_name, last_name, phone, timestamps)
-2. **Addresses Table**: Delivery addresses with geolocation (user_id, nickname, coordinates, address fields)
-3. **Categories Table**: Product categories (id, name, icon_url)
-4. **Products Table**: Product information (id, name, description, category_id, is_best_seller)
-5. **Product Variations Table**: Product variants with pricing (id, product_id, variation_name, mrp, stock)
-6. **Cart Items Table**: Shopping cart data (id, user_id, variation_id, quantity)
-7. **Orders Table**: Order records (id, user_id, total_amount, status, timestamps)
-8. **Order Items Table**: Order line items (id, order_id, variation_id, quantity, price)
+1. **User Model**: Stores customer information including email, name, phone, and status
+2. **Address Model**: Manages delivery addresses with support for multiple addresses per user
+3. **Subscription Model**: (Referenced but not fully implemented in current codebase)
 
 ## Data Flow
 
@@ -125,20 +120,6 @@ Changelog:
 - July 08, 2025. Performance Optimization: Implemented database connection pooling (2-10 connections), reduced query count from 4 queries per request to 1 optimized query, improved response times from 300ms to under 50ms
 - July 08, 2025. Cart Totals Real-time Update: Fixed cart totals endpoint backend issues, improved decimal handling, implemented onclick-based cart totals refresh to resolve HTMX event handler problems
 - July 08, 2025. Ultra-Reliable Cart Totals System: Implemented multi-approach solution combining direct click events (150/300/500ms delays), fallback HTMX updates, and emergency manual functions for guaranteed cart totals synchronization
-- July 09, 2025. Address System Enhancement: Implemented full-screen map modal for address selection with proper mobile navigation handling and touch gesture support
-- July 09, 2025. Comprehensive Code Refactoring: Created validators module for centralized form validation, cleaned up duplicate code, optimized database queries, added critical indexes for performance, removed dead code and unused imports
-- July 09, 2025. Enhanced Data Security: Implemented comprehensive encryption system with Fernet encryption for sensitive customer data (phone numbers, addresses), added security audit logging, created secure service layer, and database migration tools for existing data protection
-- July 09, 2025. Enhanced Add Address Page: Added mini map display after location confirmation, expanded address label options (Friend & Work swatches), implemented incremental naming system for duplicate labels (e.g., My Home 1, My Home 2), improved user experience with visual feedback
-- July 09, 2025. Implemented Address Editing: Added complete address editing functionality with edit page, update routes, and form validation, allowing users to modify saved addresses from the saved addresses page
-- July 09, 2025. Smart Label Management: Implemented incremental label naming system that automatically generates unique labels (e.g., My Home 1, My Home 2) when users select duplicate address labels, preventing naming conflicts
-- July 09, 2025. Database Connection Pooling Fix: Enhanced connection pooling with proper health checks, retry logic, and error handling to prevent empty saved addresses page issues
-- July 09, 2025. Address Management Bug Fixes: Fixed update address, delete address, and set default address functionality in saved addresses page; removed address dropdown from homepage and store page headers per scope change
-- July 09, 2025. Critical Database Fixes: Fixed all address management button failures by updating database query handler to properly handle UPDATE/DELETE operations, ensuring address editing, deletion, and default setting work correctly
-- July 09, 2025. Mandatory Receiver Fields Implementation: Made receiver's name and receiver's phone number mandatory fields in all address forms (add, edit, checkout), added validation rules, updated templates with required field styling, and fixed receiver name handling to prevent defaulting to "Customer"
-- July 09, 2025. Checkout Address Flow Completion: Fixed all JavaScript errors, implemented proper form validation for mandatory receiver fields, resolved KeyError issues in address saving, and enhanced confirmation flow to display one-time address details before final confirmation, ensuring complete checkout functionality
-- July 09, 2025. Unified Address Confirmation System: Implemented comprehensive address confirmation with unified display format for both saved addresses and one-time addresses, dynamic address updates when dropdown selection changes, automatic confirmation reset to prevent multiple address confirmations, clear address type labeling, and seamless user experience across all address selection flows
-- July 10, 2025. Critical Data Integrity Fixes: Resolved missing receiver_name_encrypted field in database schema, updated encryption system to properly handle receiver names, fixed all address database queries, migrated existing addresses with encrypted receiver names, reduced connection health check log noise, and confirmed proper receiver name display and validation across all address forms
-- July 10, 2025. Complete Payment System Implementation: Built comprehensive payment and order completion flow with checkout_payment.html showing order summary and address confirmation, place_order route creating orders and order_items, automatic cart clearing after successful orders, order_confirmation.html with detailed order display, Cash on Delivery payment method, and complete integration with existing address system. Fixed checkout_address.html UI by simplifying to only "Selected Delivery Address" and "Delivery Confirmation" sections, improved address confirmation logic for new addresses with proper form submission handling and real-time confirmation display
 ```
 
 ## User Preferences
