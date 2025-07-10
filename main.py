@@ -440,6 +440,11 @@ def checkout_address():
     try:
         user_id = session['user_id']
         
+        # Clear checkout session data if not in confirmation step
+        if not request.args.get('step'):
+            session.pop('checkout_address_id', None)
+            session.pop('checkout_one_time_address', None)
+        
         # Get user's addresses using SecureAddressService
         user_addresses = SecureAddressService.get_user_addresses(user_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")

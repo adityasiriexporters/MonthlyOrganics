@@ -578,6 +578,8 @@ function checkForConfirmedAddress() {
 }
 
 function showConfirmationSection() {
+    console.log('showConfirmationSection called');
+    
     // Hide address selection form
     const addressSelection = document.getElementById('addressSelection');
     const addressForm = document.getElementById('addressForm');
@@ -618,10 +620,25 @@ function checkAndDisplayOneTimeAddress() {
             // Set the dropdown to the saved address
             for (let option of addressSelect.options) {
                 if (option.value == checkoutAddressId) {
+                    console.log('Found saved address with ID:', checkoutAddressId);
                     addressSelect.value = checkoutAddressId;
-                    updateConfirmationAddress(null, 'saved');
-                    break;
+                    // Trigger change event to update confirmation section
+                    addressSelect.dispatchEvent(new Event('change'));
+                    return;
                 }
+            }
+        }
+    }
+    
+    // If no specific address is set, try to use the first available saved address
+    const addressSelect = document.getElementById('addressSelect');
+    if (addressSelect && addressSelect.options.length > 1) {
+        // Skip the "add new" option and select the first real address
+        for (let i = 0; i < addressSelect.options.length; i++) {
+            if (addressSelect.options[i].value !== 'add_new' && addressSelect.options[i].value !== '') {
+                addressSelect.value = addressSelect.options[i].value;
+                updateConfirmationAddress(null, 'saved');
+                return;
             }
         }
     }
@@ -1078,6 +1095,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if this is a confirmation step
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('step') === 'confirm') {
+        console.log('Confirmation step detected, showing confirmation section');
         showConfirmationSection();
     }
 });
