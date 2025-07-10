@@ -819,6 +819,188 @@ def cart_totals():
         logger.error(f"Error calculating cart totals: {e}", exc_info=True)
         return f"Error calculating totals: {str(e)}", 500
 
+@app.route('/checkout/payment')
+@login_required
+def checkout_payment():
+    """Payment page for finalizing the order."""
+    try:
+        user_id = session['user_id']
+        
+        # Check if we have address confirmation
+        checkout_address_id = session.get('checkout_address_id')
+        checkout_one_time_address = session.get('checkout_one_time_address')
+        
+        if not checkout_address_id and not checkout_one_time_address:
+            flash('Please select a delivery address first.', 'error')
+            return redirect(url_for('checkout_address'))
+        
+        # Get cart items and totals
+        cart_items = CartService.get_cart_items(user_id)
+        if not cart_items:
+            flash('Your cart is empty.', 'error')
+            return redirect(url_for('cart'))
+        
+        # Calculate totals
+        subtotal = sum(Decimal(str(item['total_price'])) for item in cart_items)
+        delivery_fee = Decimal('50.00')
+        total = subtotal + delivery_fee
+        
+        # Get address details for display
+        address_details = None
+        if checkout_address_id:
+            address_details = SecureAddressService.get_address_by_id(checkout_address_id, user_id)
+        elif checkout_one_time_address:
+            address_details = checkout_one_time_address
+            
+        logger.info(f"Payment page for user {user_id} with {len(cart_items)} items, total: ₹{total}")
+        
+        return render_template('checkout_payment.html',
+                             cart_items=cart_items,
+                             subtotal=float(subtotal),
+                             delivery_fee=float(delivery_fee),
+                             total=float(total),
+                             address_details=address_details,
+                             is_saved_address=bool(checkout_address_id))
+                             
+    except Exception as e:
+        logger.error(f"Error loading payment page: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('cart'))
+
+@app.route('/checkout/place-order', methods=['POST'])
+@login_required
+def place_order():
+    """Place the final order."""
+    try:
+        user_id = session['user_id']
+        
+        # Validate cart and address
+        cart_items = CartService.get_cart_items(user_id)
+        if not cart_items:
+            flash('Your cart is empty.', 'error')
+            return redirect(url_for('cart'))
+        
+        checkout_address_id = session.get('checkout_address_id')
+        checkout_one_time_address = session.get('checkout_one_time_address')
+        
+        if not checkout_address_id and not checkout_one_time_address:
+            flash('Please select a delivery address.', 'error')
+            return redirect(url_for('checkout_address'))
+        
+        # Calculate totals
+        subtotal = sum(Decimal(str(item['total_price'])) for item in cart_items)
+        delivery_fee = Decimal('50.00')
+        total = subtotal + delivery_fee
+        
+        # Prepare shipping address
+        if checkout_address_id:
+            address = SecureAddressService.get_address_by_id(checkout_address_id, user_id)
+            shipping_address = f"{address['receiver_name']}, {address['house_number']}, {address['floor_door']}, {address['locality']}, {address['city']}, {address['pincode']}, Phone: {address['contact_number']}"
+        else:
+            addr = checkout_one_time_address
+            shipping_address = f"{addr['receiver_name']}, {addr['house_number']}, {addr['floor_door']}, {addr['locality']}, {addr['city']}, {addr['pincode']}, Phone: {addr['contact_number']}"
+        
+        # Create order using DatabaseService
+        order_query = """
+            INSERT INTO orders (user_id, total_amount, shipping_address, order_status)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
+        """
+        
+        order_result = DatabaseService.execute_query(
+            order_query,
+            (user_id, float(total), shipping_address, 'confirmed'),
+            fetch_one=True
+        )
+        
+        if not order_result:
+            flash('Failed to create order. Please try again.', 'error')
+            return redirect(url_for('checkout_payment'))
+        
+        order_id = order_result[0]
+        
+        # Create order items
+        for item in cart_items:
+            item_query = """
+                INSERT INTO order_items (order_id, variation_id, quantity, price_at_purchase)
+                VALUES (%s, %s, %s, %s)
+            """
+            DatabaseService.execute_query(
+                item_query,
+                (order_id, item['variation_id'], item['quantity'], float(item['price'])),
+                fetch_one=False,
+                fetch_all=False
+            )
+        
+        # Clear cart after successful order
+        clear_cart_query = "DELETE FROM cart_items WHERE user_id = %s"
+        DatabaseService.execute_query(clear_cart_query, (user_id,), fetch_one=False, fetch_all=False)
+        
+        # Clear checkout session data
+        session.pop('checkout_address_id', None)
+        session.pop('checkout_one_time_address', None)
+        
+        # Store order ID for confirmation page
+        session['last_order_id'] = order_id
+        
+        logger.info(f"Order {order_id} placed successfully for user {user_id}")
+        flash('Order placed successfully!', 'success')
+        
+        return redirect(url_for('order_confirmation'))
+        
+    except Exception as e:
+        logger.error(f"Error placing order: {e}")
+        flash('Failed to place order. Please try again.', 'error')
+        return redirect(url_for('checkout_payment'))
+
+@app.route('/order-confirmation')
+@login_required
+def order_confirmation():
+    """Order confirmation page."""
+    try:
+        user_id = session['user_id']
+        order_id = session.get('last_order_id')
+        
+        if not order_id:
+            flash('No recent order found.', 'error')
+            return redirect(url_for('index'))
+        
+        # Get order details
+        order_query = """
+            SELECT id, total_amount, shipping_address, order_status, created_at
+            FROM orders 
+            WHERE id = %s AND user_id = %s
+        """
+        
+        order = DatabaseService.execute_query(order_query, (order_id, user_id), fetch_one=True)
+        
+        if not order:
+            flash('Order not found.', 'error')
+            return redirect(url_for('index'))
+        
+        # Get order items
+        items_query = """
+            SELECT oi.quantity, oi.price_at_purchase, pv.variation_name, p.name as product_name
+            FROM order_items oi
+            JOIN product_variations pv ON oi.variation_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE oi.order_id = %s
+        """
+        
+        order_items = DatabaseService.execute_query(items_query, (order_id,))
+        
+        # Clear the session order ID after displaying
+        session.pop('last_order_id', None)
+        
+        return render_template('order_confirmation.html',
+                             order=order,
+                             order_items=order_items)
+                             
+    except Exception as e:
+        logger.error(f"Error loading order confirmation: {e}")
+        flash('Error loading order details.', 'error')
+        return redirect(url_for('index'))
+
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
     logger.info(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
