@@ -216,10 +216,3 @@ class UserService:
             logger.error(f"Error creating user: {e}")
             db.session.rollback()
             return None
-    
-    @staticmethod
-    def validate_user_exists(user_id: int) -> bool:
-        """Validate that a user exists in the database"""
-        query = "SELECT id FROM users WHERE id = %s"
-        result = DatabaseService.execute_query(query, (user_id,), fetch_one=True)
-        return result is not None
