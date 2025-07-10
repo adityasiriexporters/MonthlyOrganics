@@ -806,66 +806,6 @@ function resetAddressForm() {
     
     validateForm();
 }
-        
-        // Show address form
-        document.getElementById('addressForm').style.display = 'block';
-        document.getElementById('newAddressButtons').style.display = 'none';
-        document.getElementById('saveChangesSection').classList.remove('hidden');
-        document.getElementById('mapSection').style.display = 'block';
-        
-        // Set coordinates
-        document.getElementById('latitude').value = selectedOption.dataset.lat;
-        document.getElementById('longitude').value = selectedOption.dataset.lng;
-        
-        // Show location as selected
-        showLocationSelected(selectedOption.dataset.locality + ', ' + selectedOption.dataset.city);
-        
-        // Enable form validation
-        validateForm();
-    } else {
-        // Hide form
-        document.getElementById('addressForm').style.display = 'none';
-        document.getElementById('saveChangesSection').classList.add('hidden');
-        document.getElementById('mapSection').style.display = 'none';
-    }
-}
-
-function populateFormWithAddressData(option) {
-    document.getElementById('house_number').value = option.dataset.house;
-    document.getElementById('block_name').value = option.dataset.block;
-    document.getElementById('floor_door').value = option.dataset.floor;
-    document.getElementById('locality').value = option.dataset.locality;
-    document.getElementById('city').value = option.dataset.city;
-    document.getElementById('pincode').value = option.dataset.pincode;
-    document.getElementById('nearby_landmark').value = option.dataset.landmark;
-    document.getElementById('contact_number').value = option.dataset.contact;
-    document.getElementById('address_notes').value = option.dataset.notes;
-    document.getElementById('receiver_name').value = option.dataset.receiver;
-    document.getElementById('nickname').value = option.dataset.nickname;
-    
-    // Set label type based on nickname
-    if (option.dataset.nickname.toLowerCase().includes('home')) {
-        document.querySelector('input[name="label_type"][value="home"]').checked = true;
-        toggleCustomLabel();
-    } else {
-        document.querySelector('input[name="label_type"][value="other"]').checked = true;
-        document.getElementById('custom_label').value = option.dataset.nickname;
-        toggleCustomLabel();
-    }
-}
-
-function resetAddressForm() {
-    document.getElementById('addressForm').reset();
-    document.getElementById('latitude').value = '0';
-    document.getElementById('longitude').value = '0';
-    document.getElementById('address_id').value = '';
-    document.getElementById('action').value = 'save';
-    hideLocationSelected();
-    document.getElementById('customLabelDiv').classList.add('hidden');
-    document.getElementById('newAddressButtons').style.display = 'block';
-    document.getElementById('saveChangesSection').classList.add('hidden');
-    validateForm();
-}
 
 // Form Validation Functions
 function setupFormValidation() {
