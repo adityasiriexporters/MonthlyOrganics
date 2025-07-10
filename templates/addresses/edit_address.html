@@ -299,12 +299,24 @@ function editAddressForm() {
         setMarker(location) {
             // Use pin manager to ensure single pin
             this.pinManager.setMarker(location, (event) => {
-                // Drag end callback
+                // Drag end callback - handle both AdvancedMarkerElement and legacy Marker
+                let dragLatLng;
+                if (event.latLng) {
+                    // Legacy Marker event structure
+                    dragLatLng = event.latLng;
+                } else if (this.pinManager.currentMarker && this.pinManager.currentMarker.position) {
+                    // AdvancedMarkerElement - get position directly
+                    dragLatLng = this.pinManager.currentMarker.position;
+                } else {
+                    console.error('Unable to get drag position');
+                    return;
+                }
+
                 this.selectedLocation = {
-                    lat: event.latLng.lat(),
-                    lng: event.latLng.lng()
+                    lat: dragLatLng.lat(),
+                    lng: dragLatLng.lng()
                 };
-                this.reverseGeocode(event.latLng);
+                this.reverseGeocode(dragLatLng);
             });
 
             // Update selected location
@@ -327,10 +339,32 @@ function editAddressForm() {
                 gestureHandling: 'none'
             });
 
-            this.previewMarker = new google.maps.Marker({
-                position: this.selectedLocation,
-                map: this.previewMap
-            });
+            // Use AdvancedMarkerElement for preview map if available
+            try {
+                if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+                    this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
+                        position: this.selectedLocation,
+                        map: this.previewMap,
+                        title: 'Selected Location'
+                    });
+                } else {
+                    // Fallback to legacy marker (non-draggable for preview)
+                    this.previewMarker = new google.maps.Marker({
+                        position: this.selectedLocation,
+                        map: this.previewMap,
+                        title: 'Selected Location',
+                        draggable: false
+                    });
+                }
+            } catch (error) {
+                // Ultimate fallback
+                this.previewMarker = new google.maps.Marker({
+                    position: this.selectedLocation,
+                    map: this.previewMap,
+                    title: 'Selected Location',
+                    draggable: false
+                });
+            }
         },
 
 
@@ -461,7 +495,7 @@ function editAddressForm() {
                     longitude: this.selectedLocation.lng
                 };
 
-                const response = await fetch(`{{ url_for('addresses.update_address', address_id=address.id) }}${this.addressId}`, {
+                const response = await fetch('{{ url_for('addresses.update_address', address_id=address.id) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

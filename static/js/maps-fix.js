@@ -24,10 +24,12 @@ class SinglePinManager {
             google.maps.event.clearInstanceListeners(this.currentMarker);
             
             // Remove from map based on marker type
-            if (this.currentMarker.map) {
-                this.currentMarker.map = null; // AdvancedMarkerElement
+            if (this.currentMarker.map !== undefined) {
+                // AdvancedMarkerElement uses map property
+                this.currentMarker.map = null;
             } else if (this.currentMarker.setMap) {
-                this.currentMarker.setMap(null); // Legacy Marker
+                // Legacy Marker uses setMap method
+                this.currentMarker.setMap(null);
             }
             
             this.currentMarker = null;
@@ -45,7 +47,7 @@ class SinglePinManager {
         this.clearMarkers();
         
         try {
-            // Check if AdvancedMarkerElement is available (requires Maps API v3.56+)
+            // Check if AdvancedMarkerElement is available and properly loaded
             if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
                 // Use new AdvancedMarkerElement API (recommended)
                 this.currentMarker = new google.maps.marker.AdvancedMarkerElement({
@@ -55,15 +57,20 @@ class SinglePinManager {
                     title: 'Selected Location'
                 });
 
-                // Add drag end listener if provided
+                // Add drag end listener with proper event handling for AdvancedMarkerElement
                 if (onDragEnd && typeof onDragEnd === 'function') {
-                    this.currentMarker.addListener('dragend', onDragEnd);
+                    this.currentMarker.addListener('dragend', (event) => {
+                        // AdvancedMarkerElement dragend event structure
+                        const dragEvent = {
+                            latLng: this.currentMarker.position
+                        };
+                        onDragEnd(dragEvent);
+                    });
                 }
-            } else {
-                // Fallback to legacy Marker API (suppress console warning)
-                const originalWarn = console.warn;
-                console.warn = () => {}; // Temporarily suppress warnings
                 
+                console.log('Using AdvancedMarkerElement API');
+            } else {
+                // Fallback: Use legacy Marker API without deprecation warnings
                 this.currentMarker = new google.maps.Marker({
                     position: location,
                     map: this.map,
@@ -74,16 +81,15 @@ class SinglePinManager {
                     zIndex: 1000
                 });
 
-                // Restore console.warn
-                console.warn = originalWarn;
-
-                // Add drag end listener if provided
+                // Add drag end listener for legacy marker
                 if (onDragEnd && typeof onDragEnd === 'function') {
                     this.currentMarker.addListener('dragend', onDragEnd);
                 }
+                
+                console.log('Using legacy Marker API as fallback');
             }
         } catch (error) {
-            console.error('Error creating marker:', error);
+            console.error('Error creating marker, using legacy fallback:', error);
             // Ultimate fallback to legacy API
             this.currentMarker = new google.maps.Marker({
                 position: location,
