@@ -131,10 +131,37 @@ class SinglePinManager {
                 if (this._canUseAdvancedMarkerElement()) {
                     console.log('SinglePinManager: Using AdvancedMarkerElement with Map ID:', this.map.get('mapId'));
                     
+                    // Create a visible marker element for AdvancedMarkerElement
+                    const markerElement = document.createElement('div');
+                    markerElement.innerHTML = `
+                        <div style="
+                            width: 30px; 
+                            height: 30px; 
+                            background: #ff4444; 
+                            border: 3px solid white; 
+                            border-radius: 50%; 
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            cursor: pointer;
+                            position: relative;
+                        "></div>
+                        <div style="
+                            width: 0; 
+                            height: 0; 
+                            border-left: 6px solid transparent; 
+                            border-right: 6px solid transparent; 
+                            border-top: 10px solid #ff4444; 
+                            position: absolute; 
+                            top: 27px; 
+                            left: 50%; 
+                            transform: translateX(-50%);
+                        "></div>
+                    `;
+
                     this.currentMarker = new google.maps.marker.AdvancedMarkerElement({
                         position: location,
                         map: this.map,
                         title: 'Selected Location',
+                        content: markerElement,
                         gmpDraggable: true
                     });
 

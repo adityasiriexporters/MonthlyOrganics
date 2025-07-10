@@ -440,13 +440,38 @@ function addressForm() {
             // Use modern AdvancedMarkerElement for consistency
             try {
                 if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+                    // Create a visible marker element for preview
+                    const previewMarkerElement = document.createElement('div');
+                    previewMarkerElement.innerHTML = `
+                        <div style="
+                            width: 24px; 
+                            height: 24px; 
+                            background: #ff4444; 
+                            border: 2px solid white; 
+                            border-radius: 50%; 
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        "></div>
+                        <div style="
+                            width: 0; 
+                            height: 0; 
+                            border-left: 5px solid transparent; 
+                            border-right: 5px solid transparent; 
+                            border-top: 8px solid #ff4444; 
+                            position: absolute; 
+                            top: 22px; 
+                            left: 50%; 
+                            transform: translateX(-50%);
+                        "></div>
+                    `;
+
                     this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
                         position: this.selectedLocation,
                         map: this.previewMap,
                         title: 'Selected Location',
+                        content: previewMarkerElement,
                         gmpDraggable: false
                     });
-                    console.log('Preview map using AdvancedMarkerElement');
+                    console.log('Preview map using AdvancedMarkerElement with custom content');
                 } else {
                     throw new Error('AdvancedMarkerElement not available for preview');
                 }
