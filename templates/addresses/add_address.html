@@ -245,7 +245,7 @@ function addressForm() {
             }
         },
 
-        initMap() {
+        async initMap() {
             console.log('initMap called - starting map initialization');
             
             // Check if Google Maps is available
@@ -277,18 +277,29 @@ function addressForm() {
                     mapId: '550e8400-e29b-41d4-a716-446655440000' // Required for AdvancedMarkerElement
                 });
 
-                console.log('Map created successfully');
+                console.log('Map created, waiting for full initialization...');
 
-                // Initialize SinglePinManager with modern API
-                this.pinManager = new SinglePinManager(this.map);
-                
-                // Add click listener using SinglePinManager
-                this.pinManager.addClickListener((location) => {
-                    console.log('MAP CLICKED via SinglePinManager! Location:', location.lat(), location.lng());
-                    this.setMarkerModern(location);
+                // Wait for map to be fully loaded before initializing pin manager
+                await new Promise((resolve) => {
+                    google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                        console.log('Map fully loaded and ready for markers');
+                        resolve();
+                    });
                 });
 
-                console.log('SinglePinManager initialized and click listener added successfully');
+                // Initialize SinglePinManager with modern API after map is ready
+                this.pinManager = new SinglePinManager(this.map);
+                
+                // Add click listener using SinglePinManager with error handling
+                this.pinManager.addClickListener((location) => {
+                    console.log('MAP CLICKED via SinglePinManager! Location:', location.lat(), location.lng());
+                    this.setMarkerModern(location).catch(error => {
+                        console.error('Error setting marker from click:', error);
+                        alert('Error placing marker. Please try again.');
+                    });
+                });
+
+                console.log('Map and SinglePinManager initialized successfully with race condition prevention');
                 
             } catch (error) {
                 console.error('Error creating map:', error);

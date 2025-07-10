@@ -264,7 +264,9 @@ function editAddressForm() {
             this.initMap();
         },
 
-        initMap() {
+        async initMap() {
+            console.log('Edit map initialization starting...');
+            
             // Clean up existing resources
             if (this.pinManager) {
                 this.pinManager.destroy();
@@ -272,29 +274,54 @@ function editAddressForm() {
             
             const defaultLocation = this.selectedLocation || { lat: 28.6139, lng: 77.2090 };
             
-            this.map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 15,
-                center: defaultLocation,
-                disableDefaultUI: true,
-                zoomControl: true,
-                gestureHandling: 'greedy',
-                clickableIcons: false,
-                disableDoubleClickZoom: false,
-                mapId: '550e8400-e29b-41d4-a716-446655440000' // Required for AdvancedMarkerElement
-            });
+            try {
+                this.map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 15,
+                    center: defaultLocation,
+                    disableDefaultUI: true,
+                    zoomControl: true,
+                    gestureHandling: 'greedy',
+                    clickableIcons: false,
+                    disableDoubleClickZoom: false,
+                    mapId: '550e8400-e29b-41d4-a716-446655440000' // Required for AdvancedMarkerElement
+                });
 
-            // Initialize single pin manager
-            this.pinManager = new window.SinglePinManager(this.map);
+                console.log('Edit map created, waiting for initialization...');
 
-            // Add existing marker if location exists
-            if (this.selectedLocation) {
-                this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                // Wait for map to be fully loaded before initializing pin manager
+                await new Promise((resolve) => {
+                    google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                        console.log('Edit map fully loaded and ready');
+                        resolve();
+                    });
+                });
+
+                // Initialize single pin manager after map is ready
+                this.pinManager = new window.SinglePinManager(this.map);
+
+                // Add existing marker if location exists with error handling
+                if (this.selectedLocation) {
+                    try {
+                        await this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                        console.log('Initial edit marker set successfully');
+                    } catch (markerError) {
+                        console.error('Error setting initial edit marker:', markerError);
+                    }
+                }
+
+                // Add click listener through pin manager with error handling
+                this.pinManager.addClickListener((latLng) => {
+                    this.setMarker(latLng).catch(error => {
+                        console.error('Error setting marker from click:', error);
+                    });
+                });
+
+                console.log('Edit map initialization completed successfully');
+                
+            } catch (error) {
+                console.error('Error initializing edit map:', error);
+                alert('Failed to initialize map: ' + error.message);
             }
-
-            // Add click listener through pin manager
-            this.pinManager.addClickListener((latLng) => {
-                this.setMarker(latLng);
-            });
         },
 
         async setMarker(location) {

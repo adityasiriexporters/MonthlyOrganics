@@ -13,6 +13,39 @@ class SinglePinManager {
         this.touchStartY = 0;
         this.isScrolling = false;
         this.isProcessingClick = false;
+        this.mapReady = false;
+        this.pendingMarkerRequest = null;
+        
+        // Wait for map to be fully loaded before allowing markers
+        this.waitForMapReady();
+    }
+
+    /**
+     * Wait for map to be fully loaded to prevent race conditions
+     */
+    waitForMapReady() {
+        // Check if map is already loaded
+        if (this.map && this.map.getCenter()) {
+            this.mapReady = true;
+            console.log('SinglePinManager: Map is ready');
+            return;
+        }
+
+        // Add listener for when map is fully loaded
+        if (this.map) {
+            google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                this.mapReady = true;
+                console.log('SinglePinManager: Map idle event - ready for markers');
+                
+                // Process any pending marker request
+                if (this.pendingMarkerRequest) {
+                    console.log('SinglePinManager: Processing pending marker request');
+                    const { location, onDragEnd, resolve } = this.pendingMarkerRequest;
+                    this.pendingMarkerRequest = null;
+                    this._createMarker(location, onDragEnd).then(resolve);
+                }
+            });
+        }
     }
 
     /**
@@ -68,68 +101,119 @@ class SinglePinManager {
     setMarker(location, onDragEnd = null) {
         console.log('SinglePinManager: Setting marker at', location.lat(), location.lng());
         
-        // Enhanced cleanup with delay to prevent race conditions
+        // Enhanced cleanup to prevent multiple pins
         this.clearMarkers();
         
-        // Add small delay to ensure cleanup completes before creating new marker
         return new Promise((resolve) => {
-            setTimeout(() => {
-                try {
-                    // Use modern AdvancedMarkerElement API with Map ID check
-                    if (google.maps.marker && google.maps.marker.AdvancedMarkerElement && this.map.get('mapId')) {
-                        console.log('SinglePinManager: Using AdvancedMarkerElement with Map ID:', this.map.get('mapId'));
-                        
-                        this.currentMarker = new google.maps.marker.AdvancedMarkerElement({
-                            position: location,
-                            map: this.map,
-                            title: 'Selected Location',
-                            gmpDraggable: true
-                        });
+            // Check if map is ready
+            if (!this.mapReady) {
+                console.log('SinglePinManager: Map not ready, queuing marker request');
+                this.pendingMarkerRequest = { location, onDragEnd, resolve };
+                return;
+            }
 
-                        // Enhanced drag end listener for AdvancedMarkerElement
-                        if (onDragEnd && typeof onDragEnd === 'function') {
-                            this.currentMarker.addListener('dragend', (event) => {
+            // Add delay to ensure cleanup completes and prevent race conditions
+            setTimeout(() => {
+                this._createMarker(location, onDragEnd).then(resolve);
+            }, 50);
+        });
+    }
+
+    /**
+     * Internal method to create marker with proper error handling and fallback
+     */
+    _createMarker(location, onDragEnd = null) {
+        return new Promise((resolve) => {
+            try {
+                // Try modern AdvancedMarkerElement API first
+                if (this._canUseAdvancedMarkerElement()) {
+                    console.log('SinglePinManager: Using AdvancedMarkerElement with Map ID:', this.map.get('mapId'));
+                    
+                    this.currentMarker = new google.maps.marker.AdvancedMarkerElement({
+                        position: location,
+                        map: this.map,
+                        title: 'Selected Location',
+                        gmpDraggable: true
+                    });
+
+                    // Enhanced drag end listener for AdvancedMarkerElement
+                    if (onDragEnd && typeof onDragEnd === 'function') {
+                        this.currentMarker.addListener('dragend', (event) => {
+                            try {
                                 // For AdvancedMarkerElement, get position from marker.position
                                 const position = this.currentMarker.position;
                                 console.log('AdvancedMarkerElement dragend:', position.lat(), position.lng());
                                 
                                 // Create event object compatible with legacy API
-                                const dragEvent = {
-                                    latLng: position
-                                };
+                                const dragEvent = { latLng: position };
                                 onDragEnd(dragEvent);
-                            });
-                        }
-                        
-                        console.log('SinglePinManager: AdvancedMarkerElement created successfully');
-                    } else {
-                        throw new Error('AdvancedMarkerElement not available or no Map ID, using fallback');
-                    }
-                } catch (error) {
-                    console.warn('SinglePinManager: AdvancedMarkerElement failed, using legacy Marker:', error.message);
-                    
-                    // Enhanced fallback to legacy API
-                    this.currentMarker = new google.maps.Marker({
-                        position: location,
-                        map: this.map,
-                        draggable: true,
-                        title: 'Selected Location',
-                        animation: google.maps.Animation.DROP,
-                        optimized: false,
-                        zIndex: 1000
-                    });
-
-                    // Add drag end listener for legacy marker
-                    if (onDragEnd && typeof onDragEnd === 'function') {
-                        this.currentMarker.addListener('dragend', onDragEnd);
+                            } catch (dragError) {
+                                console.error('Error in AdvancedMarkerElement drag handler:', dragError);
+                            }
+                        });
                     }
                     
-                    console.log('SinglePinManager: Legacy Marker created as fallback');
+                    console.log('SinglePinManager: AdvancedMarkerElement created successfully');
+                    resolve(this.currentMarker);
+                    
+                } else {
+                    // Fallback to legacy API
+                    this._createLegacyMarker(location, onDragEnd, resolve);
                 }
-
-                resolve(this.currentMarker);
-            }, 50); // 50ms delay to ensure cleanup completion
+                
+            } catch (error) {
+                console.warn('SinglePinManager: AdvancedMarkerElement failed, falling back to legacy:', error.message);
+                this._createLegacyMarker(location, onDragEnd, resolve);
+            }
         });
+    }
+
+    /**
+     * Check if AdvancedMarkerElement can be used safely
+     */
+    _canUseAdvancedMarkerElement() {
+        return google.maps.marker && 
+               google.maps.marker.AdvancedMarkerElement && 
+               this.map && 
+               this.map.get('mapId') && 
+               this.mapReady;
+    }
+
+    /**
+     * Create legacy marker with proper error handling
+     */
+    _createLegacyMarker(location, onDragEnd, resolve) {
+        try {
+            console.log('SinglePinManager: Using legacy Marker API');
+            
+            this.currentMarker = new google.maps.Marker({
+                position: location,
+                map: this.map,
+                draggable: true,
+                title: 'Selected Location',
+                animation: google.maps.Animation.DROP,
+                optimized: false,
+                zIndex: 1000
+            });
+
+            // Add drag end listener for legacy marker
+            if (onDragEnd && typeof onDragEnd === 'function') {
+                this.currentMarker.addListener('dragend', (event) => {
+                    try {
+                        onDragEnd(event);
+                    } catch (dragError) {
+                        console.error('Error in legacy marker drag handler:', dragError);
+                    }
+                });
+            }
+            
+            console.log('SinglePinManager: Legacy Marker created successfully');
+            resolve(this.currentMarker);
+            
+        } catch (legacyError) {
+            console.error('SinglePinManager: Failed to create legacy marker:', legacyError);
+            resolve(null);
+        }
     }
 
     /**
