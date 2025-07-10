@@ -233,8 +233,14 @@ class SinglePinManager {
 
     /**
      * Check if AdvancedMarkerElement can be used safely
+     * Temporarily force legacy markers for better visibility
      */
     _canUseAdvancedMarkerElement() {
+        // Force use of legacy markers for now since they're more reliable
+        console.log('SinglePinManager: Forcing legacy Marker API for better visibility');
+        return false;
+        
+        /* Original check - temporarily disabled
         const canUse = google.maps.marker && 
                       google.maps.marker.AdvancedMarkerElement && 
                       this.map && 
@@ -251,6 +257,7 @@ class SinglePinManager {
         });
         
         return canUse;
+        */
     }
 
     /**
@@ -260,11 +267,23 @@ class SinglePinManager {
         try {
             console.log('SinglePinManager: Using legacy Marker API at location:', location.lat(), location.lng());
             
+            // Create custom red pin icon for better visibility
+            const pinIcon = {
+                path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+                fillColor: '#ff4444',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+                scale: 1.5,
+                anchor: new google.maps.Point(0, 0)
+            };
+
             this.currentMarker = new google.maps.Marker({
                 position: location,
                 map: this.map,
                 draggable: true,
                 title: 'Selected Location',
+                icon: pinIcon,
                 animation: google.maps.Animation.DROP,
                 optimized: false,
                 zIndex: 1000
