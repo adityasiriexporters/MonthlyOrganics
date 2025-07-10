@@ -478,26 +478,10 @@
 </div>
 
 <script>
-console.log('Checkout address page loaded');
-
 // Global variables
 let map, marker, geocoder;
 let selectedLocation = null;
 let isEditingMode = false;
-
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    setupFormValidation();
-    setupMapFunctionality();
-    checkForConfirmedAddress();
-    
-    // Set up address selection change handler
-    const addressSelect = document.getElementById('addressSelect');
-    if (addressSelect) {
-        addressSelect.addEventListener('change', handleAddressSelection);
-        handleAddressSelection(); // Initialize with current selection
-    }
-});
 
 // Address Selection Functions
 function handleAddressSelection() {
@@ -1071,32 +1055,39 @@ function hideLocationSelected() {
 
 // Initialize everything when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Set up form validation
-    setupFormValidation();
-    setupMapFunctionality();
+    console.log('Checkout address page loaded');
     
-    // Set up address selection handler
-    const addressSelect = document.getElementById('addressSelect');
-    if (addressSelect) {
-        addressSelect.addEventListener('change', handleAddressSelection);
-        handleAddressSelection(); // Initialize with current selection
-    }
-    
-    // Set up proceed to pay button
-    const proceedBtn = document.getElementById('proceedToPayBtn');
-    if (proceedBtn) {
-        proceedBtn.addEventListener('click', function() {
-            window.location.href = '/checkout/payment';
-        });
-    }
-    
-    // Remove problematic form submission handler that was blocking button clicks
-    
-    // Check if this is a confirmation step
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('step') === 'confirm') {
-        console.log('Confirmation step detected, showing confirmation section');
-        showConfirmationSection();
+    try {
+        // Set up form validation
+        setupFormValidation();
+        setupMapFunctionality();
+        
+        // Set up address selection handler
+        const addressSelect = document.getElementById('addressSelect');
+        if (addressSelect) {
+            addressSelect.addEventListener('change', handleAddressSelection);
+            handleAddressSelection(); // Initialize with current selection
+        }
+        
+        // Set up proceed to pay button
+        const proceedBtn = document.getElementById('proceedToPayBtn');
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', function() {
+                window.location.href = '/checkout/payment';
+            });
+        }
+        
+        // Check if this is a confirmation step
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('step') === 'confirm') {
+            console.log('Confirmation step detected, showing confirmation section');
+            showConfirmationSection();
+        }
+        
+        console.log('Checkout address page initialization complete');
+        
+    } catch (error) {
+        console.error('Error initializing checkout address page:', error);
     }
 });
 
