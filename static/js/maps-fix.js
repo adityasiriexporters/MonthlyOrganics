@@ -52,80 +52,44 @@ class SinglePinManager {
      * Enhanced marker cleanup with safety net to prevent multiple pins
      */
     clearMarkers() {
-        console.log('SinglePinManager: Starting comprehensive marker cleanup');
-        
-        // Clear the tracked current marker
         if (this.currentMarker) {
-            console.log('SinglePinManager: Clearing tracked marker');
+            console.log('SinglePinManager: Clearing existing marker');
             
-            try {
-                // Clear all event listeners first
-                google.maps.event.clearInstanceListeners(this.currentMarker);
-                
-                // Remove from map based on marker type
-                if (this.currentMarker instanceof google.maps.marker.AdvancedMarkerElement) {
-                    this.currentMarker.map = null;
-                    console.log('SinglePinManager: AdvancedMarkerElement removed');
-                } else if (this.currentMarker.setMap) {
-                    this.currentMarker.setMap(null);
-                    console.log('SinglePinManager: Legacy Marker removed');
-                }
-            } catch (error) {
-                console.warn('SinglePinManager: Error removing tracked marker:', error);
+            // Clear all event listeners first
+            google.maps.event.clearInstanceListeners(this.currentMarker);
+            
+            // Remove from map based on marker type
+            if (this.currentMarker instanceof google.maps.marker.AdvancedMarkerElement) {
+                // AdvancedMarkerElement uses map property
+                this.currentMarker.map = null;
+                console.log('SinglePinManager: AdvancedMarkerElement removed');
+            } else if (this.currentMarker.setMap) {
+                // Legacy Marker uses setMap method
+                this.currentMarker.setMap(null);
+                console.log('SinglePinManager: Legacy Marker removed');
             }
             
             this.currentMarker = null;
         }
         
-        // Aggressive cleanup: Clear ALL markers from the map
+        // Safety net: Force clear any remaining markers on the map
+        // This prevents multiple pins from appearing due to race conditions
         setTimeout(() => {
-            try {
-                console.log('SinglePinManager: Starting aggressive marker cleanup');
-                
-                // Method 1: Use Google Maps built-in marker clearing
-                if (this.map && this.map.overlayMapTypes) {
-                    this.map.overlayMapTypes.clear();
-                }
-                
-                // Method 2: Clear all listeners and potential marker references
-                if (this.map) {
-                    google.maps.event.clearInstanceListeners(this.map);
-                }
-                
-                // Method 3: Force remove any DOM elements that look like markers
-                const mapDiv = this.map.getDiv();
-                if (mapDiv) {
-                    // Remove Advanced Marker elements
-                    const advancedMarkers = mapDiv.querySelectorAll('gmp-advanced-marker');
-                    advancedMarkers.forEach(marker => {
-                        try {
-                            marker.remove();
-                            console.log('SinglePinManager: Removed advanced marker DOM element');
-                        } catch (e) {
-                            console.warn('SinglePinManager: Could not remove advanced marker:', e);
-                        }
-                    });
-                    
-                    // Remove legacy marker elements (with GM marker classes)
-                    const legacyMarkers = mapDiv.querySelectorAll('img[src*="marker"], div[style*="marker"]');
-                    legacyMarkers.forEach(marker => {
-                        try {
-                            const parent = marker.parentElement;
-                            if (parent && parent.className && parent.className.includes('gm-style')) {
-                                parent.remove();
-                                console.log('SinglePinManager: Removed legacy marker DOM element');
-                            }
-                        } catch (e) {
-                            console.warn('SinglePinManager: Could not remove legacy marker:', e);
-                        }
-                    });
-                }
-                
-                console.log('SinglePinManager: Aggressive cleanup completed');
-            } catch (error) {
-                console.warn('SinglePinManager: Error in aggressive cleanup:', error);
+            const mapMarkers = [];
+            
+            // Try to find any remaining markers using map's internal structure
+            if (this.map && this.map.markers) {
+                // Some map implementations expose markers array
+                this.map.markers.forEach(marker => {
+                    if (marker && marker.setMap) {
+                        marker.setMap(null);
+                    }
+                });
+                this.map.markers = [];
             }
-        }, 20);
+            
+            console.log('SinglePinManager: Safety cleanup completed');
+        }, 10);
     }
 
     /**
@@ -148,10 +112,10 @@ class SinglePinManager {
                 return;
             }
 
-            // Add longer delay to ensure aggressive cleanup completes and prevent race conditions
+            // Add delay to ensure cleanup completes and prevent race conditions
             setTimeout(() => {
                 this._createMarker(location, onDragEnd).then(resolve);
-            }, 100);
+            }, 50);
         });
     }
 
@@ -269,14 +233,8 @@ class SinglePinManager {
 
     /**
      * Check if AdvancedMarkerElement can be used safely
-     * Temporarily force legacy markers for better visibility
      */
     _canUseAdvancedMarkerElement() {
-        // Force use of legacy markers for now since they're more reliable
-        console.log('SinglePinManager: Forcing legacy Marker API for better visibility');
-        return false;
-        
-        /* Original check - temporarily disabled
         const canUse = google.maps.marker && 
                       google.maps.marker.AdvancedMarkerElement && 
                       this.map && 
@@ -293,7 +251,6 @@ class SinglePinManager {
         });
         
         return canUse;
-        */
     }
 
     /**
@@ -303,23 +260,11 @@ class SinglePinManager {
         try {
             console.log('SinglePinManager: Using legacy Marker API at location:', location.lat(), location.lng());
             
-            // Create custom red pin icon for better visibility
-            const pinIcon = {
-                path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
-                fillColor: '#ff4444',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 2,
-                scale: 1.5,
-                anchor: new google.maps.Point(0, 0)
-            };
-
             this.currentMarker = new google.maps.Marker({
                 position: location,
                 map: this.map,
                 draggable: true,
                 title: 'Selected Location',
-                icon: pinIcon,
                 animation: google.maps.Animation.DROP,
                 optimized: false,
                 zIndex: 1000

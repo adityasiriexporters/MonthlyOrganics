@@ -493,22 +493,11 @@ function addressForm() {
                 }
             } catch (error) {
                 console.warn('Preview map falling back to legacy Marker:', error.message);
-                // Fallback to legacy Marker for preview with custom icon
-                const previewPinIcon = {
-                    path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
-                    fillColor: '#ff4444',
-                    fillOpacity: 1,
-                    strokeColor: '#ffffff',
-                    strokeWeight: 2,
-                    scale: 1.2,
-                    anchor: new google.maps.Point(0, 0)
-                };
-                
+                // Fallback to legacy Marker for preview
                 this.previewMarker = new google.maps.Marker({
                     position: this.selectedLocation,
                     map: this.previewMap,
                     title: 'Selected Location',
-                    icon: previewPinIcon,
                     draggable: false
                 });
             }
