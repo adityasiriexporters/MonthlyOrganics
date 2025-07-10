@@ -217,10 +217,12 @@ class AddressService:
                 SET encrypted_address_data = %s, address_label = %s, latitude = %s, 
                     longitude = %s, is_default = %s, updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s AND user_id = %s
+                RETURNING id
             """
             result = DatabaseService.execute_query(
                 query, 
-                (encrypted_data, address_label, latitude, longitude, is_default, address_id, user_id)
+                (encrypted_data, address_label, latitude, longitude, is_default, address_id, user_id),
+                fetch_one=True
             )
             
             return result is not None
@@ -233,8 +235,8 @@ class AddressService:
     def delete_address(user_id: int, address_id: int) -> bool:
         """Delete an address"""
         try:
-            query = "DELETE FROM user_addresses WHERE id = %s AND user_id = %s"
-            result = DatabaseService.execute_query(query, (address_id, user_id))
+            query = "DELETE FROM user_addresses WHERE id = %s AND user_id = %s RETURNING id"
+            result = DatabaseService.execute_query(query, (address_id, user_id), fetch_one=True)
             return result is not None
             
         except Exception as e:
@@ -253,8 +255,9 @@ class AddressService:
                 UPDATE user_addresses 
                 SET is_default = TRUE, updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s AND user_id = %s
+                RETURNING id
             """
-            result = DatabaseService.execute_query(query, (address_id, user_id))
+            result = DatabaseService.execute_query(query, (address_id, user_id), fetch_one=True)
             return result is not None
             
         except Exception as e:
