@@ -71,7 +71,7 @@ def store():
         
         # Get all categories using direct database query with connection pooling
         categories_query = """
-        SELECT id, name, description 
+        SELECT id, name 
         FROM categories 
         ORDER BY name
         """
@@ -82,8 +82,7 @@ def store():
         for category in categories:
             categories_list.append({
                 'id': category[0],
-                'name': category[1],
-                'description': category[2]
+                'name': category[1]
             })
         
         return render_template('store.html', categories=categories_list, search_query=search_query)
