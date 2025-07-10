@@ -48,8 +48,8 @@ class SinglePinManager {
         
         try {
             // Check if AdvancedMarkerElement is available and properly loaded
-            if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
-                // Use new AdvancedMarkerElement API (recommended)
+            if (google.maps.marker && google.maps.marker.AdvancedMarkerElement && this.map.getMapId) {
+                // Use new AdvancedMarkerElement API (recommended) - only if map has ID
                 this.currentMarker = new google.maps.marker.AdvancedMarkerElement({
                     position: location,
                     map: this.map,
@@ -70,7 +70,7 @@ class SinglePinManager {
                 
                 console.log('Using AdvancedMarkerElement API');
             } else {
-                // Fallback: Use legacy Marker API without deprecation warnings
+                // Use legacy Marker API (works without Map ID)
                 this.currentMarker = new google.maps.Marker({
                     position: location,
                     map: this.map,
@@ -86,7 +86,7 @@ class SinglePinManager {
                     this.currentMarker.addListener('dragend', onDragEnd);
                 }
                 
-                console.log('Using legacy Marker API as fallback');
+                console.log('Using legacy Marker API (AdvancedMarkerElement requires Map ID)');
             }
         } catch (error) {
             console.error('Error creating marker, using legacy fallback:', error);

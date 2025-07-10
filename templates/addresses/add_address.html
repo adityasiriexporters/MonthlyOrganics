@@ -263,7 +263,8 @@ function addressForm() {
                 zoomControl: true,
                 gestureHandling: 'greedy',
                 clickableIcons: false,
-                disableDoubleClickZoom: false
+                disableDoubleClickZoom: false,
+                mapId: 'monthly-organics-map' // Required for AdvancedMarkerElement
             });
 
             // Initialize single pin manager
@@ -405,32 +406,13 @@ function addressForm() {
                 gestureHandling: 'none'
             });
 
-            // Use AdvancedMarkerElement for preview map if available
-            try {
-                if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
-                    this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
-                        position: this.selectedLocation,
-                        map: this.previewMap,
-                        title: 'Selected Location'
-                    });
-                } else {
-                    // Fallback to legacy marker (non-draggable for preview)
-                    this.previewMarker = new google.maps.Marker({
-                        position: this.selectedLocation,
-                        map: this.previewMap,
-                        title: 'Selected Location',
-                        draggable: false
-                    });
-                }
-            } catch (error) {
-                // Ultimate fallback
-                this.previewMarker = new google.maps.Marker({
-                    position: this.selectedLocation,
-                    map: this.previewMap,
-                    title: 'Selected Location',
-                    draggable: false
-                });
-            }
+            // Use standard Marker for preview (simpler, doesn't need advanced features)
+            this.previewMarker = new google.maps.Marker({
+                position: this.selectedLocation,
+                map: this.previewMap,
+                title: 'Selected Location',
+                draggable: false
+            });
         },
 
         changeLocation() {
