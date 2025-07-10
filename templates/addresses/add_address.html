@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <!-- Google Maps JavaScript API -->
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places,marker"></script>
 <!-- Maps Fix for Single Pin Management -->
 <script src="{{ url_for('static', filename='js/maps-fix.js') }}"></script>
 {% endblock %}
@@ -393,10 +393,30 @@ function addressForm() {
                 gestureHandling: 'none'
             });
 
-            this.previewMarker = new google.maps.Marker({
-                position: this.selectedLocation,
-                map: this.previewMap
-            });
+            // Use AdvancedMarkerElement for preview map if available
+            try {
+                if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+                    this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
+                        position: this.selectedLocation,
+                        map: this.previewMap,
+                        title: 'Selected Location'
+                    });
+                } else {
+                    // Fallback to legacy marker
+                    this.previewMarker = new google.maps.Marker({
+                        position: this.selectedLocation,
+                        map: this.previewMap,
+                        title: 'Selected Location'
+                    });
+                }
+            } catch (error) {
+                // Ultimate fallback
+                this.previewMarker = new google.maps.Marker({
+                    position: this.selectedLocation,
+                    map: this.previewMap,
+                    title: 'Selected Location'
+                });
+            }
         },
 
         changeLocation() {
@@ -443,7 +463,7 @@ function addressForm() {
                     longitude: this.selectedLocation.lng
                 };
 
-                const response = await fetch('/save-address', {
+                const response = await fetch('{{ url_for('addresses.save_address') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -452,7 +472,7 @@ function addressForm() {
                 });
 
                 if (response.ok) {
-                    window.location.href = '/addresses';
+                    window.location.href = '{{ url_for('addresses.addresses') }}';
                 } else {
                     const error = await response.text();
                     alert('Error saving address: ' + error);

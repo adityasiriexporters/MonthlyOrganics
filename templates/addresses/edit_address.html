@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <!-- Google Maps JavaScript API -->
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places,marker"></script>
 <!-- Maps Fix for Single Pin Management -->
 <script src="{{ url_for('static', filename='js/maps-fix.js') }}"></script>
 {% endblock %}
@@ -461,7 +461,7 @@ function editAddressForm() {
                     longitude: this.selectedLocation.lng
                 };
 
-                const response = await fetch(`/update-address/${this.addressId}`, {
+                const response = await fetch(`{{ url_for('addresses.update_address', address_id=address.id) }}${this.addressId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -470,7 +470,7 @@ function editAddressForm() {
                 });
 
                 if (response.ok) {
-                    window.location.href = '/addresses';
+                    window.location.href = '{{ url_for('addresses.addresses') }}';
                 } else {
                     const error = await response.text();
                     alert('Error updating address: ' + error);
