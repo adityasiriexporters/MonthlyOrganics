@@ -222,6 +222,7 @@ function addressForm() {
         selectedLocation: null,
         locationConfirmed: false,
         saving: false,
+        clickTimeout: null,
         formData: {
             house_no: '',
             block_name: '',
@@ -249,20 +250,30 @@ function addressForm() {
                 center: defaultLocation,
                 disableDefaultUI: true,
                 zoomControl: true,
-                gestureHandling: 'greedy', // Allow all gestures without requiring special keys
-                clickableIcons: false
+                gestureHandling: 'greedy',
+                clickableIcons: false,
+                // Disable touch event handling to prevent console warnings
+                disableDoubleClickZoom: false
             });
 
-            // Add click listener to map for manual pin placement
+            // Add click/touch listener to map for manual pin placement
             this.map.addListener('click', (event) => {
-                this.setMarker(event.latLng);
+                // Prevent multiple rapid clicks
+                if (this.clickTimeout) {
+                    clearTimeout(this.clickTimeout);
+                }
+                
+                this.clickTimeout = setTimeout(() => {
+                    this.setMarker(event.latLng);
+                }, 100);
             });
         },
 
         setMarker(location) {
-            // Remove existing marker (ensure only one pin)
+            // Clear any existing marker completely (ensure only one pin)
             if (this.marker) {
                 this.marker.setMap(null);
+                this.marker = null;
             }
 
             // Create new marker with custom styling
@@ -271,7 +282,9 @@ function addressForm() {
                 map: this.map,
                 draggable: true,
                 animation: google.maps.Animation.DROP,
-                title: 'Selected Location'
+                title: 'Selected Location',
+                // Ensure marker is properly configured
+                optimized: false
             });
 
             // Update selected location
@@ -280,6 +293,9 @@ function addressForm() {
                 lng: location.lng()
             };
 
+            // Remove any existing drag listeners first
+            google.maps.event.clearListeners(this.marker, 'dragend');
+            
             // Add drag listener to marker for manual repositioning
             this.marker.addListener('dragend', (event) => {
                 this.selectedLocation = {
@@ -398,12 +414,21 @@ function addressForm() {
 
         changeLocation() {
             this.locationConfirmed = false;
-            // Keep the selected location and marker for user convenience
-            // User can modify the existing pin or place a new one
             
             // Re-center map on existing location if available
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
+                
+                // Clear existing marker and recreate to prevent duplicates
+                if (this.marker) {
+                    this.marker.setMap(null);
+                    this.marker = null;
+                }
+                
+                // Recreate marker at existing location
+                this.$nextTick(() => {
+                    this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                });
             }
         },
 

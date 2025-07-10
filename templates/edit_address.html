@@ -222,6 +222,7 @@ function editAddressForm() {
         selectedLocation: null,
         locationConfirmed: true, // Start with form visible for editing
         saving: false,
+        clickTimeout: null,
         addressId: {{ address.id }},
         formData: {
             house_no: '{{ address.house_no }}',
@@ -266,7 +267,8 @@ function editAddressForm() {
                 disableDefaultUI: true,
                 zoomControl: true,
                 gestureHandling: 'greedy',
-                clickableIcons: false
+                clickableIcons: false,
+                disableDoubleClickZoom: false
             });
 
             // Add existing marker if location exists
@@ -274,10 +276,55 @@ function editAddressForm() {
                 this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
             }
 
-            // Add click listener for manual pin placement
+            // Add click listener for manual pin placement with debouncing
             this.map.addListener('click', (event) => {
-                this.setMarker(event.latLng);
+                if (this.clickTimeout) {
+                    clearTimeout(this.clickTimeout);
+                }
+                
+                this.clickTimeout = setTimeout(() => {
+                    this.setMarker(event.latLng);
+                }, 100);
             });
+        },
+
+        setMarker(location) {
+            // Clear any existing marker completely (ensure only one pin)
+            if (this.marker) {
+                this.marker.setMap(null);
+                this.marker = null;
+            }
+
+            // Create new marker with custom styling
+            this.marker = new google.maps.Marker({
+                position: location,
+                map: this.map,
+                draggable: true,
+                animation: google.maps.Animation.DROP,
+                title: 'Selected Location',
+                optimized: false
+            });
+
+            // Update selected location
+            this.selectedLocation = {
+                lat: location.lat(),
+                lng: location.lng()
+            };
+
+            // Remove any existing drag listeners first
+            google.maps.event.clearListeners(this.marker, 'dragend');
+            
+            // Add drag listener to marker for manual repositioning
+            this.marker.addListener('dragend', (event) => {
+                this.selectedLocation = {
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
+                };
+                this.reverseGeocode(event.latLng);
+            });
+
+            // Get address from coordinates
+            this.reverseGeocode(location);
         },
 
         initPreviewMap() {
@@ -419,6 +466,16 @@ function editAddressForm() {
             // Re-center map on existing location
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
+                
+                // Clear and recreate marker to prevent duplicates
+                if (this.marker) {
+                    this.marker.setMap(null);
+                    this.marker = null;
+                }
+                
+                this.$nextTick(() => {
+                    this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                });
             }
         },
 

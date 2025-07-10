@@ -106,6 +106,9 @@ class AddressService:
     def get_user_addresses(user_id: int) -> List[Dict]:
         """Get all addresses for a user with decrypted data"""
         try:
+            # Initialize database service first
+            DatabaseService.initialize_pool()
+            
             query = """
                 SELECT id, encrypted_address_data, address_label, latitude, longitude, 
                        is_default, created_at, updated_at
@@ -121,19 +124,23 @@ class AddressService:
             # Decrypt and format addresses
             decrypted_addresses = []
             for addr in addresses:
-                decrypted_data = AddressService._decrypt_address_data(addr['encrypted_address_data'])
-                
-                address_info = {
-                    'id': addr['id'],
-                    'address_label': addr['address_label'],
-                    'latitude': float(addr['latitude']) if addr['latitude'] else None,
-                    'longitude': float(addr['longitude']) if addr['longitude'] else None,
-                    'is_default': addr['is_default'],
-                    'created_at': addr['created_at'],
-                    'updated_at': addr['updated_at'],
-                    **decrypted_data  # Merge decrypted sensitive data
-                }
-                decrypted_addresses.append(address_info)
+                try:
+                    decrypted_data = AddressService._decrypt_address_data(addr['encrypted_address_data'])
+                    
+                    address_info = {
+                        'id': addr['id'],
+                        'address_label': addr['address_label'],
+                        'latitude': float(addr['latitude']) if addr['latitude'] else None,
+                        'longitude': float(addr['longitude']) if addr['longitude'] else None,
+                        'is_default': addr['is_default'],
+                        'created_at': addr['created_at'],
+                        'updated_at': addr['updated_at'],
+                        **decrypted_data  # Merge decrypted sensitive data
+                    }
+                    decrypted_addresses.append(address_info)
+                except Exception as decrypt_error:
+                    logger.error(f"Error decrypting address {addr['id']}: {decrypt_error}")
+                    continue
             
             return decrypted_addresses
             
