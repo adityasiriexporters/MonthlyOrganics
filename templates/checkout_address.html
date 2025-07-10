@@ -1,0 +1,1177 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery Address - Monthly Organics{% endblock %}
+
+{% block extra_head %}
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
+<style>
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    /* Prevent body scroll when modal is open */
+    body.modal-open {
+        overflow: hidden;
+    }
+    /* Map modal specific styles */
+    #mapModal {
+        touch-action: none;
+    }
+    #mapModal #map {
+        padding-top: 80px; /* Account for header */
+        padding-bottom: 200px; /* Account for controls + mobile nav */
+    }
+    /* Map controls positioning */
+    .map-controls {
+        bottom: 80px; /* Above mobile navigation bar */
+    }
+    @media (min-width: 768px) {
+        .map-controls {
+            bottom: 20px; /* Normal position on desktop */
+        }
+        #mapModal #map {
+            padding-bottom: 160px; /* Less padding on desktop */
+        }
+    }
+    /* Custom styles for radio options */
+    .radio-option.selected {
+        border-color: #16a34a;
+        background-color: #f0fdf4;
+    }
+    .step-indicator {
+        background: linear-gradient(to right, #16a34a 50%, #e5e7eb 50%);
+        background-size: 200% 100%;
+        background-position: right bottom;
+        transition: background-position 0.3s ease;
+    }
+    .step-indicator.active {
+        background-position: left bottom;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pb-20 md:pb-0 bg-gray-50">
+    <!-- Header with back button -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-md mx-auto px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('cart') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-lg font-semibold text-gray-900">Delivery Address</h1>
+            </div>
+            
+            <!-- Step Indicator -->
+            <div class="mt-4 flex items-center space-x-2">
+                <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-primary w-1/2 transition-all duration-300"></div>
+                </div>
+                <span class="text-xs text-gray-500">Step 1 of 2</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto px-4 py-6">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Cart Summary -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <h3 class="font-semibold text-gray-900 mb-3">Order Summary</h3>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Items ({{ cart_items|length }})</span>
+                    <span class="text-gray-900">₹{{ "%.2f"|format(subtotal) }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Delivery Fee</span>
+                    <span class="text-gray-900">₹{{ "%.2f"|format(delivery_fee) }}</span>
+                </div>
+                <div class="border-t border-gray-200 pt-2 mt-2">
+                    <div class="flex justify-between font-medium">
+                        <span class="text-gray-900">Total</span>
+                        <span class="text-green-600 text-lg">₹{{ "%.2f"|format(total) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address Selection Section -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <h3 class="font-semibold text-gray-900 mb-4">Select Delivery Address</h3>
+            
+            <!-- Address Dropdown -->
+            <div class="space-y-3">
+                <select id="addressSelect" 
+                        class="w-full border border-gray-300 rounded-lg px-3 py-3 focus:ring-primary focus:border-primary text-sm">
+                    <option value="add_new">+ Add New Address</option>
+                    {% for address in addresses %}
+                        <option value="{{ address.id }}" 
+                                data-nickname="{{ address.nickname }}"
+                                data-house="{{ address.house_number }}"
+                                data-block="{{ address.block_name }}"
+                                data-floor="{{ address.floor_door }}"
+                                data-locality="{{ address.locality }}"
+                                data-city="{{ address.city }}"
+                                data-pincode="{{ address.pincode }}"
+                                data-landmark="{{ address.nearby_landmark }}"
+                                data-contact="{{ address.contact_number }}"
+                                data-notes="{{ address.address_notes }}"
+                                data-receiver="{{ address.receiver_name or '' }}"
+                                data-lat="{{ address.latitude }}"
+                                data-lng="{{ address.longitude }}"
+                                {% if address.is_default %}selected{% endif %}>
+                            {{ address.nickname }} - {{ address.locality }}, {{ address.city }}
+                        </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Enable Editing Checkbox (initially hidden) -->
+                <div id="editCheckboxContainer" class="hidden">
+                    <label class="flex items-center space-x-2 text-sm">
+                        <input type="checkbox" id="enableEditing" onchange="toggleEditing()" 
+                               class="rounded border-gray-300 text-primary focus:ring-primary">
+                        <span class="text-gray-700">Enable editing for this address</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Address Display (for saved addresses) -->
+        <div id="selectedAddressDisplay" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 hidden">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-gray-900">Selected Delivery Address</h3>
+                <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">Selected</span>
+            </div>
+            <div id="addressDetails" class="text-sm text-gray-600 space-y-1">
+                <!-- Address details will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Open Map Button (for new address) -->
+        <div id="mapSection" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
+                <button id="changeLocationBtn" class="text-primary hover:text-primary/80 text-sm font-medium hidden">
+                    Change
+                </button>
+            </div>
+            
+            <!-- Location Status Display -->
+            <div id="locationDisplay" class="mb-4 hidden">
+                <div class="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <div>
+                        <div class="text-sm font-medium text-green-800">Location Selected</div>
+                        <div id="selectedLocationDisplay" class="text-xs text-green-600"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Open Map Button -->
+            <button id="openMapBtn" 
+                    class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Select Location on Map</span>
+            </button>
+        </div>
+
+        <!-- Address Form -->
+        <form id="addressForm" method="POST" action="{{ url_for('checkout_save_address') }}" 
+              class="space-y-6" style="display: none;">
+            
+            <!-- Hidden fields -->
+            <input type="hidden" id="latitude" name="latitude" value="0">
+            <input type="hidden" id="longitude" name="longitude" value="0">
+            <input type="hidden" id="address_id" name="address_id" value="">
+            <input type="hidden" id="action" name="action" value="save">
+            
+            <!-- Address Details Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- House Number (Required) -->
+                    <div>
+                        <label for="house_number" class="block text-sm font-medium text-gray-700 required-field">
+                            House No/Plot No/Building/Community Name
+                        </label>
+                        <input type="text" id="house_number" name="house_number" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Block Name (Optional) -->
+                    <div>
+                        <label for="block_name" class="block text-sm font-medium text-gray-700">
+                            Block Name/No
+                        </label>
+                        <input type="text" id="block_name" name="block_name"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Floor/Door (Required) -->
+                    <div>
+                        <label for="floor_door" class="block text-sm font-medium text-gray-700 required-field">
+                            Floor/Door Number
+                        </label>
+                        <input type="text" id="floor_door" name="floor_door" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Locality (Required, Auto-filled) -->
+                    <div>
+                        <label for="locality" class="block text-sm font-medium text-gray-700 required-field">
+                            Locality
+                        </label>
+                        <input type="text" id="locality" name="locality" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- City (Auto-filled, Non-editable) -->
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700">
+                            City
+                        </label>
+                        <input type="text" id="city" name="city" readonly
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- Pincode (Auto-filled, Non-editable) -->
+                    <div>
+                        <label for="pincode" class="block text-sm font-medium text-gray-700">
+                            Pincode
+                        </label>
+                        <input type="text" id="pincode" name="pincode" readonly
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- Nearby Landmark (Optional) -->
+                    <div>
+                        <label for="nearby_landmark" class="block text-sm font-medium text-gray-700">
+                            Nearby Landmark
+                        </label>
+                        <input type="text" id="nearby_landmark" name="nearby_landmark"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receiver Details Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- Receiver Name (Required) -->
+                    <div>
+                        <label for="receiver_name" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Name
+                        </label>
+                        <input type="text" id="receiver_name" name="receiver_name" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Receiver Phone (Required) -->
+                    <div>
+                        <label for="contact_number" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Phone Number
+                        </label>
+                        <input type="tel" id="contact_number" name="contact_number" pattern="[0-9]{10}" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address Label Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
+                
+                <div class="space-y-4">
+                    <!-- Predefined Labels -->
+                    <div class="flex space-x-2">
+                        <label class="flex-1">
+                            <input type="radio" name="label_type" value="home" class="sr-only" onchange="toggleCustomLabel()">
+                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
+                                <span class="text-sm font-medium">My Home</span>
+                            </div>
+                        </label>
+                        <label class="flex-1">
+                            <input type="radio" name="label_type" value="other" class="sr-only" onchange="toggleCustomLabel()">
+                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
+                                <span class="text-sm font-medium">Others</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- Custom Label Input -->
+                    <div id="customLabelDiv" class="hidden">
+                        <input type="text" id="custom_label" name="custom_label" placeholder="Enter custom label"
+                               class="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Hidden nickname field that gets populated -->
+                    <input type="hidden" id="nickname" name="nickname" value="">
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h3>
+                
+                <div>
+                    <label for="address_notes" class="block text-sm font-medium text-gray-700">
+                        Address Notes
+                    </label>
+                    <textarea id="address_notes" name="address_notes" rows="3" 
+                              class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary"
+                              placeholder="Any additional delivery instructions..."></textarea>
+                </div>
+            </div>
+
+            <!-- Save Changes Button (for editing existing addresses) -->
+            <div id="saveChangesSection" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hidden">
+                <button type="submit" 
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Save Changes
+                </button>
+            </div>
+
+            <!-- Submit Buttons for new addresses -->
+            <div id="newAddressButtons" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="space-y-3">
+                    <button type="submit" onclick="setAction('save')" disabled id="saveAddressBtn"
+                            class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        Save Address
+                    </button>
+                    <button type="submit" onclick="setAction('one_time')" disabled id="oneTimeUseBtn"
+                            class="w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        Use Once
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-2 text-center">Fill all required fields to enable these options</p>
+            </div>
+        </form>
+
+        <!-- Delivery Confirmation Section -->
+        <div id="confirmSection" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 hidden">
+            <h3 class="font-semibold text-gray-900 mb-4">Delivery Confirmation</h3>
+            
+            <!-- Unified Address Display -->
+            <div id="addressDisplaySection" class="mb-6">
+                <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <div id="selectedAddressDetails" class="text-sm text-gray-800">
+                                <!-- Address details will be populated by JavaScript -->
+                            </div>
+                            <div id="addressTypeLabel" class="text-xs text-green-600 mt-2 font-medium">
+                                <!-- Will show "Saved Address" or "One-time use" -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Confirm Address Checkbox -->
+                <label class="flex items-start space-x-3">
+                    <input type="checkbox" id="confirmAddress" onchange="validateConfirmation()" 
+                           class="mt-1 rounded border-gray-300 text-primary focus:ring-primary">
+                    <div class="text-sm">
+                        <span class="font-medium text-gray-900 required-field">Confirm delivery address</span>
+                        <p class="text-gray-600 mt-1">I confirm that the selected address is correct and accessible for delivery.</p>
+                    </div>
+                </label>
+                
+                <!-- Delivery Note -->
+                <div>
+                    <label for="delivery_note" class="block text-sm font-medium text-gray-700 mb-2">
+                        Any delivery note?
+                    </label>
+                    <textarea id="delivery_note" name="delivery_note" rows="3" 
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary"
+                              placeholder="Special instructions for delivery..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proceed to Pay Button -->
+        <div id="proceedToPaySection" class="hidden">
+            <button id="proceedToPayBtn" disabled
+                    class="w-full bg-green-600 text-white py-4 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">
+                Proceed to Pay ₹{{ "%.2f"|format(total) }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Full Screen Map Modal -->
+<div id="mapModal" class="fixed inset-0 bg-white z-50 hidden overflow-hidden">
+    <!-- Map Header -->
+    <div class="absolute top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-10">
+        <div class="flex items-center justify-between p-4">
+            <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
+            <button id="closeMapBtn" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Full Screen Map -->
+    <div id="map" class="w-full h-full"></div>
+    
+    <!-- Map Controls - Fixed at bottom -->
+    <div class="absolute left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-10 map-controls">
+        <!-- Location Status -->
+        <div id="locationStatus" class="text-sm text-gray-600 mb-4 text-center">
+            Tap on the map to select your location or use current location
+        </div>
+        
+        <!-- Control Buttons -->
+        <div class="flex space-x-2">
+            <button id="getCurrentLocation" 
+                    class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Use Current Location</span>
+            </button>
+            <button id="confirmLocation" disabled
+                    class="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+                Confirm Location
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let map, marker, geocoder;
+let selectedLocation = null;
+let isEditingMode = false;
+
+// Address Selection Functions
+function handleAddressSelection() {
+    const select = document.getElementById('addressSelect');
+    if (!select) {
+        console.error('Address select element not found');
+        return;
+    }
+    
+    const selectedValue = select.value;
+    console.log('Address selection changed to:', selectedValue);
+    
+    // Reset confirmation section when address changes
+    resetConfirmationSection();
+    
+    if (selectedValue === 'add_new' || selectedValue === '') {
+        console.log('Showing new address form');
+        showNewAddressForm();
+    } else if (selectedValue) {
+        console.log('Showing selected address with ID:', selectedValue);
+        showSelectedAddress(selectedValue);
+    }
+}
+
+function showSelectedAddress(addressId) {
+    console.log('showSelectedAddress called with ID:', addressId);
+    
+    // Hide forms and show address display
+    document.getElementById('mapSection').style.display = 'none';
+    document.getElementById('addressForm').style.display = 'none';
+    document.getElementById('selectedAddressDisplay').classList.remove('hidden');
+    document.getElementById('editCheckboxContainer').classList.remove('hidden');
+    
+    // Get address data from selected option
+    const select = document.getElementById('addressSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption && selectedOption.value !== 'add_new') {
+        // Populate address details in "Selected Delivery Address" section
+        const addressDetails = document.getElementById('addressDetails');
+        if (addressDetails) {
+            addressDetails.innerHTML = `
+                <p><strong>${selectedOption.dataset.nickname}</strong></p>
+                <p>${selectedOption.dataset.house}${selectedOption.dataset.block ? ', ' + selectedOption.dataset.block : ''}</p>
+                <p>${selectedOption.dataset.floor}</p>
+                <p>${selectedOption.dataset.locality}, ${selectedOption.dataset.city} - ${selectedOption.dataset.pincode}</p>
+                ${selectedOption.dataset.landmark ? '<p>Near ' + selectedOption.dataset.landmark + '</p>' : ''}
+                <p><strong>Receiver:</strong> ${selectedOption.dataset.receiver || 'Not specified'}</p>
+                <p><strong>Phone:</strong> ${selectedOption.dataset.contact || 'Not specified'}</p>
+                ${selectedOption.dataset.notes ? '<p class="italic mt-2"><strong>Notes:</strong> ' + selectedOption.dataset.notes + '</p>' : ''}
+            `;
+        }
+        
+        // Store address ID for later use
+        const addressIdField = document.getElementById('address_id');
+        if (addressIdField) {
+            addressIdField.value = addressId;
+        }
+        
+        // Update confirmation section with selected address
+        updateConfirmationAddress(null, 'saved');
+        
+        // Show confirmation section
+        showConfirmationSection();
+    }
+    
+    // Reset editing mode
+    isEditingMode = false;
+    const editingCheckbox = document.getElementById('enableEditing');
+    if (editingCheckbox) {
+        editingCheckbox.checked = false;
+    }
+}
+
+function showNewAddressForm() {
+    // Show forms and hide address display
+    document.getElementById('mapSection').style.display = 'block';
+    document.getElementById('selectedAddressDisplay').classList.add('hidden');
+    document.getElementById('editCheckboxContainer').classList.add('hidden');
+    hideConfirmationSection();
+    
+    // Clear address ID
+    document.getElementById('address_id').value = '';
+    
+    // Reset form
+    resetAddressForm();
+}
+
+function hideConfirmationSection() {
+    document.getElementById('confirmSection').classList.add('hidden');
+    document.getElementById('proceedToPaySection').classList.add('hidden');
+}
+
+function checkForConfirmedAddress() {
+    // Check URL parameters for confirmation step
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('step') === 'confirm') {
+        showConfirmationSection();
+    }
+}
+
+function showConfirmationSection() {
+    console.log('showConfirmationSection called');
+    
+    // Hide address selection form
+    const addressSelection = document.getElementById('addressSelection');
+    const addressForm = document.getElementById('addressForm');
+    const mapSection = document.getElementById('mapSection');
+    
+    if (addressSelection) addressSelection.style.display = 'none';
+    if (addressForm) addressForm.style.display = 'none';
+    if (mapSection) mapSection.style.display = 'none';
+    
+    // Check if there's a one-time address to display
+    checkAndDisplayOneTimeAddress();
+    
+    // Show confirmation section
+    document.getElementById('confirmSection').classList.remove('hidden');
+    document.getElementById('proceedToPaySection').classList.remove('hidden');
+    
+    // Auto-scroll to confirmation
+    setTimeout(() => {
+        document.getElementById('confirmSection').scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+}
+
+function checkAndDisplayOneTimeAddress() {
+    // Check if we have a one-time address in session (passed from backend)
+    const oneTimeAddress = {{ checkout_one_time_address|tojson if checkout_one_time_address else 'null' }};
+    
+    if (oneTimeAddress) {
+        updateConfirmationAddress(oneTimeAddress, 'one_time');
+        return;
+    }
+    
+    // Check if we have a newly saved address to display
+    const checkoutAddressId = {{ checkout_address_id|tojson if checkout_address_id else 'null' }};
+    if (checkoutAddressId) {
+        // Find the saved address in the dropdown and show it
+        const addressSelect = document.getElementById('addressSelect');
+        if (addressSelect) {
+            // Set the dropdown to the saved address
+            for (let option of addressSelect.options) {
+                if (option.value == checkoutAddressId) {
+                    console.log('Found saved address with ID:', checkoutAddressId);
+                    addressSelect.value = checkoutAddressId;
+                    // Trigger change event to update confirmation section
+                    addressSelect.dispatchEvent(new Event('change'));
+                    return;
+                }
+            }
+        }
+    }
+    
+    // If no specific address is set, try to use the first available saved address
+    const addressSelect = document.getElementById('addressSelect');
+    if (addressSelect && addressSelect.options.length > 1) {
+        // Skip the "add new" option and select the first real address
+        for (let i = 0; i < addressSelect.options.length; i++) {
+            if (addressSelect.options[i].value !== 'add_new' && addressSelect.options[i].value !== '') {
+                addressSelect.value = addressSelect.options[i].value;
+                updateConfirmationAddress(null, 'saved');
+                return;
+            }
+        }
+    }
+}
+
+function updateConfirmationAddress(addressData, type) {
+    console.log('updateConfirmationAddress called with type:', type);
+    
+    const addressDetails = document.getElementById('selectedAddressDetails');
+    const addressTypeLabel = document.getElementById('addressTypeLabel');
+    const addressDisplaySection = document.getElementById('addressDisplaySection');
+    
+    console.log('Confirmation elements found:', {
+        addressDetails: !!addressDetails,
+        addressTypeLabel: !!addressTypeLabel,
+        addressDisplaySection: !!addressDisplaySection
+    });
+    
+    if (!addressDetails || !addressTypeLabel || !addressDisplaySection) {
+        console.error('Missing confirmation section elements');
+        return;
+    }
+    
+    let addressHTML = '';
+    let typeLabel = '';
+    
+    if (type === 'saved') {
+        // Get data from selected option in dropdown
+        const select = document.getElementById('addressSelect');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (selectedOption && selectedOption.value !== 'add_new') {
+            addressHTML = `
+                <p><strong>${selectedOption.dataset.nickname}</strong></p>
+                <p>${selectedOption.dataset.house}${selectedOption.dataset.block ? ', ' + selectedOption.dataset.block : ''}</p>
+                <p>${selectedOption.dataset.floor}</p>
+                <p>${selectedOption.dataset.locality}, ${selectedOption.dataset.city} - ${selectedOption.dataset.pincode}</p>
+                ${selectedOption.dataset.landmark ? '<p>Near ' + selectedOption.dataset.landmark + '</p>' : ''}
+                <p><strong>Receiver:</strong> ${selectedOption.dataset.receiver}</p>
+                <p><strong>Phone:</strong> ${selectedOption.dataset.contact}</p>
+                ${selectedOption.dataset.notes ? '<p class="italic mt-2"><strong>Notes:</strong> ' + selectedOption.dataset.notes + '</p>' : ''}
+            `;
+            typeLabel = 'Saved Address';
+        }
+    } else if (type === 'one_time') {
+        // Use one-time address data
+        addressHTML = `
+            <p><strong>${addressData.nickname}</strong></p>
+            <p>${addressData.house_number}${addressData.block_name ? ', ' + addressData.block_name : ''}</p>
+            <p>${addressData.floor_door}</p>
+            <p>${addressData.locality}, ${addressData.city} - ${addressData.pincode}</p>
+            ${addressData.nearby_landmark ? '<p>Near ' + addressData.nearby_landmark + '</p>' : ''}
+            <p><strong>Receiver:</strong> ${addressData.receiver_name}</p>
+            <p><strong>Phone:</strong> ${addressData.contact_number}</p>
+            ${addressData.address_notes ? '<p class="italic mt-2"><strong>Notes:</strong> ' + addressData.address_notes + '</p>' : ''}
+        `;
+        typeLabel = 'One-time use';
+    }
+    
+    if (addressHTML) {
+        addressDetails.innerHTML = addressHTML;
+        addressTypeLabel.textContent = typeLabel;
+        addressDisplaySection.classList.remove('hidden');
+    } else {
+        addressDisplaySection.classList.add('hidden');
+    }
+}
+
+function resetConfirmationSection() {
+    // Reset confirmation checkbox
+    const confirmCheckbox = document.getElementById('confirmAddress');
+    if (confirmCheckbox) {
+        confirmCheckbox.checked = false;
+    }
+    
+    // Hide address display in confirmation section
+    const addressDisplaySection = document.getElementById('addressDisplaySection');
+    if (addressDisplaySection) {
+        addressDisplaySection.classList.add('hidden');
+    }
+    
+    // Re-validate confirmation to update proceed button state
+    validateConfirmation();
+}
+
+function toggleEditing() {
+    const enableEditingCheckbox = document.getElementById('enableEditing');
+    isEditingMode = enableEditingCheckbox.checked;
+    
+    if (isEditingMode) {
+        // Show form with existing data
+        const select = document.getElementById('addressSelect');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        // Populate form with existing data
+        populateFormWithAddressData(selectedOption);
+        
+        // Show address form and map section
+        document.getElementById('selectedAddressDisplay').classList.add('hidden');
+        document.getElementById('addressForm').style.display = 'block';
+        document.getElementById('mapSection').style.display = 'block';
+        hideConfirmationSection();
+    } else {
+        // Hide form and show selected address
+        document.getElementById('addressForm').style.display = 'none';
+        document.getElementById('mapSection').style.display = 'none';
+        document.getElementById('selectedAddressDisplay').classList.remove('hidden');
+        showConfirmationSection();
+    }
+}
+
+function populateFormWithAddressData(selectedOption) {
+    if (!selectedOption || selectedOption.value === 'add_new') return;
+    
+    // Set address ID for editing
+    document.getElementById('address_id').value = selectedOption.value;
+    
+    // Populate form fields
+    document.getElementById('house_number').value = selectedOption.dataset.house || '';
+    document.getElementById('block_name').value = selectedOption.dataset.block || '';
+    document.getElementById('floor_door').value = selectedOption.dataset.floor || '';
+    document.getElementById('locality').value = selectedOption.dataset.locality || '';
+    document.getElementById('city').value = selectedOption.dataset.city || '';
+    document.getElementById('pincode').value = selectedOption.dataset.pincode || '';
+    document.getElementById('nearby_landmark').value = selectedOption.dataset.landmark || '';
+    document.getElementById('receiver_name').value = selectedOption.dataset.receiver || '';
+    document.getElementById('contact_number').value = selectedOption.dataset.contact || '';
+    document.getElementById('address_notes').value = selectedOption.dataset.notes || '';
+    
+    // Set coordinates if available
+    if (selectedOption.dataset.lat && selectedOption.dataset.lng) {
+        selectedLocation = {
+            lat: parseFloat(selectedOption.dataset.lat),
+            lng: parseFloat(selectedOption.dataset.lng)
+        };
+        showLocationSelected(`${selectedOption.dataset.locality}, ${selectedOption.dataset.city}`);
+    }
+    
+    // Set nickname and label
+    const nickname = selectedOption.dataset.nickname || '';
+    document.getElementById('nickname').value = nickname;
+    
+    // Set appropriate radio button for label
+    const labelRadios = document.querySelectorAll('input[name="label_type"]');
+    let labelSet = false;
+    
+    for (let radio of labelRadios) {
+        if (radio.value === nickname.toLowerCase().replace(/\s+/g, '_')) {
+            radio.checked = true;
+            labelSet = true;
+            break;
+        }
+    }
+    
+    // If no standard label matches, use "other"
+    if (!labelSet) {
+        document.getElementById('label_other').checked = true;
+        document.getElementById('custom_label').value = nickname;
+        document.getElementById('customLabelDiv').classList.remove('hidden');
+    }
+    
+    toggleCustomLabel();
+    validateForm();
+}
+
+function resetAddressForm() {
+    // Clear all form fields
+    document.getElementById('address_id').value = '';
+    document.getElementById('house_number').value = '';
+    document.getElementById('block_name').value = '';
+    document.getElementById('floor_door').value = '';
+    document.getElementById('locality').value = '';
+    document.getElementById('city').value = '';
+    document.getElementById('pincode').value = '';
+    document.getElementById('nearby_landmark').value = '';
+    document.getElementById('receiver_name').value = '';
+    document.getElementById('contact_number').value = '';
+    document.getElementById('address_notes').value = '';
+    document.getElementById('custom_label').value = '';
+    
+    // Reset location
+    selectedLocation = null;
+    hideLocationSelected();
+    
+    // Reset label selection
+    document.getElementById('label_home').checked = true;
+    document.getElementById('customLabelDiv').classList.add('hidden');
+    toggleCustomLabel();
+    
+    // Show address form
+    document.getElementById('addressForm').style.display = 'block';
+    
+    validateForm();
+}
+
+// Form Validation Functions
+function setupFormValidation() {
+    const form = document.getElementById('addressForm');
+    if (!form) return;
+    const inputs = form.querySelectorAll('input[required], textarea[required]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', validateForm);
+        input.addEventListener('change', validateForm);
+        input.addEventListener('blur', validateForm);
+    });
+    
+    // Add validation for radio buttons
+    const radioButtons = form.querySelectorAll('input[name="label_type"]');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', validateForm);
+    });
+    
+    // Add validation for custom label input
+    const customLabel = document.getElementById('custom_label');
+    if (customLabel) {
+        customLabel.addEventListener('input', validateForm);
+        customLabel.addEventListener('change', validateForm);
+    }
+}
+
+function validateForm() {
+    const form = document.getElementById('addressForm');
+    const saveBtn = document.getElementById('saveAddressBtn');
+    const oneTimeBtn = document.getElementById('oneTimeUseBtn');
+    
+    const requiredFields = [
+        'house_number', 'floor_door', 'locality', 'receiver_name', 'contact_number'
+    ];
+    
+    let isValid = true;
+    
+    // Check required fields
+    for (let fieldName of requiredFields) {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (!field || !field.value.trim()) {
+            isValid = false;
+            break;
+        }
+    }
+    
+    // Check coordinates
+    const lat = parseFloat(document.getElementById('latitude').value);
+    const lng = parseFloat(document.getElementById('longitude').value);
+    if (lat === 0 || lng === 0) {
+        isValid = false;
+    }
+    
+    // Check address label
+    const labelType = form.querySelector('input[name="label_type"]:checked');
+    if (!labelType) {
+        isValid = false;
+    } else if (labelType.value === 'other') {
+        const customLabel = document.getElementById('custom_label').value.trim();
+        if (!customLabel) {
+            isValid = false;
+        } else {
+            document.getElementById('nickname').value = customLabel;
+        }
+    } else {
+        document.getElementById('nickname').value = 'My Home';
+    }
+    
+    // Check contact number format
+    const contactNumber = form.querySelector('[name="contact_number"]');
+    if (contactNumber && contactNumber.value.trim()) {
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(contactNumber.value.trim())) {
+            isValid = false;
+        }
+    }
+    
+    // Enable/disable buttons
+    if (saveBtn) saveBtn.disabled = !isValid;
+    if (oneTimeBtn) oneTimeBtn.disabled = !isValid;
+    
+    return isValid;
+}
+
+function validateConfirmation() {
+    const confirmCheckbox = document.getElementById('confirmAddress');
+    const proceedBtn = document.getElementById('proceedToPayBtn');
+    
+    if (confirmCheckbox && proceedBtn) {
+        proceedBtn.disabled = !confirmCheckbox.checked;
+    }
+}
+
+// Label Functions
+function toggleCustomLabel() {
+    const selectedLabel = document.querySelector('input[name="label_type"]:checked');
+    const customDiv = document.getElementById('customLabelDiv');
+    const customInput = document.getElementById('custom_label');
+    
+    // Update visual selection
+    document.querySelectorAll('.radio-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    if (selectedLabel) {
+        selectedLabel.closest('label').querySelector('.radio-option').classList.add('selected');
+        
+        if (selectedLabel.value === 'other') {
+            customDiv.classList.remove('hidden');
+            customInput.focus();
+        } else {
+            customDiv.classList.add('hidden');
+            customInput.value = '';
+        }
+    }
+    
+    validateForm();
+}
+
+function setAction(action) {
+    document.getElementById('action').value = action;
+}
+
+// Map Functions
+function setupMapFunctionality() {
+    document.getElementById('openMapBtn').addEventListener('click', openMap);
+    document.getElementById('changeLocationBtn').addEventListener('click', openMap);
+    document.getElementById('closeMapBtn').addEventListener('click', closeMap);
+    document.getElementById('getCurrentLocation').addEventListener('click', getCurrentLocation);
+    document.getElementById('confirmLocation').addEventListener('click', confirmLocation);
+}
+
+function openMap() {
+    document.getElementById('mapModal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    
+    if (!map) {
+        initializeMap();
+    }
+}
+
+function closeMap() {
+    document.getElementById('mapModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+}
+
+function initializeMap() {
+    const defaultLocation = { lat: 19.0760, lng: 72.8777 }; // Mumbai
+    
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 13,
+        center: defaultLocation,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+    });
+    
+    geocoder = new google.maps.Geocoder();
+    
+    // Add click listener to map
+    map.addListener('click', function(event) {
+        selectLocation(event.latLng);
+    });
+}
+
+function selectLocation(location) {
+    selectedLocation = location;
+    
+    // Remove existing marker
+    if (marker) {
+        marker.setMap(null);
+    }
+    
+    // Add new marker
+    marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        draggable: true
+    });
+    
+    // Update marker position on drag
+    marker.addListener('dragend', function(event) {
+        selectedLocation = event.latLng;
+        reverseGeocode(selectedLocation);
+    });
+    
+    // Reverse geocode to get address
+    reverseGeocode(location);
+    
+    // Enable confirm button
+    document.getElementById('confirmLocation').disabled = false;
+    document.getElementById('locationStatus').textContent = 'Location selected. Drag marker to adjust or confirm.';
+}
+
+function reverseGeocode(location) {
+    geocoder.geocode({ location: location }, function(results, status) {
+        if (status === 'OK' && results[0]) {
+            const result = results[0];
+            
+            // Extract address components
+            let locality = '';
+            let city = '';
+            let pincode = '';
+            
+            for (let component of result.address_components) {
+                const types = component.types;
+                if (types.includes('sublocality_level_1') || types.includes('sublocality')) {
+                    locality = component.long_name;
+                } else if (types.includes('locality')) {
+                    city = component.long_name;
+                } else if (types.includes('postal_code')) {
+                    pincode = component.long_name;
+                }
+            }
+            
+            // Store parsed address data
+            selectedLocation.locality = locality;
+            selectedLocation.city = city;
+            selectedLocation.pincode = pincode;
+            
+            console.log('Reverse geocoded:', { locality, city, pincode });
+        }
+    });
+}
+
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const location = new google.maps.LatLng(
+                position.coords.latitude, 
+                position.coords.longitude
+            );
+            
+            map.setCenter(location);
+            selectLocation(location);
+        }, function(error) {
+            console.error('Geolocation error:', error);
+            alert('Unable to get your current location. Please select manually on the map.');
+        });
+    } else {
+        alert('Geolocation is not supported by this browser.');
+    }
+}
+
+function confirmLocation() {
+    if (selectedLocation) {
+        // Update form fields
+        document.getElementById('latitude').value = selectedLocation.lat();
+        document.getElementById('longitude').value = selectedLocation.lng();
+        
+        if (selectedLocation.locality) {
+            document.getElementById('locality').value = selectedLocation.locality;
+        }
+        if (selectedLocation.city) {
+            document.getElementById('city').value = selectedLocation.city;
+        }
+        if (selectedLocation.pincode) {
+            document.getElementById('pincode').value = selectedLocation.pincode;
+        }
+        
+        // Show location selected status
+        const locationText = [selectedLocation.locality, selectedLocation.city].filter(Boolean).join(', ');
+        showLocationSelected(locationText);
+        
+        // Show address form
+        document.getElementById('addressForm').style.display = 'block';
+        
+        // Validate form
+        validateForm();
+        
+        closeMap();
+    }
+}
+
+function showLocationSelected(locationText) {
+    document.getElementById('locationDisplay').classList.remove('hidden');
+    document.getElementById('selectedLocationDisplay').textContent = locationText;
+    document.getElementById('changeLocationBtn').classList.remove('hidden');
+    document.getElementById('openMapBtn').style.display = 'none';
+}
+
+function hideLocationSelected() {
+    document.getElementById('locationDisplay').classList.add('hidden');
+    document.getElementById('changeLocationBtn').classList.add('hidden');
+    document.getElementById('openMapBtn').style.display = 'block';
+}
+
+// Initialize everything when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Checkout address page loaded');
+    
+    try {
+        // Set up form validation
+        setupFormValidation();
+        setupMapFunctionality();
+        
+        // Set up address selection handler
+        const addressSelect = document.getElementById('addressSelect');
+        if (addressSelect) {
+            // Remove any existing event listeners to avoid conflicts
+            addressSelect.removeEventListener('change', handleAddressSelection);
+            addressSelect.addEventListener('change', handleAddressSelection);
+            
+            // Initialize with current selection if there's a default
+            setTimeout(() => {
+                handleAddressSelection();
+            }, 100);
+        }
+        
+        // Set up proceed to pay button
+        const proceedBtn = document.getElementById('proceedToPayBtn');
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', function() {
+                window.location.href = '/checkout/payment';
+            });
+        }
+        
+        // Check if this is a confirmation step
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('step') === 'confirm') {
+            console.log('Confirmation step detected, showing confirmation section');
+            showConfirmationSection();
+        }
+        
+        console.log('Checkout address page initialization complete');
+        
+    } catch (error) {
+        console.error('Error initializing checkout address page:', error);
+    }
+});
+
+// Note: Removed form submission handler that was blocking normal form submission
+</script>
+
+{% endblock %}

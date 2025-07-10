@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Your Cart - Monthly Organics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header with back button -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-md mx-auto px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('index') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-lg font-semibold text-gray-900">Your Cart</h1>
+                {% if cart_items %}
+                    <span class="ml-auto text-sm text-gray-500">({{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %})</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto">
+        {% if cart_items %}
+            <!-- Cart Items -->
+            <div class="bg-white shadow-sm">
+                {% for item in cart_items %}
+                    <div class="cart-item-wrapper border-b border-gray-100 p-4 last:border-b-0">
+                        <div class="flex items-start space-x-3">
+                            <!-- Product Image Placeholder -->
+                            <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            
+                            <!-- Product Details -->
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-medium text-gray-900 text-sm">{{ item.product_name }}</h3>
+                                <p class="text-sm text-gray-600">{{ item.variation_name }}</p>
+                                
+                                <div class="flex items-center justify-between mt-2">
+                                    <!-- Quantity Controls -->
+                                    <div class="flex items-center space-x-2 bg-gray-50 rounded-lg px-2 py-1">
+                                        <button hx-post="/update-cart/{{ item.variation_id }}/decr" 
+                                                hx-target="closest .cart-item-wrapper"
+                                                hx-swap="outerHTML"
+                                                class="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors text-sm update-totals">
+                                            -
+                                        </button>
+                                        <span class="px-2 font-medium text-gray-800 min-w-[24px] text-center">{{ item.quantity }}</span>
+                                        <button hx-post="/update-cart/{{ item.variation_id }}/incr" 
+                                                hx-target="closest .cart-item-wrapper"
+                                                hx-swap="outerHTML"
+                                                class="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors text-sm update-totals">
+                                            +
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Price -->
+                                    <div class="text-right">
+                                        <p class="text-sm font-medium text-gray-900">₹{{ "%.2f"|format(item.total_price) }}</p>
+                                        <p class="text-xs text-gray-500">₹{{ "%.2f"|format(item.price) }} each</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Order Summary -->
+            <div class="bg-white shadow-sm mt-4" id="order-summary">
+                <div class="p-4">
+                    <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
+                    
+                    <div class="space-y-2" 
+                         id="order-totals">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Subtotal</span>
+                            <span class="text-gray-900">₹{{ "%.2f"|format(subtotal) }}</span>
+                        </div>
+                        
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Delivery Fee</span>
+                            <span class="text-gray-900">₹{{ "%.2f"|format(delivery_fee) }}</span>
+                        </div>
+                        
+                        <div class="border-t border-gray-200 pt-2 mt-2">
+                            <div class="flex justify-between font-medium">
+                                <span class="text-gray-900">Total</span>
+                                <span class="text-green-600 text-lg font-bold">₹{{ "%.2f"|format(total) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Button -->
+            <div class="p-4">
+                <a href="{{ url_for('checkout_address') }}" class="w-full block text-center bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                    Proceed to Checkout
+                </a>
+            </div>
+
+            <!-- Continue Shopping -->
+            <div class="p-4 pt-0">
+                <a href="{{ url_for('store') }}" class="w-full block text-center text-primary py-3 border border-primary rounded-lg font-medium hover:bg-primary/5 transition-colors">
+                    Continue Shopping
+                </a>
+            </div>
+
+        {% else %}
+            <!-- Empty Cart -->
+            <div class="bg-white shadow-sm">
+                <div class="text-center py-12 px-4">
+                    <svg class="w-20 h-20 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0v-2m8 2v-2M7 18a2 2 0 11-4 0 2 2 0 014 0zM19 18a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
+                    <p class="text-sm text-gray-500 mb-6">Add some fresh organic products to get started!</p>
+                    
+                    <a href="{{ url_for('store') }}" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                        Start Shopping
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="fixed bottom-4 left-4 right-4 z-50">
+            {% for category, message in messages %}
+                <div class="bg-white rounded-lg shadow-lg border p-4 mb-2 max-w-md mx-auto
+                    {% if category == 'error' %}border-red-200{% else %}border-green-200{% endif %}">
+                    <div class="flex items-center space-x-2">
+                        {% if category == 'error' %}
+                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        {% else %}
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        {% endif %}
+                        <span class="text-sm {% if category == 'error' %}text-red-700{% else %}text-green-700{% endif %}">{{ message }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<script>
+// Cart totals - Ultra-reliable multi-approach system
+console.log('Cart page loaded with reliable cart totals system');
+
+// Approach 1: Direct click events with smart delay
+window.updateCartTotalsReliable = function() {
+    console.log('Reliable cart totals update initiated');
+    
+    // Try multiple delays to catch different timing scenarios
+    const delays = [150, 300, 500];
+    
+    delays.forEach((delay, index) => {
+        setTimeout(() => {
+            console.log(`Attempt ${index + 1}: Fetching cart totals (${delay}ms delay)`);
+            fetch('/cart-totals', {
+                credentials: 'same-origin',
+                cache: 'no-cache'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.text();
+            })
+            .then(html => {
+                const totals = document.getElementById('order-totals');
+                if (totals && html.trim()) {
+                    totals.innerHTML = html;
+                    console.log(`SUCCESS: Cart totals updated on attempt ${index + 1}`);
+                }
+            })
+            .catch(error => {
+                console.error(`Attempt ${index + 1} failed:`, error);
+                if (index === delays.length - 1) {
+                    console.log('All attempts failed, using fallback method');
+                    window.fallbackCartTotalsUpdate();
+                }
+            });
+        }, delay);
+    });
+};
+
+// Approach 2: Fallback function for emergency updates
+window.fallbackCartTotalsUpdate = function() {
+    console.log('Fallback cart totals update triggered');
+    
+    // Use HTMX to directly update the totals section
+    const totalsElement = document.getElementById('order-totals');
+    if (totalsElement && window.htmx) {
+        htmx.ajax('GET', '/cart-totals', {
+            target: '#order-totals',
+            swap: 'innerHTML'
+        });
+        console.log('Fallback: HTMX cart totals update sent');
+    } else {
+        console.error('Fallback failed: Missing elements or HTMX');
+    }
+};
+
+// Approach 3: HTMX event listener as backup
+document.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.requestConfig.path.includes('/update-cart/')) {
+        console.log('HTMX cart update detected - triggering backup totals update');
+        setTimeout(() => {
+            window.updateCartTotalsReliable();
+        }, 100);
+    }
+});
+
+// Emergency manual update function accessible from console
+window.manualUpdateCartTotals = function() {
+    console.log('Manual cart totals update called');
+    fetch('/cart-totals', {credentials: 'same-origin'})
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('order-totals').innerHTML = html;
+            console.log('Manual update completed');
+        });
+};
+</script>
+
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Order Confirmed - Monthly Organics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 pb-20">
+    <!-- Header -->
+    <div class="bg-white shadow-sm">
+        <div class="px-4 py-4">
+            <div class="flex items-center">
+                <button onclick="window.location.href='/'" class="mr-3 p-2 rounded-full hover:bg-gray-100">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                </button>
+                <h1 class="text-lg font-semibold text-gray-900">Order Confirmed</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto">
+        <!-- Success Message -->
+        <div class="bg-white mx-4 mt-4 rounded-lg shadow-sm p-6 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-2">Order Confirmed!</h2>
+            <p class="text-sm text-gray-600 mb-4">Thank you for your order. We'll start preparing it right away.</p>
+            
+            {% if order %}
+            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-gray-700">Order ID</span>
+                    <span class="text-sm font-semibold text-gray-900">#{{ order[0] }}</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-gray-700">Order Date</span>
+                    <span class="text-sm text-gray-900">{{ order[4].strftime('%d %b %Y, %I:%M %p') if order[4] else 'N/A' }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-700">Total Amount</span>
+                    <span class="text-lg font-semibold text-green-600">₹{{ "%.2f"|format(order[1]) }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Order Items -->
+        {% if order_items %}
+        <div class="bg-white mx-4 mt-4 rounded-lg shadow-sm">
+            <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="text-sm font-medium text-gray-900">Order Items</h3>
+            </div>
+            <div class="px-4 py-3 space-y-3">
+                {% for item in order_items %}
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-900">{{ item[2] }}</div>
+                        <div class="text-xs text-gray-500">{{ item[3] }}</div>
+                        <div class="text-xs text-gray-500">Qty: {{ item[0] }}</div>
+                    </div>
+                    <div class="text-sm font-medium text-gray-900">₹{{ "%.2f"|format(item[1] * item[0]) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Delivery Address -->
+        {% if order and order[2] %}
+        <div class="bg-white mx-4 mt-4 rounded-lg shadow-sm">
+            <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="text-sm font-medium text-gray-900">Delivery Address</h3>
+            </div>
+            <div class="px-4 py-3">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="w-5 h-5 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <div class="text-sm text-gray-900">{{ order[2] }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Order Status -->
+        <div class="bg-white mx-4 mt-4 rounded-lg shadow-sm">
+            <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="text-sm font-medium text-gray-900">Order Status</h3>
+            </div>
+            <div class="px-4 py-3">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900">Order Confirmed</div>
+                        <div class="text-xs text-gray-500">Your order is being prepared for delivery</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <div class="flex items-center text-sm text-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Expected delivery in 1-2 business days
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mx-4 mt-6 space-y-3">
+            <button onclick="window.location.href='/'" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors">
+                Continue Shopping
+            </button>
+            <button onclick="window.location.href='/orders'" class="w-full bg-white text-gray-700 py-3 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors">
+                View All Orders
+            </button>
+        </div>
+
+        <!-- Support -->
+        <div class="mx-4 mt-6 mb-8">
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <div class="text-sm font-medium text-blue-900">Need Help?</div>
+                        <div class="text-sm text-blue-700 mt-1">
+                            Contact our support team if you have any questions about your order.
+                        </div>
+                        <button onclick="window.location.href='/support'" class="text-sm text-blue-600 font-medium mt-2 hover:text-blue-800">
+                            Contact Support →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

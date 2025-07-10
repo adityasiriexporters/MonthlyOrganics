@@ -1,7 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime
-import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Base(DeclarativeBase):
     pass
@@ -21,9 +23,7 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     
-    # Relationships - kept for future expansion
-    # subscriptions = db.relationship('Subscription', backref='user', lazy=True, cascade='all, delete-orphan')
-    # addresses = db.relationship('Address', backref='user', lazy=True, cascade='all, delete-orphan')
+    # Relationships will be added when needed
     
     def __repr__(self):
         return f'<User {self.email}>'
@@ -32,11 +32,7 @@ class User(db.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
-# Removed Address model - not needed for current e-commerce functionality
-# Will be added back when implementing address management feature
-
-# Removed Subscription model - not needed for current e-commerce functionality  
-# Will be added back when implementing subscription features
+# Address and Subscription models handled through service layer
 
 class Product(db.Model):
     """Product model for organic produce items."""
@@ -45,23 +41,14 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    category = db.Column(db.String(50), nullable=False)  # 'fruit', 'vegetable', 'herb', 'grain'
-    season = db.Column(db.String(20), nullable=True)  # 'spring', 'summer', 'fall', 'winter', 'year-round'
-    origin_farm = db.Column(db.String(100), nullable=True)
-    organic_certified = db.Column(db.Boolean, default=True, nullable=False)
-    price_per_unit = db.Column(db.Numeric(10, 2), nullable=True)
-    unit_type = db.Column(db.String(20), nullable=False, default='piece')  # 'piece', 'pound', 'bunch', 'bag'
+    category_id = db.Column(db.Integer, nullable=False)  # References categories table
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     def __repr__(self):
         return f'<Product {self.name}>'
 
-# Removed Delivery model - not needed for current e-commerce functionality
-# Will be added back when implementing delivery tracking features
-
-# Removed DeliveryItem model - not needed for current e-commerce functionality
-# Will be added back when implementing delivery tracking features
+# Additional models handled through service layer
 
 # Database initialization function
 def init_db(app):
@@ -72,7 +59,7 @@ def init_db(app):
         try:
             # Create all tables
             db.create_all()
-            print("Database tables created successfully")
+            logger.info("Database tables created successfully")
             
             # Add sample data if tables are empty
             if Product.query.count() == 0:
