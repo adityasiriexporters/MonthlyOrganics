@@ -67,7 +67,7 @@
             <div class="max-w-md mx-auto px-4 py-3">
                 <div class="flex items-center space-x-3">
                     <!-- Logo -->
-                    <a href="{{ url_for('index') }}" class="flex-shrink-0">
+                    <a href="{{ url_for('main.index') }}" class="flex-shrink-0">
                         <img src="{{ url_for('static', filename='img/fulllogo_transparent.png') }}" 
                              alt="Monthly Organics Logo" 
                              class="h-10 w-auto">
@@ -75,7 +75,7 @@
                     
                     <!-- Search Bar -->
                     <div class="flex-1">
-                        <form action="{{ url_for('store') }}" method="GET" class="relative">
+                        <form action="{{ url_for('store.store') }}" method="GET" class="relative">
                             <input type="text" 
                                    name="search"
                                    value="{{ request.args.get('search', '') }}"
@@ -96,7 +96,7 @@
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="max-w-md mx-auto px-4 py-4">
                 <div class="flex items-center space-x-3">
-                    <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
+                    <a href="{{ url_for('main.index') }}" class="flex items-center space-x-3">
                         <img src="{{ url_for('static', filename='img/fulllogo_transparent.png') }}" 
                              alt="Monthly Organics Logo" 
                              class="h-10 w-auto">
@@ -117,7 +117,7 @@
         <div class="max-w-md mx-auto">
             <div class="flex items-center justify-around py-2">
                 <!-- Home -->
-                <a href="{{ url_for('index') }}" 
+                <a href="{{ url_for('main.index') }}" 
                    class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 
                           {% if request.path == '/' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
                           transition-colors">
@@ -128,7 +128,7 @@
                 </a>
 
                 <!-- Store -->
-                <a href="/store" 
+                <a href="{{ url_for('store.store') }}" 
                    class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 
                           {% if request.path == '/store' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
                           transition-colors">
@@ -139,7 +139,7 @@
                 </a>
 
                 <!-- Cart -->
-                <a href="/cart" 
+                <a href="{{ url_for('store.cart') }}" 
                    class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 
                           {% if request.path == '/cart' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
                           transition-colors relative">
@@ -154,7 +154,7 @@
                 </a>
 
                 <!-- Profile -->
-                <a href="/profile" 
+                <a href="{{ url_for('main.profile') }}" 
                    class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 
                           {% if request.path == '/profile' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
                           transition-colors">

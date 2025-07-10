@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Monthly Organics</title>
+    <title>Verify OTP - Monthly Organics</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center">
     <div class="max-w-md w-full space-y-8">
         <div>
             <div class="mx-auto h-12 w-12 text-center">
-                <span class="text-3xl">🥬</span>
+                <span class="text-3xl">📱</span>
             </div>
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Welcome to Monthly Organics
+                Verify Your Number
             </h2>
             <p class="mt-2 text-center text-sm text-gray-600">
-                Enter your mobile number to get started
+                We've sent a 6-digit OTP to
+            </p>
+            <p class="text-center text-lg font-semibold text-gray-900">
+                +91 {{ mobile_number }}
             </p>
         </div>
 
@@ -46,51 +49,73 @@
             {% endif %}
         {% endwith %}
 
-        <form class="mt-8 space-y-6" action="{{ url_for('send_otp') }}" method="POST">
+        <form class="mt-8 space-y-6" action="{{ url_for('auth.verify_otp') }}" method="POST">
             <div class="rounded-md shadow-sm -space-y-px">
                 <div>
-                    <label for="mobile_number" class="sr-only">Mobile Number</label>
-                    <input id="mobile_number" 
-                           name="mobile_number" 
-                           type="tel" 
+                    <label for="otp" class="sr-only">OTP</label>
+                    <input id="otp" 
+                           name="otp" 
+                           type="text" 
                            required 
-                           class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm" 
-                           placeholder="Enter 10-digit mobile number"
-                           pattern="[6-9][0-9]{9}"
-                           maxlength="10"
-                           minlength="10"
-                           title="Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9">
+                           class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 text-center text-2xl tracking-widest focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10" 
+                           placeholder="000000"
+                           pattern="[0-9]{6}"
+                           maxlength="6"
+                           minlength="6"
+                           title="Please enter the 6-digit OTP"
+                           autocomplete="one-time-code">
                 </div>
             </div>
 
             <div class="text-xs text-gray-500 text-center">
-                <p>We'll send a 6-digit OTP to verify your number</p>
+                <p>Didn't receive the code? Check your console for testing</p>
             </div>
 
             <div>
                 <button type="submit" 
                         class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                    Send OTP
+                    Verify OTP
                 </button>
             </div>
 
-            <div class="text-center">
-                <a href="/" class="text-sm text-green-600 hover:text-green-500">
-                    ← Back to Home
+            <div class="text-center space-y-2">
+                <a href="{{ url_for('auth.send_otp') }}" 
+                   onclick="event.preventDefault(); document.getElementById('resend-form').submit();"
+                   class="text-sm text-green-600 hover:text-green-500">
+                    Resend OTP
+                </a>
+                <br>
+                <a href="{{ url_for('auth.login') }}" class="text-sm text-gray-600 hover:text-gray-500">
+                    ← Change Number
                 </a>
             </div>
+        </form>
+
+        <!-- Hidden form for resending OTP -->
+        <form id="resend-form" action="{{ url_for('auth.send_otp') }}" method="POST" style="display: none;">
+            <input type="hidden" name="mobile_number" value="{{ mobile_number }}">
         </form>
     </div>
 
     <script>
-        // Auto-format mobile number input
-        document.getElementById('mobile_number').addEventListener('input', function(e) {
+        // Auto-format OTP input and auto-submit when 6 digits entered
+        document.getElementById('otp').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
-            if (value.length > 10) {
-                value = value.slice(0, 10); // Limit to 10 digits
+            if (value.length > 6) {
+                value = value.slice(0, 6); // Limit to 6 digits
             }
             e.target.value = value;
+            
+            // Auto-submit when 6 digits are entered
+            if (value.length === 6) {
+                setTimeout(() => {
+                    e.target.form.submit();
+                }, 500); // Small delay for user feedback
+            }
         });
+
+        // Auto-focus on OTP input
+        document.getElementById('otp').focus();
     </script>
 </body>
 </html>

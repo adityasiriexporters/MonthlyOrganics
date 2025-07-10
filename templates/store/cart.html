@@ -8,7 +8,7 @@
     <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
         <div class="max-w-md mx-auto px-4 py-3">
             <div class="flex items-center space-x-3">
-                <a href="{{ url_for('index') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <a href="{{ url_for('main.index') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
                     <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
@@ -106,7 +106,7 @@
 
             <!-- Continue Shopping -->
             <div class="p-4 pt-0">
-                <a href="{{ url_for('store') }}" class="w-full block text-center text-primary py-3 border border-primary rounded-lg font-medium hover:bg-primary/5 transition-colors">
+                <a href="{{ url_for('store.store') }}" class="w-full block text-center text-primary py-3 border border-primary rounded-lg font-medium hover:bg-primary/5 transition-colors">
                     Continue Shopping
                 </a>
             </div>
@@ -121,7 +121,7 @@
                     <h3 class="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
                     <p class="text-sm text-gray-500 mb-6">Add some fresh organic products to get started!</p>
                     
-                    <a href="{{ url_for('store') }}" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                    <a href="{{ url_for('store.store') }}" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
                         Start Shopping
                     </a>
                 </div>

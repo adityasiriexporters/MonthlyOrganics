@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Address - Monthly Organics{% endblock %}
+{% block title %}Add New Address - Monthly Organics{% endblock %}
 
 {% block extra_head %}
 <!-- Google Maps JavaScript API -->
@@ -10,17 +10,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-background" x-data="editAddressForm()">
+<div class="min-h-screen bg-background" x-data="addressForm()">
     <!-- Header - Always visible and fixed -->
     <div class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-30">
         <div class="max-w-md mx-auto px-4 py-4">
             <div class="flex items-center space-x-3">
-                <a href="{{ url_for('addresses') }}" class="text-gray-600 hover:text-gray-800">
+                <a href="{{ url_for('addresses.addresses') }}" class="text-gray-600 hover:text-gray-800">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
                 </a>
-                <h1 class="text-xl font-semibold text-gray-900" x-show="locationConfirmed">Edit Address</h1>
+                <h1 class="text-xl font-semibold text-gray-900" x-show="locationConfirmed">Add New Address</h1>
                 <h1 class="text-xl font-semibold text-gray-900" x-show="!locationConfirmed">Select Location</h1>
             </div>
         </div>
@@ -66,7 +66,7 @@
         </div>
 
         <!-- Address Form -->
-        <form @submit.prevent="updateAddress()" class="p-4 space-y-6">
+        <form @submit.prevent="saveAddress()" class="p-4 space-y-6">
             <!-- Address Section -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Details</h3>
@@ -203,65 +203,48 @@
                 </label>
             </div>
 
-            <!-- Update Button -->
+            <!-- Save Button -->
             <button type="submit" 
                     class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     :disabled="saving">
-                <span x-show="!saving">Update Address</span>
-                <span x-show="saving">Updating...</span>
+                <span x-show="!saving">Save Address</span>
+                <span x-show="saving">Saving...</span>
             </button>
         </form>
     </div>
 </div>
 
 <script>
-function editAddressForm() {
+function addressForm() {
     return {
         map: null,
         pinManager: null,
         previewMap: null,
         previewMarker: null,
         selectedLocation: null,
-        locationConfirmed: true, // Start with form visible for editing
+        locationConfirmed: false,
         saving: false,
         mapInitialized: false,
-        addressId: {{ address.id }},
         formData: {
-            house_no: '{{ address.house_no }}',
-            block_name: '{{ address.block_name }}',
-            floor_door: '{{ address.floor_door }}',
-            locality: '{{ address.locality }}',
-            city: '{{ address.city }}',
-            pincode: '{{ address.pincode }}',
-            landmark: '{{ address.landmark }}',
-            address_label: '{{ address.address_label }}',
-            receiver_name: '{{ address.receiver_name }}',
-            receiver_phone: '{{ address.receiver_phone }}',
-            is_default: {{ 'true' if address.is_default else 'false' }}
+            house_no: '',
+            block_name: '',
+            floor_door: '',
+            locality: '',
+            city: '',
+            pincode: '',
+            landmark: '',
+            address_label: '',
+            receiver_name: '',
+            receiver_phone: '',
+            is_default: false
         },
 
         init() {
-            // Set existing location
-            {% if address.latitude and address.longitude %}
-            this.selectedLocation = {
-                lat: {{ address.latitude }},
-                lng: {{ address.longitude }}
-            };
-            {% endif %}
-            
-            // Only initialize once
+            // Only initialize map once
             if (!this.mapInitialized) {
-                this.initMaps();
+                this.initMap();
                 this.mapInitialized = true;
             }
-        },
-
-        initMaps() {
-            // Initialize preview map with existing location
-            this.initPreviewMap();
-            
-            // Initialize full-screen map (hidden initially)
-            this.initMap();
         },
 
         initMap() {
@@ -270,7 +253,8 @@ function editAddressForm() {
                 this.pinManager.destroy();
             }
             
-            const defaultLocation = this.selectedLocation || { lat: 28.6139, lng: 77.2090 };
+            // Initialize full-screen map
+            const defaultLocation = { lat: 28.6139, lng: 77.2090 }; // Delhi as default
             
             this.map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 15,
@@ -284,11 +268,6 @@ function editAddressForm() {
 
             // Initialize single pin manager
             this.pinManager = new window.SinglePinManager(this.map);
-
-            // Add existing marker if location exists
-            if (this.selectedLocation) {
-                this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
-            }
 
             // Add click listener through pin manager
             this.pinManager.addClickListener((latLng) => {
@@ -317,34 +296,20 @@ function editAddressForm() {
             this.reverseGeocode(location);
         },
 
-        initPreviewMap() {
-            if (!this.selectedLocation) return;
-            
-            this.previewMap = new google.maps.Map(document.getElementById('map-preview'), {
-                zoom: 16,
-                center: this.selectedLocation,
-                disableDefaultUI: true,
-                gestureHandling: 'none'
-            });
-
-            this.previewMarker = new google.maps.Marker({
-                position: this.selectedLocation,
-                map: this.previewMap
-            });
-        },
-
-
-
         detectCurrentLocation() {
             if (navigator.geolocation) {
+                // Show loading state (you can add a loading indicator here)
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const location = {
                             lat: position.coords.latitude,
                             lng: position.coords.longitude
                         };
+                        // Center map on current location
                         this.map.setCenter(location);
-                        this.map.setZoom(17);
+                        this.map.setZoom(17); // Zoom in for better accuracy
+                        
+                        // Place marker at current location
                         this.setMarker(new google.maps.LatLng(location.lat, location.lng));
                     },
                     (error) => {
@@ -382,6 +347,7 @@ function editAddressForm() {
                 if (status === 'OK' && results[0]) {
                     const addressComponents = results[0].address_components;
                     
+                    // Parse address components
                     let locality = '';
                     let city = '';
                     let pincode = '';
@@ -397,6 +363,7 @@ function editAddressForm() {
                         }
                     });
                     
+                    // Update form data
                     this.formData.locality = locality;
                     this.formData.city = city;
                     this.formData.pincode = pincode;
@@ -412,18 +379,33 @@ function editAddressForm() {
             
             this.locationConfirmed = true;
             
-            // Update preview map
+            // Initialize preview map
             this.$nextTick(() => {
                 this.initPreviewMap();
+            });
+        },
+
+        initPreviewMap() {
+            this.previewMap = new google.maps.Map(document.getElementById('map-preview'), {
+                zoom: 16,
+                center: this.selectedLocation,
+                disableDefaultUI: true,
+                gestureHandling: 'none'
+            });
+
+            this.previewMarker = new google.maps.Marker({
+                position: this.selectedLocation,
+                map: this.previewMap
             });
         },
 
         changeLocation() {
             this.locationConfirmed = false;
             
-            // Re-center map on existing location
+            // Re-center map on existing location if available
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
+                this.map.setZoom(15);
                 
                 // Ensure marker exists at the selected location
                 this.$nextTick(() => {
@@ -434,7 +416,7 @@ function editAddressForm() {
             }
         },
 
-        async updateAddress() {
+        async saveAddress() {
             if (!this.selectedLocation) {
                 alert('Please select a location on the map');
                 return;
@@ -461,7 +443,7 @@ function editAddressForm() {
                     longitude: this.selectedLocation.lng
                 };
 
-                const response = await fetch(`/update-address/${this.addressId}`, {
+                const response = await fetch('/save-address', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -473,10 +455,10 @@ function editAddressForm() {
                     window.location.href = '/addresses';
                 } else {
                     const error = await response.text();
-                    alert('Error updating address: ' + error);
+                    alert('Error saving address: ' + error);
                 }
             } catch (error) {
-                alert('Error updating address: ' + error.message);
+                alert('Error saving address: ' + error.message);
             } finally {
                 this.saving = false;
             }
