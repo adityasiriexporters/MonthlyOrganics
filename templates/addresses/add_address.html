@@ -219,6 +219,7 @@ function addressForm() {
     return {
         map: null,
         currentMarker: null,
+        allMarkers: [], // Track all markers
         previewMap: null,
         previewMarker: null,
         selectedLocation: null,
@@ -297,32 +298,40 @@ function addressForm() {
         setMarkerDirect(latLng) {
             console.log('setMarkerDirect called with:', latLng.lat(), latLng.lng());
             
-            // Clear existing marker properly
-            if (this.currentMarker) {
-                console.log('Removing existing marker');
-                this.currentMarker.setMap(null);
-                this.currentMarker = null;
-            }
-            
-            // Create new marker
-            this.currentMarker = new google.maps.Marker({
-                position: latLng,
-                map: this.map,
-                draggable: true,
-                title: 'Selected Location'
+            // Clear ALL existing markers aggressively
+            console.log('Clearing all existing markers, count:', this.allMarkers.length);
+            this.allMarkers.forEach((marker, index) => {
+                console.log(`Removing marker ${index}`);
+                marker.setMap(null);
             });
+            this.allMarkers = [];
+            this.currentMarker = null;
+            console.log('All markers cleared');
             
-            console.log('New marker created and placed');
-            
-            // Add drag listener
-            this.currentMarker.addListener('dragend', (event) => {
-                console.log('Marker dragged to:', event.latLng.lat(), event.latLng.lng());
-                this.selectedLocation = {
-                    lat: event.latLng.lat(),
-                    lng: event.latLng.lng()
-                };
-                this.reverseGeocode(event.latLng);
-            });
+            // Small delay to ensure cleanup completes
+            setTimeout(() => {
+                // Create new marker
+                this.currentMarker = new google.maps.Marker({
+                    position: latLng,
+                    map: this.map,
+                    draggable: true,
+                    title: 'Selected Location'
+                });
+                
+                // Add to tracking array
+                this.allMarkers.push(this.currentMarker);
+                console.log('New marker created and added to tracking array');
+                
+                // Add drag listener
+                this.currentMarker.addListener('dragend', (event) => {
+                    console.log('Marker dragged to:', event.latLng.lat(), event.latLng.lng());
+                    this.selectedLocation = {
+                        lat: event.latLng.lat(),
+                        lng: event.latLng.lng()
+                    };
+                    this.reverseGeocode(event.latLng);
+                });
+            }, 50); // Increased delay to ensure proper cleanup
 
             // Update selected location
             this.selectedLocation = {
