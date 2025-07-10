@@ -218,7 +218,7 @@
 function addressForm() {
     return {
         map: null,
-        pinManager: null,
+        currentMarker: null,
         previewMap: null,
         previewMarker: null,
         selectedLocation: null,
@@ -248,74 +248,89 @@ function addressForm() {
         },
 
         initMap() {
-            // Clean up existing resources
-            if (this.pinManager) {
-                this.pinManager.destroy();
+            console.log('initMap called - starting map initialization');
+            
+            // Check if Google Maps is available
+            if (typeof google === 'undefined' || !google.maps) {
+                console.error('Google Maps API not loaded');
+                alert('Google Maps failed to load. Please refresh the page.');
+                return;
+            }
+            
+            // Clean up existing marker
+            if (this.currentMarker) {
+                this.currentMarker.setMap(null);
+                this.currentMarker = null;
             }
             
             // Initialize full-screen map
             const defaultLocation = { lat: 28.6139, lng: 77.2090 }; // Delhi as default
+            console.log('Creating map with default location:', defaultLocation);
             
-            this.map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 15,
-                center: defaultLocation,
-                disableDefaultUI: true,
-                zoomControl: true,
-                gestureHandling: 'greedy',
-                clickableIcons: false,
-                disableDoubleClickZoom: false,
-                mapId: 'monthly-organics-map' // Required for AdvancedMarkerElement
-            });
+            try {
+                this.map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 15,
+                    center: defaultLocation,
+                    disableDefaultUI: true,
+                    zoomControl: true,
+                    gestureHandling: 'greedy',
+                    clickableIcons: false,
+                    disableDoubleClickZoom: false
+                });
 
-            // Initialize single pin manager
-            this.pinManager = new window.SinglePinManager(this.map);
+                console.log('Map created successfully');
 
-            // Add click listener through pin manager
-            this.pinManager.addClickListener((latLng) => {
-                console.log('Map clicked, setting marker at:', latLng.lat(), latLng.lng());
-                this.setMarker(latLng);
-            });
+                // Add direct click listener (simplified approach)
+                this.map.addListener('click', (event) => {
+                    console.log('MAP CLICKED! Location:', event.latLng.lat(), event.latLng.lng());
+                    this.setMarkerDirect(event.latLng);
+                });
+
+                console.log('Click listener added successfully');
+                
+            } catch (error) {
+                console.error('Error creating map:', error);
+                alert('Failed to initialize map: ' + error.message);
+            }
         },
 
-        setMarker(location) {
-            console.log('setMarker called with location:', location.lat(), location.lng());
+        setMarkerDirect(latLng) {
+            console.log('setMarkerDirect called with:', latLng.lat(), latLng.lng());
             
-            // Use pin manager to ensure single pin
-            this.pinManager.setMarker(location, (event) => {
-                console.log('Drag end callback triggered');
-                
-                // Drag end callback - handle both AdvancedMarkerElement and legacy Marker
-                let dragLatLng;
-                if (event.latLng) {
-                    // Legacy Marker event structure
-                    dragLatLng = event.latLng;
-                    console.log('Using legacy marker event structure');
-                } else if (this.pinManager.currentMarker && this.pinManager.currentMarker.position) {
-                    // AdvancedMarkerElement - get position directly
-                    dragLatLng = this.pinManager.currentMarker.position;
-                    console.log('Using AdvancedMarkerElement position');
-                } else {
-                    console.error('Unable to get drag position');
-                    return;
-                }
-
+            // Clear existing marker
+            if (this.currentMarker) {
+                this.currentMarker.setMap(null);
+            }
+            
+            // Create new marker
+            this.currentMarker = new google.maps.Marker({
+                position: latLng,
+                map: this.map,
+                draggable: true,
+                title: 'Selected Location'
+            });
+            
+            console.log('Marker created and placed');
+            
+            // Add drag listener
+            this.currentMarker.addListener('dragend', (event) => {
+                console.log('Marker dragged to:', event.latLng.lat(), event.latLng.lng());
                 this.selectedLocation = {
-                    lat: dragLatLng.lat(),
-                    lng: dragLatLng.lng()
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
                 };
-                console.log('Updated selectedLocation to:', this.selectedLocation);
-                this.reverseGeocode(dragLatLng);
+                this.reverseGeocode(event.latLng);
             });
 
             // Update selected location
             this.selectedLocation = {
-                lat: location.lat(),
-                lng: location.lng()
+                lat: latLng.lat(),
+                lng: latLng.lng()
             };
-            console.log('Initial selectedLocation set to:', this.selectedLocation);
+            console.log('selectedLocation updated to:', this.selectedLocation);
 
             // Get address from coordinates
-            this.reverseGeocode(location);
+            this.reverseGeocode(latLng);
         },
 
         detectCurrentLocation() {
@@ -332,7 +347,7 @@ function addressForm() {
                         this.map.setZoom(17); // Zoom in for better accuracy
                         
                         // Place marker at current location
-                        this.setMarker(new google.maps.LatLng(location.lat, location.lng));
+                        this.setMarkerDirect(new google.maps.LatLng(location.lat, location.lng));
                     },
                     (error) => {
                         let errorMessage = 'Error getting current location: ';
@@ -434,8 +449,8 @@ function addressForm() {
                 
                 // Ensure marker exists at the selected location
                 this.$nextTick(() => {
-                    if (!this.pinManager.hasMarker()) {
-                        this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                    if (!this.currentMarker) {
+                        this.setMarkerDirect(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
                     }
                 });
             }
