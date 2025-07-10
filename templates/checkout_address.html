@@ -606,6 +606,24 @@ function checkAndDisplayOneTimeAddress() {
     
     if (oneTimeAddress) {
         updateConfirmationAddress(oneTimeAddress, 'one_time');
+        return;
+    }
+    
+    // Check if we have a newly saved address to display
+    const checkoutAddressId = {{ checkout_address_id|tojson if checkout_address_id else 'null' }};
+    if (checkoutAddressId) {
+        // Find the saved address in the dropdown and show it
+        const addressSelect = document.getElementById('addressSelect');
+        if (addressSelect) {
+            // Set the dropdown to the saved address
+            for (let option of addressSelect.options) {
+                if (option.value == checkoutAddressId) {
+                    addressSelect.value = checkoutAddressId;
+                    updateConfirmationAddress(null, 'saved');
+                    break;
+                }
+            }
+        }
     }
 }
 
