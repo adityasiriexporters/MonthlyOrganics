@@ -495,43 +495,59 @@ function handleAddressSelection() {
     
     if (selectedValue === 'add_new') {
         showNewAddressForm();
-    } else {
+    } else if (selectedValue) {
         showSelectedAddress(selectedValue);
-        // Update confirmation section with selected saved address
-        updateConfirmationAddress(selectedValue, 'saved');
     }
 }
 
 function showSelectedAddress(addressId) {
+    console.log('showSelectedAddress called with ID:', addressId);
+    
     // Hide forms and show address display
     document.getElementById('mapSection').style.display = 'none';
     document.getElementById('addressForm').style.display = 'none';
     document.getElementById('selectedAddressDisplay').classList.remove('hidden');
     document.getElementById('editCheckboxContainer').classList.remove('hidden');
-    showConfirmationSection();
     
     // Get address data from selected option
     const select = document.getElementById('addressSelect');
     const selectedOption = select.options[select.selectedIndex];
     
-    // Populate address details
-    const addressDetails = document.getElementById('addressDetails');
-    addressDetails.innerHTML = `
-        <p><strong>${selectedOption.dataset.nickname}</strong></p>
-        <p>${selectedOption.dataset.house}${selectedOption.dataset.block ? ', ' + selectedOption.dataset.block : ''}</p>
-        <p>${selectedOption.dataset.floor}</p>
-        <p>${selectedOption.dataset.locality}, ${selectedOption.dataset.city} - ${selectedOption.dataset.pincode}</p>
-        ${selectedOption.dataset.landmark ? '<p>Near ' + selectedOption.dataset.landmark + '</p>' : ''}
-        ${selectedOption.dataset.contact ? '<p>Phone: ' + selectedOption.dataset.contact + '</p>' : ''}
-        ${selectedOption.dataset.notes ? '<p class="italic">' + selectedOption.dataset.notes + '</p>' : ''}
-    `;
-    
-    // Store address ID for later use
-    document.getElementById('address_id').value = addressId;
+    if (selectedOption && selectedOption.value !== 'add_new') {
+        // Populate address details in "Selected Delivery Address" section
+        const addressDetails = document.getElementById('addressDetails');
+        if (addressDetails) {
+            addressDetails.innerHTML = `
+                <p><strong>${selectedOption.dataset.nickname}</strong></p>
+                <p>${selectedOption.dataset.house}${selectedOption.dataset.block ? ', ' + selectedOption.dataset.block : ''}</p>
+                <p>${selectedOption.dataset.floor}</p>
+                <p>${selectedOption.dataset.locality}, ${selectedOption.dataset.city} - ${selectedOption.dataset.pincode}</p>
+                ${selectedOption.dataset.landmark ? '<p>Near ' + selectedOption.dataset.landmark + '</p>' : ''}
+                <p><strong>Receiver:</strong> ${selectedOption.dataset.receiver || 'Not specified'}</p>
+                <p><strong>Phone:</strong> ${selectedOption.dataset.contact || 'Not specified'}</p>
+                ${selectedOption.dataset.notes ? '<p class="italic mt-2"><strong>Notes:</strong> ' + selectedOption.dataset.notes + '</p>' : ''}
+            `;
+        }
+        
+        // Store address ID for later use
+        const addressIdField = document.getElementById('address_id');
+        if (addressIdField) {
+            addressIdField.value = addressId;
+        }
+        
+        // Update confirmation section with selected address
+        updateConfirmationAddress(null, 'saved');
+        
+        // Show confirmation section
+        showConfirmationSection();
+    }
     
     // Reset editing mode
     isEditingMode = false;
-    document.getElementById('enableEditing').checked = false;
+    const editingCheckbox = document.getElementById('enableEditing');
+    if (editingCheckbox) {
+        editingCheckbox.checked = false;
+    }
 }
 
 function showNewAddressForm() {
@@ -629,11 +645,22 @@ function checkAndDisplayOneTimeAddress() {
 }
 
 function updateConfirmationAddress(addressData, type) {
+    console.log('updateConfirmationAddress called with type:', type);
+    
     const addressDetails = document.getElementById('selectedAddressDetails');
     const addressTypeLabel = document.getElementById('addressTypeLabel');
     const addressDisplaySection = document.getElementById('addressDisplaySection');
     
-    if (!addressDetails || !addressTypeLabel || !addressDisplaySection) return;
+    console.log('Confirmation elements found:', {
+        addressDetails: !!addressDetails,
+        addressTypeLabel: !!addressTypeLabel,
+        addressDisplaySection: !!addressDisplaySection
+    });
+    
+    if (!addressDetails || !addressTypeLabel || !addressDisplaySection) {
+        console.error('Missing confirmation section elements');
+        return;
+    }
     
     let addressHTML = '';
     let typeLabel = '';
