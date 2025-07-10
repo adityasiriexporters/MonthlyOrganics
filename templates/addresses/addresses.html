@@ -21,7 +21,7 @@
     <div class="max-w-md mx-auto px-4 py-6">
         <!-- Add New Address Button -->
         <div class="mb-6">
-            <a href="{{ url_for('add_address') }}" 
+            <a href="{{ url_for('addresses.add_address') }}" 
                class="w-full flex items-center justify-center space-x-2 bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -108,7 +108,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No Saved Addresses</h3>
                 <p class="text-sm text-gray-500 mb-6">Add your first address to get started with deliveries</p>
                 
-                <a href="{{ url_for('add_address') }}" 
+                <a href="{{ url_for('addresses.add_address') }}" 
                    class="inline-flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>

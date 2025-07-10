@@ -19,10 +19,10 @@ def login_required(f):
             # For HTMX requests, use HX-Redirect header to redirect the entire page
             if request.headers.get('HX-Request'):
                 response = make_response('Login required', 401)
-                response.headers['HX-Redirect'] = url_for('login')
+                response.headers['HX-Redirect'] = url_for('auth.login')
                 return response
             else:
-                return redirect(url_for('login'))
+                return redirect(url_for('auth.login'))
         
         logger.debug(f"User {session['user_id']} accessing {request.endpoint}")
         return f(*args, **kwargs)
