@@ -136,7 +136,7 @@ class SecureDataHandler:
         secure_data = address_data.copy()
         
         # Encrypt sensitive fields
-        sensitive_fields = ['house_number', 'floor_door', 'contact_number', 'nearby_landmark']
+        sensitive_fields = ['house_number', 'floor_door', 'contact_number', 'nearby_landmark', 'receiver_name']
         
         for field in sensitive_fields:
             if field in secure_data and secure_data[field]:
@@ -177,7 +177,8 @@ class SecureDataHandler:
             'house_number_encrypted': 'house_number',
             'floor_door_encrypted': 'floor_door', 
             'contact_number_encrypted': 'contact_number',
-            'nearby_landmark_encrypted': 'nearby_landmark'
+            'nearby_landmark_encrypted': 'nearby_landmark',
+            'receiver_name_encrypted': 'receiver_name'
         }
         
         for encrypted_field, original_field in encrypted_fields.items():

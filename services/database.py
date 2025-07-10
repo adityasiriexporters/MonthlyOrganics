@@ -47,16 +47,17 @@ class DatabaseService:
     def _is_connection_healthy(cls, conn: psycopg2.extensions.connection) -> bool:
         """Check if a database connection is healthy"""
         try:
-            if conn.closed:
+            if conn is None or conn.closed != 0:
                 return False
             
             # Test the connection with a simple query
             with conn.cursor() as cursor:
                 cursor.execute("SELECT 1")
-                cursor.fetchone()
+                result = cursor.fetchone()
+                return result is not None and result[0] == 1
             
-            return True
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Connection health check failed: {e}")  # Reduce log noise
             return False
     
     @classmethod
@@ -77,7 +78,7 @@ class DatabaseService:
                     return conn
                 else:
                     # Connection is unhealthy, remove it from pool and try again
-                    logger.warning(f"Unhealthy connection detected on attempt {attempt + 1}, removing from pool")
+                    logger.debug(f"Unhealthy connection detected on attempt {attempt + 1}, removing from pool")
                     cls._connection_pool.putconn(conn, close=True)
                     
             except Exception as e:

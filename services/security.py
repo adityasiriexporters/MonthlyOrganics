@@ -72,7 +72,7 @@ class SecureAddressService:
                 SELECT id, user_id, nickname, house_number_encrypted, block_name,
                        floor_door_encrypted, contact_number_encrypted, latitude, longitude,
                        locality, city, pincode, nearby_landmark_encrypted, 
-                       address_notes, is_default, created_at
+                       address_notes, receiver_name_encrypted, is_default, created_at
                 FROM addresses 
                 WHERE user_id = %s 
                 ORDER BY is_default DESC, created_at DESC
@@ -114,8 +114,8 @@ class SecureAddressService:
                 INSERT INTO addresses (
                     user_id, nickname, house_number_encrypted, block_name, floor_door_encrypted, 
                     contact_number_encrypted, latitude, longitude, locality, city, pincode, 
-                    nearby_landmark_encrypted, address_notes, is_default
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    nearby_landmark_encrypted, address_notes, receiver_name_encrypted, is_default
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """
             
@@ -135,6 +135,7 @@ class SecureAddressService:
                     secure_data['pincode'],
                     secure_data.get('nearby_landmark_encrypted'),
                     secure_data.get('address_notes', ''),
+                    secure_data.get('receiver_name_encrypted'),
                     secure_data['is_default']
                 ),
                 fetch_one=True
@@ -205,6 +206,7 @@ class SecureAddressService:
                     pincode = %s,
                     nearby_landmark_encrypted = %s,
                     address_notes = %s,
+                    receiver_name_encrypted = %s,
                     is_default = %s
                 WHERE id = %s AND user_id = %s
             """
@@ -224,6 +226,7 @@ class SecureAddressService:
                     secure_data['pincode'],
                     secure_data.get('nearby_landmark_encrypted'),
                     secure_data.get('address_notes', ''),
+                    secure_data.get('receiver_name_encrypted'),
                     secure_data.get('is_default', False),
                     address_id,
                     user_id
