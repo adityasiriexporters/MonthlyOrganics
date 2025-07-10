@@ -369,27 +369,43 @@ function editAddressForm() {
                 if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
                     // Create a visible marker element for edit preview
                     const editPreviewMarkerElement = document.createElement('div');
-                    editPreviewMarkerElement.innerHTML = `
-                        <div style="
-                            width: 24px; 
-                            height: 24px; 
-                            background: #ff4444; 
-                            border: 2px solid white; 
-                            border-radius: 50%; 
-                            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                        "></div>
-                        <div style="
-                            width: 0; 
-                            height: 0; 
-                            border-left: 5px solid transparent; 
-                            border-right: 5px solid transparent; 
-                            border-top: 8px solid #ff4444; 
-                            position: absolute; 
-                            top: 22px; 
-                            left: 50%; 
-                            transform: translateX(-50%);
-                        "></div>
+                    editPreviewMarkerElement.style.cssText = `
+                        position: relative;
+                        width: 24px;
+                        height: 32px;
+                        cursor: pointer;
                     `;
+                    
+                    // Create the circle part
+                    const editCircle = document.createElement('div');
+                    editCircle.style.cssText = `
+                        width: 24px;
+                        height: 24px;
+                        background: #ff4444;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                    `;
+                    
+                    // Create the pointer part
+                    const editPointer = document.createElement('div');
+                    editPointer.style.cssText = `
+                        width: 0;
+                        height: 0;
+                        border-left: 5px solid transparent;
+                        border-right: 5px solid transparent;
+                        border-top: 8px solid #ff4444;
+                        position: absolute;
+                        top: 22px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                    `;
+                    
+                    editPreviewMarkerElement.appendChild(editCircle);
+                    editPreviewMarkerElement.appendChild(editPointer);
 
                     this.previewMarker = new google.maps.marker.AdvancedMarkerElement({
                         position: this.selectedLocation,
