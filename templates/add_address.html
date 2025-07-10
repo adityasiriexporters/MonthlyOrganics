@@ -5,6 +5,8 @@
 {% block extra_head %}
 <!-- Google Maps JavaScript API -->
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places"></script>
+<!-- Maps Fix for Single Pin Management -->
+<script src="{{ url_for('static', filename='js/maps-fix.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -216,13 +218,13 @@
 function addressForm() {
     return {
         map: null,
-        marker: null,
+        pinManager: null,
         previewMap: null,
         previewMarker: null,
         selectedLocation: null,
         locationConfirmed: false,
         saving: false,
-        clickTimeout: null,
+        mapInitialized: false,
         formData: {
             house_no: '',
             block_name: '',
@@ -238,10 +240,19 @@ function addressForm() {
         },
 
         init() {
-            this.initMap();
+            // Only initialize map once
+            if (!this.mapInitialized) {
+                this.initMap();
+                this.mapInitialized = true;
+            }
         },
 
         initMap() {
+            // Clean up existing resources
+            if (this.pinManager) {
+                this.pinManager.destroy();
+            }
+            
             // Initialize full-screen map
             const defaultLocation = { lat: 28.6139, lng: 77.2090 }; // Delhi as default
             
@@ -252,39 +263,27 @@ function addressForm() {
                 zoomControl: true,
                 gestureHandling: 'greedy',
                 clickableIcons: false,
-                // Disable touch event handling to prevent console warnings
                 disableDoubleClickZoom: false
             });
 
-            // Add click/touch listener to map for manual pin placement
-            this.map.addListener('click', (event) => {
-                // Prevent multiple rapid clicks
-                if (this.clickTimeout) {
-                    clearTimeout(this.clickTimeout);
-                }
-                
-                this.clickTimeout = setTimeout(() => {
-                    this.setMarker(event.latLng);
-                }, 100);
+            // Initialize single pin manager
+            this.pinManager = new window.SinglePinManager(this.map);
+
+            // Add click listener through pin manager
+            this.pinManager.addClickListener((latLng) => {
+                this.setMarker(latLng);
             });
         },
 
         setMarker(location) {
-            // Clear any existing marker completely (ensure only one pin)
-            if (this.marker) {
-                this.marker.setMap(null);
-                this.marker = null;
-            }
-
-            // Create new marker with custom styling
-            this.marker = new google.maps.Marker({
-                position: location,
-                map: this.map,
-                draggable: true,
-                animation: google.maps.Animation.DROP,
-                title: 'Selected Location',
-                // Ensure marker is properly configured
-                optimized: false
+            // Use pin manager to ensure single pin
+            this.pinManager.setMarker(location, (event) => {
+                // Drag end callback
+                this.selectedLocation = {
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
+                };
+                this.reverseGeocode(event.latLng);
             });
 
             // Update selected location
@@ -292,18 +291,6 @@ function addressForm() {
                 lat: location.lat(),
                 lng: location.lng()
             };
-
-            // Remove any existing drag listeners first
-            google.maps.event.clearListeners(this.marker, 'dragend');
-            
-            // Add drag listener to marker for manual repositioning
-            this.marker.addListener('dragend', (event) => {
-                this.selectedLocation = {
-                    lat: event.latLng.lat(),
-                    lng: event.latLng.lng()
-                };
-                this.reverseGeocode(event.latLng);
-            });
 
             // Get address from coordinates
             this.reverseGeocode(location);
@@ -418,16 +405,13 @@ function addressForm() {
             // Re-center map on existing location if available
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
+                this.map.setZoom(15);
                 
-                // Clear existing marker and recreate to prevent duplicates
-                if (this.marker) {
-                    this.marker.setMap(null);
-                    this.marker = null;
-                }
-                
-                // Recreate marker at existing location
+                // Ensure marker exists at the selected location
                 this.$nextTick(() => {
-                    this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                    if (!this.pinManager.hasMarker()) {
+                        this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                    }
                 });
             }
         },

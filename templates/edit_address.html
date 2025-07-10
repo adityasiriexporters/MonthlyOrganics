@@ -5,6 +5,8 @@
 {% block extra_head %}
 <!-- Google Maps JavaScript API -->
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry,places"></script>
+<!-- Maps Fix for Single Pin Management -->
+<script src="{{ url_for('static', filename='js/maps-fix.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -216,13 +218,13 @@
 function editAddressForm() {
     return {
         map: null,
-        marker: null,
+        pinManager: null,
         previewMap: null,
         previewMarker: null,
         selectedLocation: null,
         locationConfirmed: true, // Start with form visible for editing
         saving: false,
-        clickTimeout: null,
+        mapInitialized: false,
         addressId: {{ address.id }},
         formData: {
             house_no: '{{ address.house_no }}',
@@ -247,7 +249,11 @@ function editAddressForm() {
             };
             {% endif %}
             
-            this.initMaps();
+            // Only initialize once
+            if (!this.mapInitialized) {
+                this.initMaps();
+                this.mapInitialized = true;
+            }
         },
 
         initMaps() {
@@ -259,6 +265,11 @@ function editAddressForm() {
         },
 
         initMap() {
+            // Clean up existing resources
+            if (this.pinManager) {
+                this.pinManager.destroy();
+            }
+            
             const defaultLocation = this.selectedLocation || { lat: 28.6139, lng: 77.2090 };
             
             this.map = new google.maps.Map(document.getElementById('map'), {
@@ -271,38 +282,29 @@ function editAddressForm() {
                 disableDoubleClickZoom: false
             });
 
+            // Initialize single pin manager
+            this.pinManager = new window.SinglePinManager(this.map);
+
             // Add existing marker if location exists
             if (this.selectedLocation) {
                 this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
             }
 
-            // Add click listener for manual pin placement with debouncing
-            this.map.addListener('click', (event) => {
-                if (this.clickTimeout) {
-                    clearTimeout(this.clickTimeout);
-                }
-                
-                this.clickTimeout = setTimeout(() => {
-                    this.setMarker(event.latLng);
-                }, 100);
+            // Add click listener through pin manager
+            this.pinManager.addClickListener((latLng) => {
+                this.setMarker(latLng);
             });
         },
 
         setMarker(location) {
-            // Clear any existing marker completely (ensure only one pin)
-            if (this.marker) {
-                this.marker.setMap(null);
-                this.marker = null;
-            }
-
-            // Create new marker with custom styling
-            this.marker = new google.maps.Marker({
-                position: location,
-                map: this.map,
-                draggable: true,
-                animation: google.maps.Animation.DROP,
-                title: 'Selected Location',
-                optimized: false
+            // Use pin manager to ensure single pin
+            this.pinManager.setMarker(location, (event) => {
+                // Drag end callback
+                this.selectedLocation = {
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
+                };
+                this.reverseGeocode(event.latLng);
             });
 
             // Update selected location
@@ -310,18 +312,6 @@ function editAddressForm() {
                 lat: location.lat(),
                 lng: location.lng()
             };
-
-            // Remove any existing drag listeners first
-            google.maps.event.clearListeners(this.marker, 'dragend');
-            
-            // Add drag listener to marker for manual repositioning
-            this.marker.addListener('dragend', (event) => {
-                this.selectedLocation = {
-                    lat: event.latLng.lat(),
-                    lng: event.latLng.lng()
-                };
-                this.reverseGeocode(event.latLng);
-            });
 
             // Get address from coordinates
             this.reverseGeocode(location);
@@ -343,39 +333,7 @@ function editAddressForm() {
             });
         },
 
-        setMarker(location) {
-            // Remove existing marker (ensure only one pin)
-            if (this.marker) {
-                this.marker.setMap(null);
-            }
 
-            // Create new marker
-            this.marker = new google.maps.Marker({
-                position: location,
-                map: this.map,
-                draggable: true,
-                animation: google.maps.Animation.DROP,
-                title: 'Selected Location'
-            });
-
-            // Update selected location
-            this.selectedLocation = {
-                lat: location.lat(),
-                lng: location.lng()
-            };
-
-            // Add drag listener
-            this.marker.addListener('dragend', (event) => {
-                this.selectedLocation = {
-                    lat: event.latLng.lat(),
-                    lng: event.latLng.lng()
-                };
-                this.reverseGeocode(event.latLng);
-            });
-
-            // Get address from coordinates
-            this.reverseGeocode(location);
-        },
 
         detectCurrentLocation() {
             if (navigator.geolocation) {
@@ -467,14 +425,11 @@ function editAddressForm() {
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
                 
-                // Clear and recreate marker to prevent duplicates
-                if (this.marker) {
-                    this.marker.setMap(null);
-                    this.marker = null;
-                }
-                
+                // Ensure marker exists at the selected location
                 this.$nextTick(() => {
-                    this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                    if (!this.pinManager.hasMarker()) {
+                        this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
+                    }
                 });
             }
         },
