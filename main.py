@@ -1096,10 +1096,15 @@ def admin_sales():
         recent_orders = get_recent_orders(limit=10)
         category_sales = get_category_sales()
         
+        # Get categories for filter dropdown
+        from services.database import DatabaseService
+        categories = DatabaseService.execute_query("SELECT id, name FROM categories ORDER BY name", fetch_all=True)
+        
         return render_template('admin/admin_sales.html',
                              sales_stats=sales_stats,
                              recent_orders=recent_orders,
                              category_sales=category_sales,
+                             categories=categories or [],
                              admin_user=AdminAuth.get_admin_user())
     except Exception as e:
         logger.error(f"Error loading sales data: {str(e)}")
@@ -1108,6 +1113,7 @@ def admin_sales():
                              sales_stats=get_default_sales_stats(),
                              recent_orders=[],
                              category_sales=[],
+                             categories=[],
                              admin_user=AdminAuth.get_admin_user())
 
 # ===== ADMIN DATA FUNCTIONS =====
@@ -1133,8 +1139,8 @@ def get_admin_dashboard_stats():
         """
         monthly_revenue = DatabaseService.execute_query(monthly_revenue_query, fetch_one=True)['revenue']
         
-        # Active products
-        products_query = "SELECT COUNT(*) as count FROM products WHERE is_active = true"
+        # Active products (using total products since is_active column doesn't exist)
+        products_query = "SELECT COUNT(*) as count FROM products"
         active_products = DatabaseService.execute_query(products_query, fetch_one=True)['count']
         
         return {
@@ -1162,15 +1168,81 @@ def get_recent_orders(limit=5):
     
     try:
         query = """
-            SELECT id, user_id, total_amount, status, created_at
-            FROM orders 
-            ORDER BY created_at DESC 
+            SELECT o.id, o.user_id, o.total_amount, o.order_status as status, o.created_at,
+                   COUNT(oi.id) as item_count
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            GROUP BY o.id, o.user_id, o.total_amount, o.order_status, o.created_at
+            ORDER BY o.created_at DESC 
             LIMIT %s
         """
         orders = DatabaseService.execute_query(query, (limit,), fetch_all=True)
         return orders or []
     except Exception as e:
         logger.error(f"Error getting recent orders: {str(e)}")
+        return []
+
+def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_amount=None, limit=50):
+    """Get filtered orders with comprehensive filtering and security"""
+    from services.database import DatabaseService
+    
+    try:
+        # Base query with parameterized conditions
+        base_query = """
+            SELECT o.id, o.user_id, o.total_amount, o.order_status as status, o.created_at,
+                   COUNT(oi.id) as item_count
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+        """
+        
+        conditions = []
+        params = []
+        
+        # Date range filter
+        if date_from:
+            conditions.append("o.created_at >= %s")
+            params.append(date_from)
+            
+        if date_to:
+            conditions.append("o.created_at <= %s")
+            params.append(date_to + ' 23:59:59')  # Include full day
+        
+        # Category filter (requires joining with product tables)
+        if category_filter and category_filter.isdigit():
+            base_query = """
+                SELECT DISTINCT o.id, o.user_id, o.total_amount, o.order_status as status, o.created_at,
+                       COUNT(oi.id) as item_count
+                FROM orders o
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN product_variations pv ON oi.variation_id = pv.id
+                LEFT JOIN products p ON pv.product_id = p.id
+            """
+            conditions.append("p.category_id = %s")
+            params.append(int(category_filter))
+        
+        # Minimum amount filter
+        if min_amount and min_amount.replace('.', '').isdigit():
+            conditions.append("o.total_amount >= %s")
+            params.append(float(min_amount))
+        
+        # Build final query
+        if conditions:
+            query = base_query + " WHERE " + " AND ".join(conditions)
+        else:
+            query = base_query
+            
+        query += """
+            GROUP BY o.id, o.user_id, o.total_amount, o.order_status, o.created_at
+            ORDER BY o.created_at DESC 
+            LIMIT %s
+        """
+        params.append(limit)
+        
+        orders = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
+        return orders or []
+        
+    except Exception as e:
+        logger.error(f"Error filtering orders: {str(e)}")
         return []
 
 def get_all_customers_with_stats():
@@ -1181,7 +1253,9 @@ def get_all_customers_with_stats():
         query = """
             SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
                    u.created_at, u.is_active,
-                   COUNT(o.id) as order_count
+                   COUNT(o.id) as order_count,
+                   MAX(o.created_at) as last_order_date,
+                   COALESCE(SUM(o.total_amount), 0) as total_spent
             FROM users u
             LEFT JOIN orders o ON u.id = o.user_id
             GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, u.is_active
@@ -1191,6 +1265,71 @@ def get_all_customers_with_stats():
         return customers or []
     except Exception as e:
         logger.error(f"Error getting customers: {str(e)}")
+        return []
+
+def get_filtered_customers(search=None, date_from=None, date_to=None, status_filter=None, min_orders=None):
+    """Get filtered customers with comprehensive filtering and security"""
+    from services.database import DatabaseService
+    
+    try:
+        # Base query with parameterized conditions
+        base_query = """
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
+                   u.created_at, u.is_active,
+                   COUNT(o.id) as order_count,
+                   MAX(o.created_at) as last_order_date,
+                   COALESCE(SUM(o.total_amount), 0) as total_spent
+            FROM users u
+            LEFT JOIN orders o ON u.id = o.user_id
+            WHERE 1=1
+        """
+        
+        conditions = []
+        params = []
+        
+        # Search filter (name or email) - using ILIKE for case-insensitive search
+        if search and search.strip():
+            conditions.append("(LOWER(u.first_name) LIKE LOWER(%s) OR LOWER(u.last_name) LIKE LOWER(%s) OR LOWER(u.email) LIKE LOWER(%s))")
+            search_param = f"%{search.strip()}%"
+            params.extend([search_param, search_param, search_param])
+        
+        # Date range filter
+        if date_from:
+            conditions.append("u.created_at >= %s")
+            params.append(date_from)
+            
+        if date_to:
+            conditions.append("u.created_at <= %s")
+            params.append(date_to + ' 23:59:59')  # Include full day
+        
+        # Status filter
+        if status_filter == 'active':
+            conditions.append("u.is_active = true")
+        elif status_filter == 'inactive':
+            conditions.append("u.is_active = false")
+        
+        # Build final query
+        if conditions:
+            query = base_query + " AND " + " AND ".join(conditions)
+        else:
+            query = base_query
+            
+        query += """
+            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, u.is_active
+        """
+        
+        # Minimum orders filter (applied after GROUP BY)
+        if min_orders and min_orders.isdigit():
+            query += " HAVING COUNT(o.id) >= %s"
+            params.append(int(min_orders))
+            
+        query += " ORDER BY u.created_at DESC"
+        
+        customers = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
+        return customers or []
+        
+    except Exception as e:
+        logger.error(f"Error filtering customers: {str(e)}")
         return []
 
 def get_new_customers_count():
@@ -1259,13 +1398,13 @@ def get_category_sales():
     
     try:
         query = """
-            SELECT c.name, COALESCE(SUM(oi.price * oi.quantity), 0) as revenue
+            SELECT c.name, COALESCE(SUM(oi.price_at_purchase * oi.quantity), 0) as revenue
             FROM categories c
             LEFT JOIN products p ON c.id = p.category_id
             LEFT JOIN product_variations pv ON p.id = pv.product_id
             LEFT JOIN order_items oi ON pv.id = oi.variation_id
             GROUP BY c.id, c.name
-            HAVING SUM(oi.price * oi.quantity) > 0
+            HAVING SUM(oi.price_at_purchase * oi.quantity) > 0
             ORDER BY revenue DESC
         """
         categories = DatabaseService.execute_query(query, fetch_all=True)
@@ -1273,6 +1412,235 @@ def get_category_sales():
     except Exception as e:
         logger.error(f"Error getting category sales: {str(e)}")
         return []
+
+# ===== ADMIN FILTERING AND EXPORT ROUTES =====
+
+@app.route('/admin/customers/filter', methods=['GET'])
+@admin_required
+def admin_customers_filter():
+    """AJAX endpoint for filtering customers"""
+    try:
+        # Get filter parameters with sanitization
+        search = request.args.get('search', '').strip()
+        date_from = request.args.get('date_from', '').strip()
+        date_to = request.args.get('date_to', '').strip()
+        status_filter = request.args.get('status_filter', '').strip()
+        min_orders = request.args.get('min_orders', '').strip()
+        
+        # Get filtered customers
+        customers = get_filtered_customers(search, date_from, date_to, status_filter, min_orders)
+        
+        # Render table HTML
+        table_html = render_template('admin/partials/customer_table.html', customers=customers)
+        
+        return jsonify({
+            'html': table_html,
+            'count': len(customers)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error filtering customers: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/admin/customers/export', methods=['GET'])
+@admin_required
+def admin_customers_export():
+    """Export filtered customers to CSV"""
+    try:
+        # Get filter parameters with sanitization
+        search = request.args.get('search', '').strip()
+        date_from = request.args.get('date_from', '').strip()
+        date_to = request.args.get('date_to', '').strip()
+        status_filter = request.args.get('status_filter', '').strip()
+        min_orders = request.args.get('min_orders', '').strip()
+        
+        # Get filtered customers
+        customers = get_filtered_customers(search, date_from, date_to, status_filter, min_orders)
+        
+        # Generate CSV content
+        import csv
+        import io
+        from flask import make_response
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # CSV headers
+        writer.writerow([
+            'Customer ID', 'First Name', 'Last Name', 'Email', 'Phone',
+            'Joined Date', 'Status', 'Order Count', 'Last Order Date', 'Total Spent'
+        ])
+        
+        # CSV data
+        for customer in customers:
+            writer.writerow([
+                customer['id'],
+                customer['first_name'] or '',
+                customer['last_name'] or '',
+                customer['email'] or '',
+                customer['phone'] or '',
+                customer['created_at'].strftime('%Y-%m-%d') if customer['created_at'] else '',
+                'Active' if customer['is_active'] else 'Inactive',
+                customer['order_count'] or 0,
+                customer['last_order_date'].strftime('%Y-%m-%d') if customer['last_order_date'] else 'No orders',
+                f"₹{customer['total_spent'] or 0:.2f}"
+            ])
+        
+        # Create response
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=customers_export.csv'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error exporting customers: {str(e)}")
+        flash('Error exporting customer data.', 'error')
+        return redirect(url_for('admin_customers'))
+
+@app.route('/admin/sales/filter', methods=['GET'])
+@admin_required
+def admin_sales_filter():
+    """AJAX endpoint for filtering sales data"""
+    try:
+        # Get filter parameters with sanitization
+        date_from = request.args.get('date_from', '').strip()
+        date_to = request.args.get('date_to', '').strip()
+        category_filter = request.args.get('category_filter', '').strip()
+        min_amount = request.args.get('min_amount', '').strip()
+        
+        # Get filtered orders
+        filtered_orders = get_filtered_orders(date_from, date_to, category_filter, min_amount, limit=50)
+        
+        # Calculate filtered statistics
+        filtered_stats = get_filtered_sales_statistics(date_from, date_to, category_filter, min_amount)
+        
+        # Render table HTML
+        orders_html = render_template('admin/partials/orders_table.html', recent_orders=filtered_orders)
+        
+        return jsonify({
+            'orders_html': orders_html,
+            'orders_count': len(filtered_orders),
+            'stats': filtered_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"Error filtering sales: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/admin/sales/export', methods=['GET'])
+@admin_required
+def admin_sales_export():
+    """Export filtered sales data to CSV"""
+    try:
+        # Get filter parameters with sanitization
+        date_from = request.args.get('date_from', '').strip()
+        date_to = request.args.get('date_to', '').strip()
+        category_filter = request.args.get('category_filter', '').strip()
+        min_amount = request.args.get('min_amount', '').strip()
+        
+        # Get filtered orders (without limit for export)
+        orders = get_filtered_orders(date_from, date_to, category_filter, min_amount, limit=10000)
+        
+        # Generate CSV content
+        import csv
+        import io
+        from flask import make_response
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # CSV headers
+        writer.writerow([
+            'Order ID', 'Customer ID', 'Order Date', 'Status', 
+            'Item Count', 'Total Amount'
+        ])
+        
+        # CSV data
+        for order in orders:
+            writer.writerow([
+                order['id'],
+                order['user_id'],
+                order['created_at'].strftime('%Y-%m-%d %H:%M:%S') if order['created_at'] else '',
+                order['status'] or '',
+                order['item_count'] or 0,
+                f"₹{order['total_amount'] or 0:.2f}"
+            ])
+        
+        # Create response
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=sales_export.csv'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error exporting sales data: {str(e)}")
+        flash('Error exporting sales data.', 'error')
+        return redirect(url_for('admin_sales'))
+
+def get_filtered_sales_statistics(date_from=None, date_to=None, category_filter=None, min_amount=None):
+    """Get sales statistics for filtered data"""
+    from services.database import DatabaseService
+    
+    try:
+        # Base query with parameterized conditions
+        base_query = "SELECT COALESCE(SUM(o.total_amount), 0) as revenue, COUNT(o.id) as order_count FROM orders o"
+        
+        conditions = []
+        params = []
+        
+        # Date range filter
+        if date_from:
+            conditions.append("o.created_at >= %s")
+            params.append(date_from)
+            
+        if date_to:
+            conditions.append("o.created_at <= %s")
+            params.append(date_to + ' 23:59:59')
+        
+        # Category filter
+        if category_filter and category_filter.isdigit():
+            base_query = """
+                SELECT COALESCE(SUM(o.total_amount), 0) as revenue, COUNT(DISTINCT o.id) as order_count 
+                FROM orders o
+                JOIN order_items oi ON o.id = oi.order_id
+                JOIN product_variations pv ON oi.variation_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+            """
+            conditions.append("p.category_id = %s")
+            params.append(int(category_filter))
+        
+        # Minimum amount filter
+        if min_amount and min_amount.replace('.', '').isdigit():
+            conditions.append("o.total_amount >= %s")
+            params.append(float(min_amount))
+        
+        # Build final query
+        if conditions:
+            query = base_query + " WHERE " + " AND ".join(conditions)
+        else:
+            query = base_query
+        
+        result = DatabaseService.execute_query(query, tuple(params), fetch_one=True)
+        
+        # Get total stats for comparison
+        total_stats = get_sales_statistics()
+        
+        filtered_revenue = float(result['revenue'] or 0)
+        filtered_orders = result['order_count'] or 0
+        avg_order = (filtered_revenue / filtered_orders) if filtered_orders > 0 else 0
+        
+        return {
+            'total_revenue': total_stats['total_revenue'],
+            'total_orders': total_stats['total_orders'], 
+            'average_order_value': avg_order,
+            'filtered_revenue': filtered_revenue
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting filtered sales statistics: {str(e)}")
+        return get_default_sales_stats()
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
