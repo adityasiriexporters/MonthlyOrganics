@@ -1248,7 +1248,6 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
 def get_all_customers_with_stats():
     """Get all customers with their order statistics and addresses"""
     from services.database import DatabaseService
-    from services.security import SecureAddressService
     
     try:
         query = """
@@ -1264,15 +1263,36 @@ def get_all_customers_with_stats():
         """
         customers = DatabaseService.execute_query(query, fetch_all=True)
         
-        # Add addresses for each customer
+        # Add address count for each customer using simple query
         if customers:
             for customer in customers:
                 try:
-                    addresses = SecureAddressService.get_user_addresses(customer['id'])
-                    customer['addresses'] = addresses
-                    customer['address_count'] = len(addresses)
+                    # Simple address count query
+                    addr_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
+                    addr_result = DatabaseService.execute_query(addr_query, (customer['id'],), fetch_one=True)
+                    customer['address_count'] = addr_result['count'] if addr_result else 0
+                    
+                    # Get basic address info for preview
+                    preview_query = """
+                        SELECT id, nickname, locality, city, is_default 
+                        FROM addresses 
+                        WHERE user_id = %s 
+                        ORDER BY is_default DESC, created_at DESC 
+                        LIMIT 2
+                    """
+                    preview_addresses = DatabaseService.execute_query(preview_query, (customer['id'],), fetch_all=True)
+                    customer['addresses'] = []
+                    
+                    for addr in preview_addresses or []:
+                        customer['addresses'].append({
+                            'id': addr.get('id'),
+                            'nickname': addr.get('nickname', 'Address'),
+                            'area': addr.get('locality') or addr.get('city', ''),
+                            'is_default': addr.get('is_default', False)
+                        })
+                    
                 except Exception as e:
-                    logger.error(f"Error getting addresses for customer {customer['id']}: {str(e)}")
+                    logger.error(f"Error getting address info for customer {customer['id']}: {str(e)}")
                     customer['addresses'] = []
                     customer['address_count'] = 0
         
@@ -1282,9 +1302,8 @@ def get_all_customers_with_stats():
         return []
 
 def get_filtered_customers(search=None, date_from=None, date_to=None, status_filter=None, min_orders=None):
-    """Get filtered customers with comprehensive filtering, security, and addresses"""
+    """Get filtered customers with comprehensive filtering and basic address info"""
     from services.database import DatabaseService
-    from services.security import SecureAddressService
     
     try:
         # Base query with parameterized conditions
@@ -1342,15 +1361,36 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         
         customers = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
         
-        # Add addresses for each customer
+        # Add basic address info for each customer
         if customers:
             for customer in customers:
                 try:
-                    addresses = SecureAddressService.get_user_addresses(customer['id'])
-                    customer['addresses'] = addresses
-                    customer['address_count'] = len(addresses)
+                    # Simple address count query
+                    addr_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
+                    addr_result = DatabaseService.execute_query(addr_query, (customer['id'],), fetch_one=True)
+                    customer['address_count'] = addr_result['count'] if addr_result else 0
+                    
+                    # Get basic address info for preview
+                    preview_query = """
+                        SELECT id, nickname, locality, city, is_default 
+                        FROM addresses 
+                        WHERE user_id = %s 
+                        ORDER BY is_default DESC, created_at DESC 
+                        LIMIT 2
+                    """
+                    preview_addresses = DatabaseService.execute_query(preview_query, (customer['id'],), fetch_all=True)
+                    customer['addresses'] = []
+                    
+                    for addr in preview_addresses or []:
+                        customer['addresses'].append({
+                            'id': addr.get('id'),
+                            'nickname': addr.get('nickname', 'Address'),
+                            'area': addr.get('locality') or addr.get('city', ''),
+                            'is_default': addr.get('is_default', False)
+                        })
+                    
                 except Exception as e:
-                    logger.error(f"Error getting addresses for customer {customer['id']}: {str(e)}")
+                    logger.error(f"Error getting address info for customer {customer['id']}: {str(e)}")
                     customer['addresses'] = []
                     customer['address_count'] = 0
         

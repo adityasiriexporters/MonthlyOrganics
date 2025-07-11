@@ -183,6 +183,12 @@ class SecureDataHandler:
         
         for encrypted_field, original_field in encrypted_fields.items():
             if encrypted_field in address_data and address_data[encrypted_field]:
-                decrypted[original_field] = DataEncryption.decrypt_address_field(address_data[encrypted_field])
+                try:
+                    decrypted[original_field] = DataEncryption.decrypt_address_field(address_data[encrypted_field])
+                except Exception as e:
+                    # If decryption fails, use empty string
+                    decrypted[original_field] = ''
+            else:
+                decrypted[original_field] = ''
         
         return decrypted
