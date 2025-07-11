@@ -2,6 +2,50 @@
 
 {% block title %}Edit Address - Monthly Organics{% endblock %}
 
+{% block head %}
+<style>
+/* Modal styles */
+.modal-open {
+    overflow: hidden;
+}
+
+/* Map marker styles */
+.marker-icon {
+    width: 30px;
+    height: 30px;
+    background: #ef4444;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.marker-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Required field indicator */
+.required-field::after {
+    content: ' *';
+    color: #ef4444;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen pb-20 md:pb-0 bg-gray-50">
     <div class="max-w-md mx-auto px-4 py-6">
@@ -28,84 +72,145 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Mini Map Display -->
-        <div class="mb-6">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-3">Current Location</h3>
-                <div id="miniMap" class="h-40 w-full rounded-lg bg-gray-100 overflow-hidden"></div>
-                <div class="mt-2 text-sm text-gray-600">
-                    <p>{{ address.locality }}, {{ address.city }} - {{ address.pincode }}</p>
+        <!-- Location Section -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Location</h3>
+                <button type="button" onclick="openMapModal()" class="text-primary hover:text-primary/80 text-sm font-medium">
+                    Change Location
+                </button>
+            </div>
+            
+            <!-- Current Location Display -->
+            <div id="locationDisplay" class="mb-4">
+                <div class="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <div>
+                        <div class="text-sm font-medium text-green-800">Current Location</div>
+                        <div id="selectedLocationDisplay" class="text-xs text-green-600">{{ address.locality }}, {{ address.city }} - {{ address.pincode }}</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Edit Address Form -->
-        <form method="POST" action="{{ url_for('update_address', address_id=address.id) }}" class="space-y-4">
-            <!-- Hidden fields for location -->
-            <input type="hidden" name="latitude" value="{{ address.latitude }}">
-            <input type="hidden" name="longitude" value="{{ address.longitude }}">
-            <input type="hidden" name="locality" value="{{ address.locality }}">
-            <input type="hidden" name="city" value="{{ address.city }}">
-            <input type="hidden" name="pincode" value="{{ address.pincode }}">
+        <!-- Selected Location Map Display -->
+        <div id="selectedLocationMap" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Selected Location</h3>
+            <div id="miniMap" style="height: 200px; width: 100%; border-radius: 8px;"></div>
+            <div class="mt-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span id="selectedLocationText">Current location confirmed</span>
+                </div>
+                <button type="button" onclick="openMapModal()" class="text-primary hover:text-primary/80 text-sm font-medium">
+                    Change Location
+                </button>
+            </div>
+        </div>
 
-            <!-- Address Details -->
+        <!-- Address Form -->
+        <form id="addressForm" method="POST" action="{{ url_for('update_address', address_id=address.id) }}" class="space-y-6">
+            
+            <!-- Hidden Map Data -->
+            <input type="hidden" id="latitude" name="latitude" value="{{ address.latitude }}">
+            <input type="hidden" id="longitude" name="longitude" value="{{ address.longitude }}">
+            
+            <!-- Address Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Details</h3>
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <!-- House Number (Required) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">House/Flat/Plot Number *</label>
-                        <input type="text" name="house_number" value="{{ address.house_number }}" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <label for="house_number" class="block text-sm font-medium text-gray-700 required-field">
+                            House No/Plot No/Building/Community Name
+                        </label>
+                        <input type="text" id="house_number" name="house_number" value="{{ address.house_number }}" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
+                    
+                    <!-- Block Name (Optional) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Block/Building Name</label>
-                        <input type="text" name="block_name" value="{{ address.block_name or '' }}"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <label for="block_name" class="block text-sm font-medium text-gray-700">
+                            Block Name/No
+                        </label>
+                        <input type="text" id="block_name" name="block_name" value="{{ address.block_name or '' }}"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Floor/Door Number *</label>
-                    <input type="text" name="floor_door" value="{{ address.floor_door }}" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nearby Landmark (Optional)</label>
-                    <input type="text" name="nearby_landmark" value="{{ address.nearby_landmark or '' }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    
+                    <!-- Floor/Door (Required) -->
+                    <div>
+                        <label for="floor_door" class="block text-sm font-medium text-gray-700 required-field">
+                            Floor/Door Number
+                        </label>
+                        <input type="text" id="floor_door" name="floor_door" value="{{ address.floor_door }}" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Locality (Required, Auto-filled) -->
+                    <div>
+                        <label for="locality" class="block text-sm font-medium text-gray-700 required-field">
+                            Locality
+                        </label>
+                        <input type="text" id="locality" name="locality" value="{{ address.locality }}" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- City (Auto-filled, Non-editable) -->
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700">
+                            City
+                        </label>
+                        <input type="text" id="city" name="city" value="{{ address.city }}" readonly
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- Pincode (Auto-filled, Non-editable) -->
+                    <div>
+                        <label for="pincode" class="block text-sm font-medium text-gray-700">
+                            Pincode
+                        </label>
+                        <input type="text" id="pincode" name="pincode" value="{{ address.pincode }}" readonly
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- Nearby Landmark (Optional) -->
+                    <div>
+                        <label for="nearby_landmark" class="block text-sm font-medium text-gray-700">
+                            Nearby Landmark
+                        </label>
+                        <input type="text" id="nearby_landmark" name="nearby_landmark" value="{{ address.nearby_landmark or '' }}"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
                 </div>
             </div>
 
-            <!-- Contact Information -->
+            <!-- Address Label Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <!-- Manual Label Input -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Receiver Name *</label>
-                        <input type="text" name="receiver_name" value="{{ address.receiver_name or 'Customer' }}" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <label for="custom_label" class="block text-sm font-medium text-gray-700 required-field">
+                            Enter Address Label
+                        </label>
+                        <input type="text" id="custom_label" name="custom_label" value="{{ address.nickname }}" required
+                               placeholder="e.g., Home, Office, Friend's Place, etc."
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number *</label>
-                        <input type="tel" name="contact_number" value="{{ address.contact_number }}" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
-                    </div>
+                    
+                    <!-- Hidden nickname field that gets populated -->
+                    <input type="hidden" id="nickname" name="nickname" value="{{ address.nickname }}">
                 </div>
             </div>
 
-            <!-- Address Label -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Label</h3>
-                
-                <input type="text" name="nickname" value="{{ address.nickname }}" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                       placeholder="Enter address label">
-            </div>
-
-            <!-- Receiver Details -->
+            <!-- Receiver Details Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
                 
@@ -115,9 +220,17 @@
                         <label for="receiver_name" class="block text-sm font-medium text-gray-700 required-field">
                             Receiver's Name
                         </label>
-                        <input type="text" id="receiver_name" name="receiver_name" required
-                               value="{{ address.receiver_name if address.receiver_name and address.receiver_name != 'Customer' else '' }}"
-                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                        <div class="mt-1 relative">
+                            <input type="text" id="receiver_name" name="receiver_name" required
+                                   value="{{ address.receiver_name if address.receiver_name and address.receiver_name != 'Customer' else '' }}"
+                                   class="block w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-primary focus:border-primary">
+                            <button type="button" id="contactsBtn" 
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Receiver Phone (Required) -->
@@ -129,15 +242,17 @@
                                value="{{ address.contact_number or '' }}"
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
+                    
+                    <!-- Address Notes -->
+                    <div>
+                        <label for="address_notes" class="block text-sm font-medium text-gray-700">
+                            Address Notes (Optional)
+                        </label>
+                        <textarea id="address_notes" name="address_notes" rows="3" 
+                                  class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary"
+                                  placeholder="Any additional delivery instructions...">{{ address.address_notes or '' }}</textarea>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Additional Notes -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h3>
-                <textarea name="address_notes" rows="3" 
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                          placeholder="Any additional delivery instructions...">{{ address.address_notes or '' }}</textarea>
             </div>
 
             <!-- Set as Default -->
@@ -149,66 +264,371 @@
                 </label>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex space-x-4 pt-4">
-                <button type="submit" 
-                        class="flex-1 bg-primary text-white py-3 px-6 rounded-lg hover:bg-primary/90 transition-colors font-medium">
-                    Update Address
-                </button>
-                <a href="{{ url_for('addresses') }}" 
-                   class="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition-colors text-center font-medium">
-                    Cancel
-                </a>
+            <!-- Submit Button -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex space-x-4">
+                    <button type="submit" 
+                            class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        Update Address
+                    </button>
+                    <a href="{{ url_for('addresses') }}" 
+                       class="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center font-medium">
+                        Cancel
+                    </a>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<script>
-// Initialize mini map
-function initMiniMap() {
-    const lat = parseFloat('{{ address.latitude }}');
-    const lng = parseFloat('{{ address.longitude }}');
+<!-- Full Screen Map Modal -->
+<div id="mapModal" class="fixed inset-0 bg-white z-50 hidden overflow-hidden">
+    <!-- Map Header -->
+    <div class="absolute top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-10">
+        <div class="flex items-center justify-between p-4">
+            <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
+            <button id="closeMapBtn" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
     
-    const map = new google.maps.Map(document.getElementById('miniMap'), {
-        center: { lat: lat, lng: lng },
+    <!-- Map Container -->
+    <div class="pt-16 h-full relative">
+        <div id="map" class="w-full h-full"></div>
+        
+        <!-- Map Controls -->
+        <div class="absolute bottom-20 left-4 right-4 z-10">
+            <!-- Location Status -->
+            <div class="bg-white rounded-lg p-3 mb-4 shadow-lg border border-gray-200">
+                <p id="locationStatus" class="text-sm text-gray-600">Tap on the map to select a location or use your current location</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex space-x-3">
+                <button id="getCurrentLocation" class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Use Current Location
+                </button>
+                <button id="confirmLocation" disabled class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed opacity-50">
+                    Confirm Location
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Confirmation Modal -->
+<div id="locationConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-sm w-full p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Location</h3>
+        <p class="text-sm text-gray-600 mb-6">
+            Do you want to use this location for your address?
+        </p>
+        <p id="confirmLocationText" class="text-sm font-medium text-gray-900 mb-6"></p>
+        
+        <div class="flex space-x-3">
+            <button id="cancelLocationConfirm" class="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
+                Cancel
+            </button>
+            <button id="confirmLocationFinal" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDhyTM_Bt5VTaJGBHgqbF6HnSp-gFRnAFI&libraries=geometry"></script>
+<script>
+let map;
+let marker;
+let miniMap;
+let miniMarker;
+let geocoder;
+let selectedLocation = {
+    lat: {{ address.latitude }},
+    lng: {{ address.longitude }}
+};
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+    showMiniMap();
+});
+
+function setupEventListeners() {
+    // Open map button
+    document.getElementById('openMapBtn')?.addEventListener('click', openMapModal);
+    
+    // Close map button
+    document.getElementById('closeMapBtn').addEventListener('click', closeMapModal);
+    
+    // Get current location button
+    document.getElementById('getCurrentLocation').addEventListener('click', getCurrentLocation);
+    
+    // Confirm location button
+    document.getElementById('confirmLocation').addEventListener('click', confirmLocationSelection);
+    
+    // Location confirmation modal buttons
+    document.getElementById('cancelLocationConfirm').addEventListener('click', function() {
+        document.getElementById('locationConfirmModal').classList.add('hidden');
+    });
+    
+    document.getElementById('confirmLocationFinal').addEventListener('click', function() {
+        // Hide modals
+        document.getElementById('locationConfirmModal').classList.add('hidden');
+        closeMapModal();
+        
+        // Update location display
+        updateLocationDisplay();
+        
+        // Populate form fields
+        if (window.pendingLocationData) {
+            document.getElementById('locality').value = window.pendingLocationData.locality;
+            document.getElementById('city').value = window.pendingLocationData.city;
+            document.getElementById('pincode').value = window.pendingLocationData.pincode;
+        }
+        
+        // Show mini map
+        showMiniMap();
+    });
+    
+    // Contacts button (placeholder for now)
+    if (document.getElementById('contactsBtn')) {
+        document.getElementById('contactsBtn').addEventListener('click', function() {
+            alert('Contact selection feature will be available soon!');
+        });
+    }
+    
+    // Custom label input listener
+    if (document.getElementById('custom_label')) {
+        document.getElementById('custom_label').addEventListener('input', updateNickname);
+    }
+}
+
+function updateNickname() {
+    const customLabelInput = document.getElementById('custom_label');
+    const nicknameInput = document.getElementById('nickname');
+    
+    if (customLabelInput && nicknameInput) {
+        nicknameInput.value = customLabelInput.value;
+    }
+}
+
+function initMap() {
+    // Use current location or default to Hyderabad coordinates
+    const initialCoords = selectedLocation || { lat: 17.385044, lng: 78.486671 };
+    
+    // Create map
+    map = new google.maps.Map(document.getElementById('map'), {
         zoom: 15,
+        center: initialCoords,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        gestureHandling: 'greedy',
         disableDefaultUI: true,
         zoomControl: true,
-        styles: [
-            {
-                featureType: 'poi',
-                elementType: 'labels',
-                stylers: [{ visibility: 'off' }]
-            }
-        ]
+        zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_CENTER
+        }
     });
+    
+    // Initialize geocoder
+    geocoder = new google.maps.Geocoder();
+    
+    // Add existing marker if location exists
+    if (selectedLocation) {
+        setMarker(new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng));
+    }
+    
+    // Add click listener for map
+    map.addListener('click', function(e) {
+        setMarker(e.latLng);
+    });
+}
 
-    // Add marker
-    new google.maps.Marker({
-        position: { lat: lat, lng: lng },
+function setMarker(location) {
+    // Remove existing marker
+    if (marker) {
+        marker.setMap(null);
+    }
+    
+    // Create new marker
+    marker = new google.maps.Marker({
+        position: location,
         map: map,
-        icon: {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#10b981" stroke="#059669" stroke-width="2"/>
-                    <circle cx="12" cy="10" r="3" fill="white"/>
-                </svg>
-            `),
-            scaledSize: new google.maps.Size(24, 24),
-            anchor: new google.maps.Point(12, 24)
+        draggable: true,
+        animation: google.maps.Animation.DROP
+    });
+    
+    // Add drag listener
+    marker.addListener('dragend', function(e) {
+        setMarker(e.latLng);
+    });
+    
+    // Update location data
+    selectedLocation = { lat: location.lat(), lng: location.lng() };
+    document.getElementById('latitude').value = location.lat();
+    document.getElementById('longitude').value = location.lng();
+    
+    // Enable confirm button
+    const confirmBtn = document.getElementById('confirmLocation');
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    
+    // Update status
+    document.getElementById('locationStatus').textContent = 'Location selected. Tap "Confirm Location" to proceed.';
+    
+    // Reverse geocode to get address
+    reverseGeocode(location);
+}
+
+function reverseGeocode(location) {
+    geocoder.geocode({ location: location }, function(results, status) {
+        if (status === 'OK' && results[0]) {
+            const addressComponents = results[0].address_components;
+            const formattedAddress = results[0].formatted_address;
+            
+            // Extract address components
+            let locality = '';
+            let city = '';
+            let pincode = '';
+            
+            for (let component of addressComponents) {
+                const types = component.types;
+                
+                if (types.includes('sublocality_level_1') || 
+                    types.includes('sublocality_level_2') || 
+                    types.includes('locality')) {
+                    if (!locality) locality = component.long_name;
+                }
+                
+                if (types.includes('administrative_area_level_2') || 
+                    types.includes('administrative_area_level_3') ||
+                    types.includes('locality')) {
+                    if (!city) city = component.long_name;
+                }
+                
+                if (types.includes('postal_code')) {
+                    pincode = component.long_name;
+                }
+            }
+            
+            if (!city && locality) {
+                city = locality;
+            }
+            
+            // Store for later use
+            window.pendingLocationData = {
+                locality: locality,
+                city: city,
+                pincode: pincode,
+                formattedAddress: formattedAddress
+            };
+            
+            document.getElementById('confirmLocationText').textContent = formattedAddress;
         }
     });
 }
 
-// Initialize map when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof google !== 'undefined' && google.maps) {
-        initMiniMap();
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        document.getElementById('locationStatus').textContent = 'Getting your location...';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const location = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                
+                map.setCenter(location);
+                map.setZoom(16);
+                setMarker(location);
+            },
+            function(error) {
+                document.getElementById('locationStatus').textContent = 'Unable to access location. Please tap on the map to select.';
+                console.error('Geolocation error:', error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
     } else {
-        // Wait for Google Maps to load
-        window.initMiniMap = initMiniMap;
+        document.getElementById('locationStatus').textContent = 'Location not supported. Please tap on the map to select.';
     }
-});
+}
+
+function openMapModal() {
+    // Show modal
+    document.getElementById('mapModal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    
+    // Initialize map if not already done
+    if (!map) {
+        initMap();
+    } else {
+        // Trigger resize if map already exists
+        setTimeout(() => {
+            google.maps.event.trigger(map, 'resize');
+            if (selectedLocation) {
+                map.setCenter(new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng));
+            }
+        }, 100);
+    }
+}
+
+function closeMapModal() {
+    document.getElementById('mapModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+}
+
+function confirmLocationSelection() {
+    if (selectedLocation) {
+        document.getElementById('locationConfirmModal').classList.remove('hidden');
+    }
+}
+
+function updateLocationDisplay() {
+    if (window.pendingLocationData) {
+        document.getElementById('selectedLocationDisplay').textContent = window.pendingLocationData.formattedAddress || 'Selected location';
+        document.getElementById('selectedLocationText').textContent = window.pendingLocationData.formattedAddress || 'Location confirmed';
+    }
+}
+
+function showMiniMap() {
+    if (selectedLocation) {
+        const mapContainer = document.getElementById('selectedLocationMap');
+        mapContainer.classList.remove('hidden');
+        
+        // Initialize mini map
+        setTimeout(() => {
+            miniMap = new google.maps.Map(document.getElementById('miniMap'), {
+                zoom: 15,
+                center: new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng),
+                disableDefaultUI: true,
+                gestureHandling: 'none',
+                clickableIcons: false
+            });
+            
+            // Add marker to mini map
+            miniMarker = new google.maps.Marker({
+                position: new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng),
+                map: miniMap,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="15" cy="15" r="8" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+                            <circle cx="15" cy="15" r="3" fill="#ffffff"/>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(30, 30),
+                    anchor: new google.maps.Point(15, 15)
+                }
+            });
+        }, 100);
+    }
+}
 </script>
 {% endblock %}
