@@ -121,12 +121,8 @@ def all_products():
         
         # Cart quantities are now included in the main query above for better performance
         
-        # Check for search query
-        from flask import request
-        search_query = request.args.get('search', '').strip()
-        
         # Optimized single query to get all data including cart quantities
-        base_query = """
+        query = """
             SELECT 
                 c.id as category_id,
                 c.name as category_name,
@@ -144,24 +140,11 @@ def all_products():
             LEFT JOIN product_variations pv ON p.id = pv.product_id
             LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_id = %s
             WHERE p.id IS NOT NULL
+            ORDER BY c.name, p.name, pv.variation_name
         """
         
-        query_params = [session.get('user_id', 0)]
-        
-        # Add search filter if provided
-        if search_query:
-            base_query += """ AND (
-                LOWER(p.name) LIKE LOWER(%s) OR 
-                LOWER(p.description) LIKE LOWER(%s) OR 
-                LOWER(pv.variation_name) LIKE LOWER(%s) OR
-                LOWER(c.name) LIKE LOWER(%s)
-            )"""
-            search_pattern = f"%{search_query}%"
-            query_params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
-        
-        base_query += " ORDER BY c.name, p.name, pv.variation_name"
-        
-        raw_data = DatabaseService.execute_query(base_query, tuple(query_params))
+        user_id = session.get('user_id', 0)
+        raw_data = DatabaseService.execute_query(query, (user_id,))
         
         # Group data by categories and products
         categories_with_products = {}
@@ -208,10 +191,7 @@ def all_products():
                 final_categories.append(cat_data)
         
         from flask import render_template
-        return render_template('partials/all_products.html', 
-                             categories_with_products=final_categories,
-                             search_query=search_query,
-                             search_results_count=sum(len(cat['products']) for cat in final_categories))
+        return render_template('partials/all_products.html', categories_with_products=final_categories)
         
     except Exception as e:
         logger.error(f"Error loading all products: {e}")

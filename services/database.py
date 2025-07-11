@@ -44,60 +44,124 @@ class DatabaseService:
         return True
     
     @classmethod
+    def _is_connection_healthy(cls, conn: psycopg2.extensions.connection) -> bool:
+        """Check if a database connection is healthy"""
+        try:
+            if conn is None or conn.closed != 0:
+                return False
+            
+            # Test the connection with a simple query
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
+                return result is not None and result[0] == 1
+            
+        except Exception as e:
+            logger.debug(f"Connection health check failed: {e}")  # Reduce log noise
+            return False
+    
+    @classmethod
     def get_connection(cls) -> Optional[psycopg2.extensions.connection]:
-        """Get database connection from pool with proper error handling"""
+        """Get database connection from pool with proper error handling and health checks"""
         if not cls.initialize_pool():
             return None
             
-        try:
-            conn = cls._connection_pool.getconn()
-            return conn
-        except Exception as e:
-            logger.error(f"Failed to get connection from pool: {e}")
-            return None
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                conn = cls._connection_pool.getconn()
+                if conn is None:
+                    continue
+                
+                # Check if connection is healthy
+                if cls._is_connection_healthy(conn):
+                    return conn
+                else:
+                    # Connection is unhealthy, remove it from pool and try again
+                    logger.debug(f"Unhealthy connection detected on attempt {attempt + 1}, removing from pool")
+                    cls._connection_pool.putconn(conn, close=True)
+                    
+            except Exception as e:
+                logger.error(f"Failed to get connection from pool (attempt {attempt + 1}): {e}")
+                if attempt == max_retries - 1:
+                    return None
+                    
+        return None
     
     @classmethod
-    def return_connection(cls, conn: psycopg2.extensions.connection):
-        """Return connection to pool"""
+    def return_connection(cls, conn: psycopg2.extensions.connection, close_conn: bool = False):
+        """Return connection to pool or close it if it's unhealthy"""
         if cls._connection_pool and conn:
             try:
-                cls._connection_pool.putconn(conn)
+                if close_conn or not cls._is_connection_healthy(conn):
+                    cls._connection_pool.putconn(conn, close=True)
+                else:
+                    cls._connection_pool.putconn(conn)
             except Exception as e:
                 logger.error(f"Failed to return connection to pool: {e}")
     
     @classmethod
     def execute_query(cls, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = True) -> Any:
-        """Execute query with connection pool management for better performance"""
-        conn = None
-        cursor = None
-        try:
-            conn = cls.get_connection()
-            if not conn:
+        """Execute query with connection pool management and retry logic"""
+        max_retries = 2
+        
+        for attempt in range(max_retries):
+            conn = None
+            cursor = None
+            connection_failed = False
+            
+            try:
+                conn = cls.get_connection()
+                if not conn:
+                    logger.error(f"Failed to get connection on attempt {attempt + 1}")
+                    continue
+                    
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                cursor.execute(query, params)
+                
+                # Check if this is a SELECT query that should return results
+                query_upper = query.strip().upper()
+                is_select_query = query_upper.startswith('SELECT') or 'RETURNING' in query_upper
+                
+                if is_select_query:
+                    if fetch_one:
+                        result = cursor.fetchone()
+                    elif fetch_all:
+                        result = cursor.fetchall()
+                    else:
+                        result = None
+                else:
+                    # For UPDATE, DELETE, INSERT without RETURNING, return rowcount
+                    result = cursor.rowcount
+                    
+                conn.commit()
+                return result
+                
+            except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+                # Connection-related errors - retry with new connection
+                logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+                connection_failed = True
+                if conn:
+                    conn.rollback()
+                    
+            except Exception as e:
+                # Other errors - don't retry
+                logger.error(f"Query execution failed: {e}")
+                if conn:
+                    conn.rollback()
                 return None
                 
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cursor.execute(query, params)
-            
-            if fetch_one:
-                result = cursor.fetchone()
-            elif fetch_all:
-                result = cursor.fetchall()
-            else:
-                result = None
-                
-            conn.commit()
-            return result
-            
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"Query execution failed: {e}")
-            return None
-        finally:
-            if cursor:
-                cursor.close()
-            if conn:
-                cls.return_connection(conn)  # Return to pool instead of closing
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except:
+                        pass
+                if conn:
+                    cls.return_connection(conn, close_conn=connection_failed)
+                    
+        logger.error(f"Query failed after {max_retries} attempts")
+        return None
 
 class CartService:
     """Service for cart-related database operations"""
@@ -216,3 +280,162 @@ class UserService:
             logger.error(f"Error creating user: {e}")
             db.session.rollback()
             return None
+
+class AddressService:
+    """Service for address-related database operations"""
+    
+    @staticmethod
+    def get_user_addresses(user_id: int) -> List[Dict]:
+        """Get all addresses for a user"""
+        query = """
+            SELECT 
+                id, nickname, house_number, block_name, floor_door, 
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            FROM addresses
+            WHERE user_id = %s
+            ORDER BY is_default DESC, created_at DESC
+        """
+        result = DatabaseService.execute_query(query, (user_id,))
+        return result if result else []
+    
+    @staticmethod
+    def get_default_address(user_id: int) -> Optional[Dict]:
+        """Get default address for a user"""
+        query = """
+            SELECT 
+                id, nickname, house_number, block_name, floor_door, 
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            FROM addresses
+            WHERE user_id = %s AND is_default = true
+            LIMIT 1
+        """
+        result = DatabaseService.execute_query(query, (user_id,), fetch_one=True)
+        return dict(result) if result else None
+    
+    @staticmethod
+    def create_address(user_id: int, address_data: Dict) -> Optional[int]:
+        """Create a new address for a user"""
+        query = """
+            INSERT INTO addresses (
+                user_id, nickname, house_number, block_name, floor_door,
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            RETURNING id
+        """
+        
+        # If this is set as default, first unset all other defaults
+        if address_data.get('is_default', False):
+            AddressService.unset_default_address(user_id)
+        
+        result = DatabaseService.execute_query(query, (
+            user_id,
+            address_data['nickname'],
+            address_data['house_number'],
+            address_data.get('block_name', ''),
+            address_data['floor_door'],
+            address_data['contact_number'],
+            address_data['latitude'],
+            address_data['longitude'],
+            address_data['locality'],
+            address_data['city'],
+            address_data['pincode'],
+            address_data.get('nearby_landmark', ''),
+            address_data.get('address_notes', ''),
+            address_data.get('is_default', False)
+        ), fetch_one=True)
+        
+        return result[0] if result else None
+    
+    @staticmethod
+    def update_address(address_id: int, user_id: int, address_data: Dict) -> bool:
+        """Update an existing address"""
+        query = """
+            UPDATE addresses SET
+                nickname = %s, house_number = %s, block_name = %s, floor_door = %s,
+                contact_number = %s, latitude = %s, longitude = %s, locality = %s, 
+                city = %s, pincode = %s, nearby_landmark = %s, address_notes = %s,
+                is_default = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND user_id = %s
+        """
+        
+        # If this is set as default, first unset all other defaults
+        if address_data.get('is_default', False):
+            AddressService.unset_default_address(user_id)
+        
+        result = DatabaseService.execute_query(query, (
+            address_data['nickname'],
+            address_data['house_number'],
+            address_data.get('block_name', ''),
+            address_data['floor_door'],
+            address_data['contact_number'],
+            address_data['latitude'],
+            address_data['longitude'],
+            address_data['locality'],
+            address_data['city'],
+            address_data['pincode'],
+            address_data.get('nearby_landmark', ''),
+            address_data.get('address_notes', ''),
+            address_data.get('is_default', False),
+            address_id,
+            user_id
+        ), fetch_all=False)
+        
+        return result is not None
+    
+    @staticmethod
+    def delete_address(address_id: int, user_id: int) -> bool:
+        """Delete an address"""
+        query = """
+            DELETE FROM addresses 
+            WHERE id = %s AND user_id = %s
+        """
+        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_all=False)
+        return result is not None
+    
+    @staticmethod
+    def unset_default_address(user_id: int) -> bool:
+        """Unset default flag for all addresses of a user"""
+        query = """
+            UPDATE addresses SET is_default = false 
+            WHERE user_id = %s AND is_default = true
+        """
+        result = DatabaseService.execute_query(query, (user_id,), fetch_all=False)
+        return result is not None
+    
+    @staticmethod
+    def set_default_address(address_id: int, user_id: int) -> bool:
+        """Set an address as default"""
+        # First unset all defaults
+        AddressService.unset_default_address(user_id)
+        
+        # Then set the new default
+        query = """
+            UPDATE addresses SET is_default = true, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND user_id = %s
+        """
+        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_all=False)
+        return result is not None
+    
+    @staticmethod
+    def get_address_by_id(address_id: int, user_id: int) -> Optional[Dict]:
+        """Get a specific address by ID"""
+        query = """
+            SELECT 
+                id, nickname, house_number, block_name, floor_door, 
+                contact_number, latitude, longitude, locality, city, 
+                pincode, nearby_landmark, address_notes, is_default,
+                created_at, updated_at
+            FROM addresses
+            WHERE id = %s AND user_id = %s
+        """
+        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_one=True)
+        return dict(result) if result else None

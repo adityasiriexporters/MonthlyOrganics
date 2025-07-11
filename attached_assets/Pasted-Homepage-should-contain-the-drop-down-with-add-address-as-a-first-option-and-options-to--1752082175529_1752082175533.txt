@@ -1,0 +1,55 @@
+Homepage should contain the drop-down with 
+- '+ add address' as a first option 
+- and options to select saved delivery address with their nicknames. (replace '+ Add address' button with this drop-down.)
+
+
+The 'saved addresses' page should contain:
+- '+ Add address' button
+- Previously saved address (below it)
+
+
+Build a page with 'Add New Address' form.
+The new address form within the template must go along the following details. Please mark the mandatory fields clearly for the user to know.
+
+- First upon clicking '+ add address' button in the 'home page' or in the 'saved address' page. User should be taken to the 'add new address' form. And a pop-up window should automatically open, to collect pin location.
+
+[
+A div with id="map" to hold the interactive Google Map for pinning the location. 
+   * until the user gives location access, by default Hyderabad map should be visible without location pin 
+   * If the user is not interested in giving the location access, then the user can manually give the pin location. 
+   * User upon giving the location access, it has to detect the current location of the user automatically. The user can manually change/iterate the pin location on the map.
+   * User will have to confirm this pin location in a pop-up window with 'confirm location' button
+] (This is a mandatory step by the user to add a new address) 
+
+- Upon clicking the 'confirm location' button on the window. the map window with the given pin location should settle on the form in 3:2 (landscape) ratio in the mobile (there should be an option to change/iterate the pin location on the map with a 'change' button). followed by 'Add New Address' form.
+
+- 'Add New Address' form should have the following fields (in order).
+
+[Address section]
+
+Hno/Plot No/Building/Community Name (Mandatory)
+Block Name/No 
+Floor/Door Number (Mandatory)
+Locality (mandatory) (to be taken automatically from the map and still can be editable. without disturbing the user's given pin location)
+City (to be taken automatically from the map and is non editable)
+Pincode (to be taken automatically from the map and is non editable)
+Nearby Landmark 
+
+
+[Add address label Section] (Mandatory) 
+   * This is like, user giving nickname to the address 
+   * once after the address is saved, it is represented with this name 
+   * user should choose the swatches among 'My Home' & 'Others'. 
+   * Upon choosing "others", there should appear a field, which enables the user to enter their own field
+
+[Receiver details Section]
+
+Receiver's name (In this field, user can fill the receiver's name on the left side of the field. And on the right side there should be a small icon with a phone book which enables the user can choose a contact from the user's contacts.)  (If a contact is chosen from user's contacts, then this field is auto-filled with the respective information.)
+
+Receiver's phone number (If a contact is chosen from user's contacts, then this field is auto-filled with the respective information.)
+
+- Address notes if any
+
+- And a 'save address' button to save the above filled address. 
+
+- These saved addresses should be saved to the database and shown in the 'Saved Addresses' page
