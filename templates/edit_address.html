@@ -2,47 +2,42 @@
 
 {% block title %}Edit Address - Monthly Organics{% endblock %}
 
-{% block head %}
+{% block extra_head %}
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
 <style>
-/* Modal styles */
-.modal-open {
-    overflow: hidden;
-}
-
-/* Map marker styles */
-.marker-icon {
-    width: 30px;
-    height: 30px;
-    background: #ef4444;
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    position: relative;
-}
-
-.marker-icon::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 10px;
-    height: 10px;
-    background: white;
-    border-radius: 50%;
-}
-
-/* Loading states */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-/* Required field indicator */
-.required-field::after {
-    content: ' *';
-    color: #ef4444;
-}
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    /* Prevent body scroll when modal is open */
+    body.modal-open {
+        overflow: hidden;
+    }
+    /* Map modal specific styles */
+    #mapModal {
+        touch-action: none;
+    }
+    #mapModal #map {
+        padding-top: 80px; /* Account for header */
+        padding-bottom: 200px; /* Account for controls + mobile nav */
+    }
+    /* Map controls positioning */
+    .map-controls {
+        bottom: 80px; /* Above mobile navigation bar */
+    }
+    @media (min-width: 768px) {
+        .map-controls {
+            bottom: 20px; /* Normal position on desktop */
+        }
+        #mapModal #map {
+            padding-bottom: 160px; /* Less padding on desktop */
+        }
+    }
 </style>
 {% endblock %}
 
@@ -51,14 +46,8 @@
     <div class="max-w-md mx-auto px-4 py-6">
         <!-- Header -->
         <div class="mb-6">
-            <div class="flex items-center space-x-4">
-                <a href="{{ url_for('addresses') }}" class="text-gray-600 hover:text-gray-900">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </a>
-                <h1 class="text-2xl font-bold text-gray-900">Edit Address</h1>
-            </div>
+            <h1 class="text-2xl font-bold text-gray-900">Edit Address</h1>
+            <p class="text-gray-600 text-sm mt-1">Update your delivery address details</p>
         </div>
 
         <!-- Flash Messages -->
@@ -72,16 +61,16 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Location Section -->
+        <!-- Open Map Button -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Location</h3>
-                <button type="button" onclick="openMapModal()" class="text-primary hover:text-primary/80 text-sm font-medium">
-                    Change Location
+                <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
+                <button id="changeLocationBtn" class="text-primary hover:text-primary/80 text-sm font-medium">
+                    Change
                 </button>
             </div>
             
-            <!-- Current Location Display -->
+            <!-- Location Status Display -->
             <div id="locationDisplay" class="mb-4">
                 <div class="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,11 +78,21 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
                     <div>
-                        <div class="text-sm font-medium text-green-800">Current Location</div>
+                        <div class="text-sm font-medium text-green-800">Location Selected</div>
                         <div id="selectedLocationDisplay" class="text-xs text-green-600">{{ address.locality }}, {{ address.city }} - {{ address.pincode }}</div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Open Map Button -->
+            <button id="openMapBtn" 
+                    class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Select Location on Map</span>
+            </button>
         </div>
 
         <!-- Selected Location Map Display -->
@@ -255,27 +254,12 @@
                 </div>
             </div>
 
-            <!-- Set as Default -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <label class="flex items-center space-x-3">
-                    <input type="checkbox" name="is_default" value="1" {% if address.is_default %}checked{% endif %}
-                           class="h-4 w-4 text-primary focus:ring-primary/50 border-gray-300 rounded">
-                    <span class="text-sm font-medium text-gray-700">Set as default address</span>
-                </label>
-            </div>
-
             <!-- Submit Button -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div class="flex space-x-4">
-                    <button type="submit" 
-                            class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium">
-                        Update Address
-                    </button>
-                    <a href="{{ url_for('addresses') }}" 
-                       class="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center font-medium">
-                        Cancel
-                    </a>
-                </div>
+                <button type="submit" 
+                        class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                    Update Address
+                </button>
             </div>
         </form>
     </div>
@@ -295,57 +279,66 @@
         </div>
     </div>
     
-    <!-- Map Container -->
-    <div class="pt-16 h-full relative">
-        <div id="map" class="w-full h-full"></div>
+    <!-- Full Screen Map -->
+    <div id="map" class="w-full h-full"></div>
+    
+    <!-- Map Controls - Fixed at bottom -->
+    <div class="absolute left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-10 map-controls">
+        <!-- Location Status -->
+        <div id="locationStatus" class="text-sm text-gray-600 mb-4 text-center">
+            Tap on the map to select your location or use current location
+        </div>
         
-        <!-- Map Controls -->
-        <div class="absolute bottom-20 left-4 right-4 z-10">
-            <!-- Location Status -->
-            <div class="bg-white rounded-lg p-3 mb-4 shadow-lg border border-gray-200">
-                <p id="locationStatus" class="text-sm text-gray-600">Tap on the map to select a location or use your current location</p>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="flex space-x-3">
-                <button id="getCurrentLocation" class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    Use Current Location
-                </button>
-                <button id="confirmLocation" disabled class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed opacity-50">
-                    Confirm Location
-                </button>
-            </div>
+        <!-- Control Buttons -->
+        <div class="flex space-x-2">
+            <button id="getCurrentLocation" 
+                    class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Use Current Location</span>
+            </button>
+            <button id="confirmLocation" 
+                    class="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2" 
+                    disabled>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>Confirm Location</span>
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Location Confirmation Modal -->
-<div id="locationConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-60 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg max-w-sm w-full p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Location</h3>
-        <p class="text-sm text-gray-600 mb-6">
-            Do you want to use this location for your address?
-        </p>
-        <p id="confirmLocationText" class="text-sm font-medium text-gray-900 mb-6"></p>
-        
-        <div class="flex space-x-3">
-            <button id="cancelLocationConfirm" class="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                Cancel
-            </button>
-            <button id="confirmLocationFinal" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">
-                Confirm
-            </button>
+<div id="locationConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Location</h3>
+            <div id="selectedLocationText" class="text-sm text-gray-600 mb-6"></div>
+            <div class="flex space-x-3">
+                <button id="cancelLocationConfirm" 
+                        class="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmLocationFinal" 
+                        class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">
+                    Confirm
+                </button>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDhyTM_Bt5VTaJGBHgqbF6HnSp-gFRnAFI&libraries=geometry"></script>
+{% block extra_scripts %}
 <script>
 let map;
 let marker;
+let geocoder;
 let miniMap;
 let miniMarker;
-let geocoder;
 let selectedLocation = {
     lat: {{ address.latitude }},
     lng: {{ address.longitude }}
@@ -447,6 +440,11 @@ function initMap() {
     map.addListener('click', function(e) {
         setMarker(e.latLng);
     });
+    
+    // Trigger resize after map is initialized
+    setTimeout(() => {
+        google.maps.event.trigger(map, 'resize');
+    }, 100);
 }
 
 function setMarker(location) {
@@ -528,7 +526,7 @@ function reverseGeocode(location) {
                 formattedAddress: formattedAddress
             };
             
-            document.getElementById('confirmLocationText').textContent = formattedAddress;
+            document.getElementById('selectedLocationText').textContent = formattedAddress;
         }
     });
 }
