@@ -1246,9 +1246,8 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
         return []
 
 def get_all_customers_with_stats():
-    """Get all customers with their order statistics"""
+    """Get all customers with their order statistics and addresses"""
     try:
-        # Use direct database connection instead of service layer temporarily
         import psycopg2
         import psycopg2.extras
         import os
@@ -1257,6 +1256,7 @@ def get_all_customers_with_stats():
         conn = psycopg2.connect(database_url)
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
+        # Get customer data with order statistics
         query = """
             SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
                    u.created_at, u.is_active,
@@ -1271,32 +1271,42 @@ def get_all_customers_with_stats():
         cursor.execute(query)
         customers = cursor.fetchall()
         
-        # Convert to regular dicts and add address count
+        # Process each customer and add their addresses
         result = []
         for customer in customers:
             customer_dict = dict(customer)
             
-            # Get address count for each customer
-            try:
-                addr_cursor = conn.cursor()
-                addr_cursor.execute("SELECT COUNT(*) FROM addresses WHERE user_id = %s", (customer_dict['id'],))
-                address_count = addr_cursor.fetchone()[0]
-                customer_dict['address_count'] = address_count
-                addr_cursor.close()
-            except:
-                customer_dict['address_count'] = 0
+            # Get addresses for this customer
+            addr_cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            addr_cursor.execute("""
+                SELECT id, nickname, locality, city, pincode, is_default
+                FROM addresses 
+                WHERE user_id = %s 
+                ORDER BY is_default DESC, created_at DESC
+            """, (customer_dict['id'],))
+            addresses = addr_cursor.fetchall()
             
-            # Initialize empty addresses list
+            # Convert addresses to proper format
             customer_dict['addresses'] = []
+            for addr in addresses:
+                customer_dict['addresses'].append({
+                    'id': addr['id'],
+                    'nickname': addr['nickname'] or 'Address',
+                    'area': f"{addr['locality'] or ''}, {addr['city'] or ''}".strip(', '),
+                    'pincode': addr['pincode'] or '',
+                    'is_default': addr['is_default']
+                })
+            
+            customer_dict['address_count'] = len(customer_dict['addresses'])
+            addr_cursor.close()
             result.append(customer_dict)
         
         cursor.close()
         conn.close()
-        
         return result
         
     except Exception as e:
-        logger.error(f"Error getting customers: {str(e)}")
+        logger.error(f"Error getting customers with addresses: {str(e)}")
         return []
 
 def get_filtered_customers(search=None, date_from=None, date_to=None, status_filter=None, min_orders=None):
@@ -1367,23 +1377,34 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         cursor.execute(query, tuple(params))
         customers = cursor.fetchall()
         
-        # Convert to regular dicts and add address count
+        # Process each customer and add their addresses
         result = []
         for customer in customers:
             customer_dict = dict(customer)
             
-            # Get address count for each customer
-            try:
-                addr_cursor = conn.cursor()
-                addr_cursor.execute("SELECT COUNT(*) FROM addresses WHERE user_id = %s", (customer_dict['id'],))
-                address_count = addr_cursor.fetchone()[0]
-                customer_dict['address_count'] = address_count
-                addr_cursor.close()
-            except:
-                customer_dict['address_count'] = 0
+            # Get addresses for this customer
+            addr_cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            addr_cursor.execute("""
+                SELECT id, nickname, locality, city, pincode, is_default
+                FROM addresses 
+                WHERE user_id = %s 
+                ORDER BY is_default DESC, created_at DESC
+            """, (customer_dict['id'],))
+            addresses = addr_cursor.fetchall()
             
-            # Initialize empty addresses list
+            # Convert addresses to proper format
             customer_dict['addresses'] = []
+            for addr in addresses:
+                customer_dict['addresses'].append({
+                    'id': addr['id'],
+                    'nickname': addr['nickname'] or 'Address',
+                    'area': f"{addr['locality'] or ''}, {addr['city'] or ''}".strip(', '),
+                    'pincode': addr['pincode'] or '',
+                    'is_default': addr['is_default']
+                })
+            
+            customer_dict['address_count'] = len(customer_dict['addresses'])
+            addr_cursor.close()
             result.append(customer_dict)
         
         cursor.close()
