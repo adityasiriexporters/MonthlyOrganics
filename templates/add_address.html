@@ -260,10 +260,9 @@ function addressForm() {
         },
 
         setMarker(location) {
-            // Remove existing marker first (critical to prevent multiple pins)
+            // Remove existing marker (ensure only one pin)
             if (this.marker) {
                 this.marker.setMap(null);
-                this.marker = null;
             }
 
             // Create new marker with custom styling
@@ -272,17 +271,7 @@ function addressForm() {
                 map: this.map,
                 draggable: true,
                 animation: google.maps.Animation.DROP,
-                title: 'Delivery Location',
-                icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="16" cy="16" r="12" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
-                            <circle cx="16" cy="16" r="6" fill="#ffffff"/>
-                        </svg>
-                    `),
-                    scaledSize: new google.maps.Size(32, 32),
-                    anchor: new google.maps.Point(16, 16)
-                }
+                title: 'Selected Location'
             });
 
             // Update selected location
@@ -302,8 +291,6 @@ function addressForm() {
 
             // Get address from coordinates
             this.reverseGeocode(location);
-            
-            console.log('Location selected:', this.selectedLocation.lat, this.selectedLocation.lng);
         },
 
         detectCurrentLocation() {
@@ -364,11 +351,9 @@ function addressForm() {
                     
                     addressComponents.forEach(component => {
                         const types = component.types;
-                        if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood')) {
+                        if (types.includes('sublocality') || types.includes('neighborhood')) {
                             locality = component.long_name;
                         } else if (types.includes('locality') || types.includes('administrative_area_level_2')) {
-                            city = component.long_name;
-                        } else if (types.includes('administrative_area_level_1') && !city) {
                             city = component.long_name;
                         } else if (types.includes('postal_code')) {
                             pincode = component.long_name;
@@ -376,20 +361,9 @@ function addressForm() {
                     });
                     
                     // Update form data
-                    this.formData.locality = locality || '';
-                    this.formData.city = city || '';
-                    this.formData.pincode = pincode || '';
-                    
-                    // Log for debugging
-                    const geocodeResult = {
-                        locality: locality,
-                        city: city,
-                        pincode: pincode,
-                        formattedAddress: results[0].formatted_address
-                    };
-                    console.log('Geocoding result:', geocodeResult);
-                } else {
-                    console.error('Geocoding failed:', status);
+                    this.formData.locality = locality;
+                    this.formData.city = city;
+                    this.formData.pincode = pincode;
                 }
             });
         },
@@ -424,12 +398,12 @@ function addressForm() {
 
         changeLocation() {
             this.locationConfirmed = false;
+            // Keep the selected location and marker for user convenience
+            // User can modify the existing pin or place a new one
             
             // Re-center map on existing location if available
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
-                // Recreate marker on full-screen map
-                this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
             }
         },
 

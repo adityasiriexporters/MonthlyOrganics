@@ -297,29 +297,18 @@ function editAddressForm() {
         },
 
         setMarker(location) {
-            // Remove existing marker first (critical to prevent multiple pins)
+            // Remove existing marker (ensure only one pin)
             if (this.marker) {
                 this.marker.setMap(null);
-                this.marker = null;
             }
 
-            // Create new marker with custom styling
+            // Create new marker
             this.marker = new google.maps.Marker({
                 position: location,
                 map: this.map,
                 draggable: true,
                 animation: google.maps.Animation.DROP,
-                title: 'Delivery Location',
-                icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="16" cy="16" r="12" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
-                            <circle cx="16" cy="16" r="6" fill="#ffffff"/>
-                        </svg>
-                    `),
-                    scaledSize: new google.maps.Size(32, 32),
-                    anchor: new google.maps.Point(16, 16)
-                }
+                title: 'Selected Location'
             });
 
             // Update selected location
@@ -328,7 +317,7 @@ function editAddressForm() {
                 lng: location.lng()
             };
 
-            // Add drag listener for manual repositioning
+            // Add drag listener
             this.marker.addListener('dragend', (event) => {
                 this.selectedLocation = {
                     lat: event.latLng.lat(),
@@ -339,8 +328,6 @@ function editAddressForm() {
 
             // Get address from coordinates
             this.reverseGeocode(location);
-            
-            console.log('Location updated:', this.selectedLocation.lat, this.selectedLocation.lng);
         },
 
         detectCurrentLocation() {
@@ -429,11 +416,9 @@ function editAddressForm() {
         changeLocation() {
             this.locationConfirmed = false;
             
-            // Re-center map on existing location if available
+            // Re-center map on existing location
             if (this.selectedLocation) {
                 this.map.setCenter(this.selectedLocation);
-                // Recreate marker on full-screen map
-                this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
             }
         },
 
