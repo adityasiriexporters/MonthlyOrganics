@@ -1246,10 +1246,17 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
         return []
 
 def get_all_customers_with_stats():
-    """Get all customers with their order statistics and addresses"""
-    from services.database import DatabaseService
-    
+    """Get all customers with their order statistics"""
     try:
+        # Use direct database connection instead of service layer temporarily
+        import psycopg2
+        import psycopg2.extras
+        import os
+        
+        database_url = os.environ.get('DATABASE_URL')
+        conn = psycopg2.connect(database_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
         query = """
             SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
                    u.created_at, u.is_active,
@@ -1261,35 +1268,49 @@ def get_all_customers_with_stats():
             GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, u.is_active
             ORDER BY u.created_at DESC
         """
-        customers = DatabaseService.execute_query(query, fetch_all=True)
+        cursor.execute(query)
+        customers = cursor.fetchall()
         
-        # Add simple address count for each customer
-        if customers:
-            for customer in customers:
-                try:
-                    # Get address count using proper fetch_one with alias
-                    addr_count_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
-                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],), fetch_one=True)
-                    customer['address_count'] = count_result.get('count', 0) if count_result else 0
-                    
-                    # Initialize empty addresses list for now
-                    customer['addresses'] = []
-                    
-                except Exception as e:
-                    logger.error(f"Error getting address count for customer {customer['id']}: {str(e)}")
-                    customer['addresses'] = []
-                    customer['address_count'] = 0
+        # Convert to regular dicts and add address count
+        result = []
+        for customer in customers:
+            customer_dict = dict(customer)
+            
+            # Get address count for each customer
+            try:
+                addr_cursor = conn.cursor()
+                addr_cursor.execute("SELECT COUNT(*) FROM addresses WHERE user_id = %s", (customer_dict['id'],))
+                address_count = addr_cursor.fetchone()[0]
+                customer_dict['address_count'] = address_count
+                addr_cursor.close()
+            except:
+                customer_dict['address_count'] = 0
+            
+            # Initialize empty addresses list
+            customer_dict['addresses'] = []
+            result.append(customer_dict)
         
-        return customers or []
+        cursor.close()
+        conn.close()
+        
+        return result
+        
     except Exception as e:
         logger.error(f"Error getting customers: {str(e)}")
         return []
 
 def get_filtered_customers(search=None, date_from=None, date_to=None, status_filter=None, min_orders=None):
-    """Get filtered customers with comprehensive filtering and basic address info"""
-    from services.database import DatabaseService
-    
+    """Get filtered customers with comprehensive filtering"""
     try:
+        # Use direct database connection instead of service layer temporarily
+        import psycopg2
+        import psycopg2.extras
+        import os
+        
+        database_url = os.environ.get('DATABASE_URL')
+        conn = psycopg2.connect(database_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
         # Base query with parameterized conditions
         base_query = """
             SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
@@ -1305,7 +1326,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         conditions = []
         params = []
         
-        # Search filter (name or email) - using ILIKE for case-insensitive search
+        # Search filter (name or email)
         if search and search.strip():
             conditions.append("(LOWER(u.first_name) LIKE LOWER(%s) OR LOWER(u.last_name) LIKE LOWER(%s) OR LOWER(u.email) LIKE LOWER(%s))")
             search_param = f"%{search.strip()}%"
@@ -1318,7 +1339,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
             
         if date_to:
             conditions.append("u.created_at <= %s")
-            params.append(date_to + ' 23:59:59')  # Include full day
+            params.append(date_to + ' 23:59:59')
         
         # Status filter
         if status_filter == 'active':
@@ -1343,26 +1364,32 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
             
         query += " ORDER BY u.created_at DESC"
         
-        customers = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
+        cursor.execute(query, tuple(params))
+        customers = cursor.fetchall()
         
-        # Add simple address count for each customer  
-        if customers:
-            for customer in customers:
-                try:
-                    # Get address count using proper fetch_one with alias
-                    addr_count_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
-                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],), fetch_one=True)
-                    customer['address_count'] = count_result.get('count', 0) if count_result else 0
-                    
-                    # Initialize empty addresses list for now
-                    customer['addresses'] = []
-                    
-                except Exception as e:
-                    logger.error(f"Error getting address count for customer {customer['id']}: {str(e)}")
-                    customer['addresses'] = []
-                    customer['address_count'] = 0
+        # Convert to regular dicts and add address count
+        result = []
+        for customer in customers:
+            customer_dict = dict(customer)
+            
+            # Get address count for each customer
+            try:
+                addr_cursor = conn.cursor()
+                addr_cursor.execute("SELECT COUNT(*) FROM addresses WHERE user_id = %s", (customer_dict['id'],))
+                address_count = addr_cursor.fetchone()[0]
+                customer_dict['address_count'] = address_count
+                addr_cursor.close()
+            except:
+                customer_dict['address_count'] = 0
+            
+            # Initialize empty addresses list
+            customer_dict['addresses'] = []
+            result.append(customer_dict)
         
-        return customers or []
+        cursor.close()
+        conn.close()
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error filtering customers: {str(e)}")
