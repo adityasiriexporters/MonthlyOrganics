@@ -1246,8 +1246,9 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
         return []
 
 def get_all_customers_with_stats():
-    """Get all customers with their order statistics"""
+    """Get all customers with their order statistics and addresses"""
     from services.database import DatabaseService
+    from services.security import SecureAddressService
     
     try:
         query = """
@@ -1262,14 +1263,28 @@ def get_all_customers_with_stats():
             ORDER BY u.created_at DESC
         """
         customers = DatabaseService.execute_query(query, fetch_all=True)
+        
+        # Add addresses for each customer
+        if customers:
+            for customer in customers:
+                try:
+                    addresses = SecureAddressService.get_user_addresses(customer['id'])
+                    customer['addresses'] = addresses
+                    customer['address_count'] = len(addresses)
+                except Exception as e:
+                    logger.error(f"Error getting addresses for customer {customer['id']}: {str(e)}")
+                    customer['addresses'] = []
+                    customer['address_count'] = 0
+        
         return customers or []
     except Exception as e:
         logger.error(f"Error getting customers: {str(e)}")
         return []
 
 def get_filtered_customers(search=None, date_from=None, date_to=None, status_filter=None, min_orders=None):
-    """Get filtered customers with comprehensive filtering and security"""
+    """Get filtered customers with comprehensive filtering, security, and addresses"""
     from services.database import DatabaseService
+    from services.security import SecureAddressService
     
     try:
         # Base query with parameterized conditions
@@ -1326,6 +1341,19 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         query += " ORDER BY u.created_at DESC"
         
         customers = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
+        
+        # Add addresses for each customer
+        if customers:
+            for customer in customers:
+                try:
+                    addresses = SecureAddressService.get_user_addresses(customer['id'])
+                    customer['addresses'] = addresses
+                    customer['address_count'] = len(addresses)
+                except Exception as e:
+                    logger.error(f"Error getting addresses for customer {customer['id']}: {str(e)}")
+                    customer['addresses'] = []
+                    customer['address_count'] = 0
+        
         return customers or []
         
     except Exception as e:
