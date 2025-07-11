@@ -1263,36 +1263,20 @@ def get_all_customers_with_stats():
         """
         customers = DatabaseService.execute_query(query, fetch_all=True)
         
-        # Add address count for each customer using simple query
+        # Add simple address count for each customer
         if customers:
             for customer in customers:
                 try:
-                    # Simple address count query
-                    addr_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
-                    addr_result = DatabaseService.execute_query(addr_query, (customer['id'],), fetch_one=True)
-                    customer['address_count'] = addr_result['count'] if addr_result else 0
+                    # Get address count using simplified query
+                    addr_count_query = "SELECT COUNT(*) FROM addresses WHERE user_id = %s"
+                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],))
+                    customer['address_count'] = count_result[0][0] if count_result and count_result[0] else 0
                     
-                    # Get basic address info for preview
-                    preview_query = """
-                        SELECT id, nickname, locality, city, is_default 
-                        FROM addresses 
-                        WHERE user_id = %s 
-                        ORDER BY is_default DESC, created_at DESC 
-                        LIMIT 2
-                    """
-                    preview_addresses = DatabaseService.execute_query(preview_query, (customer['id'],), fetch_all=True)
+                    # Initialize empty addresses list for now
                     customer['addresses'] = []
                     
-                    for addr in preview_addresses or []:
-                        customer['addresses'].append({
-                            'id': addr.get('id'),
-                            'nickname': addr.get('nickname', 'Address'),
-                            'area': addr.get('locality') or addr.get('city', ''),
-                            'is_default': addr.get('is_default', False)
-                        })
-                    
                 except Exception as e:
-                    logger.error(f"Error getting address info for customer {customer['id']}: {str(e)}")
+                    logger.error(f"Error getting address count for customer {customer['id']}: {str(e)}")
                     customer['addresses'] = []
                     customer['address_count'] = 0
         
@@ -1361,36 +1345,20 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         
         customers = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
         
-        # Add basic address info for each customer
+        # Add simple address count for each customer
         if customers:
             for customer in customers:
                 try:
-                    # Simple address count query
-                    addr_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
-                    addr_result = DatabaseService.execute_query(addr_query, (customer['id'],), fetch_one=True)
-                    customer['address_count'] = addr_result['count'] if addr_result else 0
+                    # Get address count using simplified query
+                    addr_count_query = "SELECT COUNT(*) FROM addresses WHERE user_id = %s"
+                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],))
+                    customer['address_count'] = count_result[0][0] if count_result and count_result[0] else 0
                     
-                    # Get basic address info for preview
-                    preview_query = """
-                        SELECT id, nickname, locality, city, is_default 
-                        FROM addresses 
-                        WHERE user_id = %s 
-                        ORDER BY is_default DESC, created_at DESC 
-                        LIMIT 2
-                    """
-                    preview_addresses = DatabaseService.execute_query(preview_query, (customer['id'],), fetch_all=True)
+                    # Initialize empty addresses list for now
                     customer['addresses'] = []
                     
-                    for addr in preview_addresses or []:
-                        customer['addresses'].append({
-                            'id': addr.get('id'),
-                            'nickname': addr.get('nickname', 'Address'),
-                            'area': addr.get('locality') or addr.get('city', ''),
-                            'is_default': addr.get('is_default', False)
-                        })
-                    
                 except Exception as e:
-                    logger.error(f"Error getting address info for customer {customer['id']}: {str(e)}")
+                    logger.error(f"Error getting address count for customer {customer['id']}: {str(e)}")
                     customer['addresses'] = []
                     customer['address_count'] = 0
         
