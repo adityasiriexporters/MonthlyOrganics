@@ -311,26 +311,14 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
                 
                 <div class="space-y-4">
-                    <!-- Predefined Labels -->
-                    <div class="flex space-x-2">
-                        <label class="flex-1">
-                            <input type="radio" name="label_type" value="home" class="sr-only" onchange="toggleCustomLabel()">
-                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
-                                <span class="text-sm font-medium">My Home</span>
-                            </div>
+                    <!-- Manual Label Input -->
+                    <div>
+                        <label for="custom_label" class="block text-sm font-medium text-gray-700 required-field">
+                            Enter Address Label
                         </label>
-                        <label class="flex-1">
-                            <input type="radio" name="label_type" value="other" class="sr-only" onchange="toggleCustomLabel()">
-                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
-                                <span class="text-sm font-medium">Others</span>
-                            </div>
-                        </label>
-                    </div>
-                    
-                    <!-- Custom Label Input -->
-                    <div id="customLabelDiv" class="hidden">
-                        <input type="text" id="custom_label" name="custom_label" placeholder="Enter custom label"
-                               class="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                        <input type="text" id="custom_label" name="custom_label" required
+                               placeholder="e.g., Home, Office, Friend's Place, etc."
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
                     
                     <!-- Hidden nickname field that gets populated -->
@@ -786,27 +774,7 @@ function populateFormWithAddressData(selectedOption) {
     // Set nickname and label
     const nickname = selectedOption.dataset.nickname || '';
     document.getElementById('nickname').value = nickname;
-    
-    // Set appropriate radio button for label
-    const labelRadios = document.querySelectorAll('input[name="label_type"]');
-    let labelSet = false;
-    
-    for (let radio of labelRadios) {
-        if (radio.value === nickname.toLowerCase().replace(/\s+/g, '_')) {
-            radio.checked = true;
-            labelSet = true;
-            break;
-        }
-    }
-    
-    // If no standard label matches, use "other"
-    if (!labelSet) {
-        document.getElementById('label_other').checked = true;
-        document.getElementById('custom_label').value = nickname;
-        document.getElementById('customLabelDiv').classList.remove('hidden');
-    }
-    
-    toggleCustomLabel();
+    document.getElementById('custom_label').value = nickname;
     validateForm();
 }
 
@@ -829,10 +797,8 @@ function resetAddressForm() {
     selectedLocation = null;
     hideLocationSelected();
     
-    // Reset label selection
-    document.getElementById('label_home').checked = true;
-    document.getElementById('customLabelDiv').classList.add('hidden');
-    toggleCustomLabel();
+    // Reset nickname field
+    document.getElementById('nickname').value = '';
     
     // Show address form
     document.getElementById('addressForm').style.display = 'block';
@@ -852,16 +818,13 @@ function setupFormValidation() {
         input.addEventListener('blur', validateForm);
     });
     
-    // Add validation for radio buttons
-    const radioButtons = form.querySelectorAll('input[name="label_type"]');
-    radioButtons.forEach(radio => {
-        radio.addEventListener('change', validateForm);
-    });
-    
     // Add validation for custom label input
     const customLabel = document.getElementById('custom_label');
     if (customLabel) {
-        customLabel.addEventListener('input', validateForm);
+        customLabel.addEventListener('input', function() {
+            updateNickname();
+            validateForm();
+        });
         customLabel.addEventListener('change', validateForm);
     }
 }
@@ -894,18 +857,11 @@ function validateForm() {
     }
     
     // Check address label
-    const labelType = form.querySelector('input[name="label_type"]:checked');
-    if (!labelType) {
+    const customLabel = document.getElementById('custom_label').value.trim();
+    if (!customLabel) {
         isValid = false;
-    } else if (labelType.value === 'other') {
-        const customLabel = document.getElementById('custom_label').value.trim();
-        if (!customLabel) {
-            isValid = false;
-        } else {
-            document.getElementById('nickname').value = customLabel;
-        }
     } else {
-        document.getElementById('nickname').value = 'My Home';
+        document.getElementById('nickname').value = customLabel;
     }
     
     // Check contact number format
@@ -934,29 +890,13 @@ function validateConfirmation() {
 }
 
 // Label Functions
-function toggleCustomLabel() {
-    const selectedLabel = document.querySelector('input[name="label_type"]:checked');
-    const customDiv = document.getElementById('customLabelDiv');
-    const customInput = document.getElementById('custom_label');
+function updateNickname() {
+    const customLabelInput = document.getElementById('custom_label');
+    const nicknameInput = document.getElementById('nickname');
     
-    // Update visual selection
-    document.querySelectorAll('.radio-option').forEach(option => {
-        option.classList.remove('selected');
-    });
-    
-    if (selectedLabel) {
-        selectedLabel.closest('label').querySelector('.radio-option').classList.add('selected');
-        
-        if (selectedLabel.value === 'other') {
-            customDiv.classList.remove('hidden');
-            customInput.focus();
-        } else {
-            customDiv.classList.add('hidden');
-            customInput.value = '';
-        }
+    if (customLabelInput && nicknameInput) {
+        nicknameInput.value = customLabelInput.value;
     }
-    
-    validateForm();
 }
 
 function setAction(action) {

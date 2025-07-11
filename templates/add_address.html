@@ -195,42 +195,14 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
                 
                 <div class="space-y-4">
-                    <!-- Predefined Labels - Row 1 -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex-1">
-                            <input type="radio" name="label_type" value="home" class="sr-only" onchange="toggleCustomLabel()">
-                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
-                                <span class="text-sm font-medium">My Home</span>
-                            </div>
+                    <!-- Manual Label Input -->
+                    <div>
+                        <label for="custom_label" class="block text-sm font-medium text-gray-700 required-field">
+                            Enter Address Label
                         </label>
-                        <label class="flex-1">
-                            <input type="radio" name="label_type" value="work" class="sr-only" onchange="toggleCustomLabel()">
-                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
-                                <span class="text-sm font-medium">Work</span>
-                            </div>
-                        </label>
-                    </div>
-                    
-                    <!-- Predefined Labels - Row 2 -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex-1">
-                            <input type="radio" name="label_type" value="friend" class="sr-only" onchange="toggleCustomLabel()">
-                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
-                                <span class="text-sm font-medium">Friend</span>
-                            </div>
-                        </label>
-                        <label class="flex-1">
-                            <input type="radio" name="label_type" value="other" class="sr-only" onchange="toggleCustomLabel()">
-                            <div class="border border-gray-300 rounded-lg px-4 py-3 text-center cursor-pointer hover:bg-primary/5 transition-colors radio-option">
-                                <span class="text-sm font-medium">Others</span>
-                            </div>
-                        </label>
-                    </div>
-                    
-                    <!-- Custom Label Input -->
-                    <div id="customLabelDiv" class="hidden">
-                        <input type="text" id="custom_label" name="custom_label" placeholder="Enter custom label"
-                               class="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                        <input type="text" id="custom_label" name="custom_label" required
+                               placeholder="e.g., Home, Office, Friend's Place, etc."
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
                     
                     <!-- Hidden nickname field that gets populated -->
@@ -647,72 +619,20 @@ function setupEventListeners() {
     });
 }
 
-function toggleCustomLabel() {
-    const selectedInput = document.querySelector('input[name="label_type"]:checked');
-    if (!selectedInput) return;
-    
-    const labelType = selectedInput.value;
-    const customLabelDiv = document.getElementById('customLabelDiv');
+// Update nickname when custom label changes
+function updateNickname() {
     const customLabelInput = document.getElementById('custom_label');
     const nicknameInput = document.getElementById('nickname');
     
-    // Update radio button appearance
-    document.querySelectorAll('.radio-option').forEach(option => {
-        option.classList.remove('border-primary', 'bg-primary/5');
-        option.classList.add('border-gray-300');
-    });
-    
-    const selectedOption = selectedInput.parentElement.querySelector('.radio-option');
-    selectedOption.classList.remove('border-gray-300');
-    selectedOption.classList.add('border-primary', 'bg-primary/5');
-    
-    if (labelType === 'other') {
-        customLabelDiv.classList.remove('hidden');
-        customLabelInput.required = true;
-        nicknameInput.value = '';
-    } else {
-        customLabelDiv.classList.add('hidden');
-        customLabelInput.required = false;
-        customLabelInput.value = '';
-        
-        // Set nickname based on selection with incremental numbering
-        let baseNickname = '';
-        switch(labelType) {
-            case 'home':
-                baseNickname = 'My Home';
-                break;
-            case 'work':
-                baseNickname = 'Work';
-                break;
-            case 'friend':
-                baseNickname = 'Friend';
-                break;
-        }
-        
-        // Generate incremental label if base already exists
-        const finalNickname = generateIncrementalLabel(baseNickname);
-        nicknameInput.value = finalNickname;
-        
-        // Update the display text if incremental
-        if (finalNickname !== baseNickname) {
-            const displaySpan = selectedOption.querySelector('span');
-            const originalText = displaySpan.textContent;
-            displaySpan.textContent = finalNickname;
-            
-            // Reset text after a delay to show original label for next use
-            setTimeout(() => {
-                displaySpan.textContent = originalText;
-            }, 3000);
-        }
+    if (customLabelInput && nicknameInput) {
+        nicknameInput.value = customLabelInput.value;
     }
 }
 
 // Update nickname when custom label changes
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('custom_label')) {
-        document.getElementById('custom_label').addEventListener('input', function() {
-            document.getElementById('nickname').value = this.value;
-        });
+        document.getElementById('custom_label').addEventListener('input', updateNickname);
     }
 });
 
@@ -720,24 +640,16 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('addressForm')) {
         document.getElementById('addressForm').addEventListener('submit', function(e) {
-            const nickname = document.getElementById('nickname').value;
-            const labelType = document.querySelector('input[name="label_type"]:checked');
+            const customLabel = document.getElementById('custom_label').value.trim();
             
-            if (!labelType) {
+            if (!customLabel) {
                 e.preventDefault();
-                alert('Please select an address label.');
+                alert('Please enter an address label.');
                 return;
             }
             
-            if (labelType.value === 'other' && !nickname) {
-                e.preventDefault();
-                alert('Please enter a custom label.');
-                return;
-            }
-            
-            if (labelType.value === 'home') {
-                document.getElementById('nickname').value = 'My Home';
-            }
+            // Update nickname field with the custom label value
+            document.getElementById('nickname').value = customLabel;
         });
     }
 });
