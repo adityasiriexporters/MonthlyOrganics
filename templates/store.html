@@ -7,12 +7,21 @@
 <div class="h-screen flex flex-col bg-gray-50">
     <!-- Fixed Header -->
     <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 border-b border-gray-200">
-        <div class="max-w-md mx-auto flex items-center justify-center p-4">
-            <!-- Brand Logo (Centered) -->
+        <div class="max-w-md mx-auto flex items-center justify-between p-4">
+            <!-- Brand Logo (Larger) -->
             <div class="flex items-center">
                 <img src="{{ url_for('static', filename='images/fulllogo_transparent.png') }}" 
                      alt="Monthly Organics" 
                      class="h-10 w-auto">
+            </div>
+            
+            <!-- Cart Icon -->
+            <div class="flex items-center">
+                <a href="{{ url_for('cart') }}" class="relative">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0v-2m8 2v-2M7 18a2 2 0 11-4 0 2 2 0 014 0zM19 18a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </a>
             </div>
         </div>
     </header>
@@ -271,29 +280,6 @@ function scrollToCategory(categoryId) {
 
 // Make scrollToCategory globally accessible for onclick handlers
 window.scrollToCategory = scrollToCategory;
-
-// Address selection function (same as homepage)
-function selectAddress(addressId) {
-    fetch('/set-default-address/' + addressId, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Reload the page to update the address display
-            location.reload();
-        } else {
-            alert('Error setting default address');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error setting default address');
-    });
-}
 
 // Additional event delegation for better browser compatibility
 document.addEventListener('DOMContentLoaded', function() {

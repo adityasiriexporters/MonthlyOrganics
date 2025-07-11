@@ -28,4 +28,12 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Validation functions moved to validators.forms module
+def validate_mobile_number(mobile_number: str) -> bool:
+    """Validate Indian mobile number format"""
+    import re
+    return bool(mobile_number and re.match(r'^[6-9]\d{9}$', mobile_number))
+
+def validate_otp(otp: str) -> bool:
+    """Validate OTP format"""
+    import re
+    return bool(otp and re.match(r'^\d{6}$', otp))

@@ -1,6 +1,5 @@
 import os
 import logging
-import re
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -9,11 +8,8 @@ from decimal import Decimal
 
 # Import services and utilities
 from models import db, init_db
-from services.database import CartService
-from services.security import SecureUserService, SecureAddressService, SecurityAuditLogger
-from utils.decorators import login_required
-from validators.forms import FormValidator
-from utils.encryption import DataEncryption
+from services.database import CartService, UserService
+from utils.decorators import login_required, validate_mobile_number, validate_otp
 from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
     render_add_to_cart_button, render_cart_totals
@@ -22,39 +18,6 @@ from utils.template_helpers import (
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-def generate_incremental_label(user_id: int, requested_nickname: str) -> str:
-    """Generate incremental label for address nickname if it already exists."""
-    try:
-        # Get existing addresses for the user
-        existing_addresses = SecureAddressService.get_user_addresses(user_id)
-        existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses]
-        
-        # Check if the requested nickname already exists
-        if requested_nickname.lower() not in existing_nicknames:
-            return requested_nickname
-        
-        # Find the highest number for this base nickname
-        base_nickname = requested_nickname
-        pattern = re.compile(rf"^{re.escape(base_nickname.lower())}(?: (\d+))?$")
-        
-        max_number = 0
-        for nickname in existing_nicknames:
-            match = pattern.match(nickname)
-            if match:
-                number_str = match.group(1)
-                if number_str:
-                    max_number = max(max_number, int(number_str))
-                else:
-                    max_number = max(max_number, 1)  # Original name counts as 1
-        
-        # Generate new incremental name
-        new_number = max_number + 1
-        return f"{base_nickname} {new_number}"
-        
-    except Exception as e:
-        logger.error(f"Error generating incremental label: {e}")
-        return requested_nickname
 
 class Base(DeclarativeBase):
     pass
@@ -83,7 +46,6 @@ with app.app_context():
 def index():
     """Main index route that renders the homepage template."""
     logger.info("Rendering homepage")
-    
     return render_template('index.html')
 
 @app.route('/profile')
@@ -96,10 +58,41 @@ def profile():
         return render_template('profile.html')
 
 # Import store functions from routes module
-from routes.store import store as store_view, products_by_category, all_products
+from routes.store import products_by_category, all_products
+from services.database import DatabaseService
+
+@app.route('/store')
+@login_required
+def store():
+    """Store page route that displays categories and products with search functionality."""
+    try:
+        # Get search query from URL parameters
+        search_query = request.args.get('search', '').strip()
+        
+        # Get all categories using direct database query with connection pooling
+        categories_query = """
+        SELECT id, name 
+        FROM categories 
+        ORDER BY name
+        """
+        categories = DatabaseService.execute_query(categories_query, fetch_all=True)
+        
+        # Convert to list of dictionaries for template
+        categories_list = []
+        for category in categories:
+            categories_list.append({
+                'id': category[0],
+                'name': category[1]
+            })
+        
+        return render_template('store.html', categories=categories_list, search_query=search_query)
+        
+    except Exception as e:
+        logger.error(f"Error loading store page: {e}")
+        flash('Error loading store page', 'error')
+        return redirect(url_for('index'))
 
 # Store routes 
-app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
@@ -156,434 +149,167 @@ def profile_settings():
     """Profile settings page route - placeholder."""
     return render_template('profile.html')
 
+from services.address_service import AddressService
+
 @app.route('/addresses')
 @login_required
 def addresses():
-    """Addresses page route."""
+    """Saved addresses page with encrypted address management."""
     try:
         user_id = session['user_id']
-        
-        # Get user's addresses using SecureAddressService
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
-        logger.info(f"Found {len(user_addresses)} addresses for user {user_id}")
+        user_addresses = AddressService.get_user_addresses(user_id)
         
         return render_template('addresses.html', addresses=user_addresses)
         
     except Exception as e:
         logger.error(f"Error loading addresses: {e}")
-        flash('An error occurred while loading addresses. Please try again.', 'error')
+        flash('Error loading addresses', 'error')
         return redirect(url_for('profile'))
 
 @app.route('/add-address')
 @login_required
 def add_address():
-    """Add address page route."""
-    return render_template('add_address.html', 
-                         google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+    """Add new address page with Google Maps integration."""
+    try:
+        google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+        if not google_maps_api_key:
+            flash('Google Maps is currently unavailable', 'error')
+            return redirect(url_for('addresses'))
+        
+        return render_template('add_address.html', google_maps_api_key=google_maps_api_key)
+        
+    except Exception as e:
+        logger.error(f"Error loading add address page: {e}")
+        flash('Error loading add address page', 'error')
+        return redirect(url_for('addresses'))
 
 @app.route('/save-address', methods=['POST'])
 @login_required
 def save_address():
-    """Save new address."""
+    """Save new address with encryption."""
     try:
         user_id = session['user_id']
+        address_data = request.get_json()
         
-        # Log all form data for debugging
-        logger.info(f"Received form data: {dict(request.form)}")
+        # Validate required fields
+        required_fields = ['house_no', 'floor_door', 'address_label', 'receiver_name', 'receiver_phone', 'latitude', 'longitude']
+        for field in required_fields:
+            if not address_data.get(field):
+                return f"Missing required field: {field}", 400
         
-        # Generate incremental label if nickname already exists
-        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
-        final_nickname = generate_incremental_label(user_id, requested_nickname)
-        
-        # Get form data with more robust handling
-        address_data = {
-            'nickname': final_nickname,
-            'house_number': FormValidator.sanitize_string(request.form.get('house_number', '')),
-            'block_name': FormValidator.sanitize_string(request.form.get('block_name', '')),
-            'floor_door': FormValidator.sanitize_string(request.form.get('floor_door', '')),
-            'contact_number': FormValidator.sanitize_string(request.form.get('contact_number', '')),
-            'receiver_name': FormValidator.sanitize_string(request.form.get('receiver_name', '')),
-            'latitude': float(request.form.get('latitude', 0)),
-            'longitude': float(request.form.get('longitude', 0)),
-            'locality': FormValidator.sanitize_string(request.form.get('locality', '')),
-            'city': FormValidator.sanitize_string(request.form.get('city', '')),
-            'pincode': FormValidator.sanitize_string(request.form.get('pincode', '')),
-            'nearby_landmark': FormValidator.sanitize_string(request.form.get('nearby_landmark', '')),
-            'address_notes': FormValidator.sanitize_string(request.form.get('address_notes', '')),
-            'is_default': request.form.get('is_default') == 'on'
-        }
-        
-        logger.info(f"Processed address data: {address_data}")
-        
-        # Validate address data using FormValidator
-        is_valid, errors = FormValidator.validate_address_data(address_data)
-        logger.info(f"Validation result: valid={is_valid}, errors={errors}")
-        
-        if not is_valid:
-            for error in errors:
-                flash(error, 'error')
-            return redirect(url_for('add_address'))
-        
-        # Save address using SecureAddressService
-        logger.info(f"Attempting to save address for user {user_id}")
-        address_id = SecureAddressService.create_address(user_id, address_data)
-        logger.info(f"Address creation result: {address_id}")
-        
-        SecurityAuditLogger.log_data_access(user_id, "CREATE", "address", bool(address_id))
+        # Save address using AddressService
+        address_id = AddressService.save_address(user_id, address_data)
         
         if address_id:
             flash('Address saved successfully!', 'success')
-            return redirect(url_for('addresses'))
+            return '', 200
         else:
-            flash('Error saving address. Please try again.', 'error')
-            return redirect(url_for('add_address'))
+            return 'Failed to save address', 500
             
     except Exception as e:
         logger.error(f"Error saving address: {e}")
-        import traceback
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        flash('An error occurred while saving the address. Please try again.', 'error')
-        return redirect(url_for('add_address'))
-
-@app.route('/set-default-address/<int:address_id>', methods=['GET', 'POST'])
-@login_required
-def set_default_address(address_id):
-    """Set an address as default."""
-    try:
-        user_id = session['user_id']
-        
-        if SecureAddressService.set_default_address(address_id, user_id):
-            SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_default")
-            
-            # Return JSON for AJAX calls, redirect for normal calls
-            if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-                return jsonify({'success': True, 'message': 'Default address updated successfully!'})
-            else:
-                flash('Default address updated successfully!', 'success')
-        else:
-            if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-                return jsonify({'success': False, 'message': 'Error updating default address.'})
-            else:
-                flash('Error updating default address.', 'error')
-            
-    except Exception as e:
-        logger.error(f"Error setting default address: {e}")
-        if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-            return jsonify({'success': False, 'message': 'An error occurred. Please try again.'})
-        else:
-            flash('An error occurred. Please try again.', 'error')
-    
-    return redirect(url_for('addresses'))
+        return f'Error saving address: {str(e)}', 500
 
 @app.route('/edit-address/<int:address_id>')
 @login_required
 def edit_address(address_id):
-    """Edit address page."""
+    """Edit address page with Google Maps integration."""
     try:
         user_id = session['user_id']
-        
-        # Get the specific address using SecureAddressService
-        addresses = SecureAddressService.get_user_addresses(user_id)
-        address = None
-        
-        for addr in addresses:
-            if addr['id'] == address_id:
-                address = addr
-                break
+        address = AddressService.get_address_by_id(user_id, address_id)
         
         if not address:
-            flash('Address not found.', 'error')
+            flash('Address not found', 'error')
             return redirect(url_for('addresses'))
         
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "address")
+        google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+        if not google_maps_api_key:
+            flash('Google Maps is currently unavailable', 'error')
+            return redirect(url_for('addresses'))
         
-        return render_template('edit_address.html', 
-                             address=address,
-                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        return render_template('edit_address.html', address=address, google_maps_api_key=google_maps_api_key)
         
     except Exception as e:
         logger.error(f"Error loading edit address page: {e}")
-        flash('An error occurred. Please try again.', 'error')
+        flash('Error loading edit address page', 'error')
         return redirect(url_for('addresses'))
 
 @app.route('/update-address/<int:address_id>', methods=['POST'])
 @login_required
 def update_address(address_id):
-    """Update an existing address."""
+    """Update existing address with encryption."""
     try:
         user_id = session['user_id']
-        
-        # Get form data
-        form_data = request.form.to_dict()
-        logger.info(f"Updating address {address_id} with data: {form_data}")
+        address_data = request.get_json()
         
         # Validate required fields
-        required_fields = ['house_number', 'floor_door', 'locality', 'nickname', 'receiver_name', 'contact_number']
-        missing_fields = [field for field in required_fields if not form_data.get(field)]
+        required_fields = ['house_no', 'floor_door', 'address_label', 'receiver_name', 'receiver_phone', 'latitude', 'longitude']
+        for field in required_fields:
+            if not address_data.get(field):
+                return f"Missing required field: {field}", 400
         
-        if missing_fields:
-            flash(f'Please fill in all required fields: {", ".join(missing_fields)}', 'error')
-            return redirect(url_for('edit_address', address_id=address_id))
+        # Update address using AddressService
+        success = AddressService.update_address(user_id, address_id, address_data)
         
-        # Validate coordinates
-        try:
-            latitude = float(form_data.get('latitude', 0))
-            longitude = float(form_data.get('longitude', 0))
-            if latitude == 0 or longitude == 0:
-                flash('Invalid location coordinates.', 'error')
-                return redirect(url_for('edit_address', address_id=address_id))
-        except (ValueError, TypeError):
-            flash('Invalid location coordinates.', 'error')
-            return redirect(url_for('edit_address', address_id=address_id))
-        
-        # Generate incremental label if nickname already exists (only for editing existing address)
-        requested_nickname = form_data.get('nickname')
-        
-        # For editing, we don't need incremental naming unless they're changing to a conflicting name
-        # Get existing addresses excluding current one
-        existing_addresses = SecureAddressService.get_user_addresses(user_id)
-        existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
-        
-        final_nickname = requested_nickname
-        if requested_nickname.lower() in existing_nicknames:
-            final_nickname = generate_incremental_label(user_id, requested_nickname)
-        
-        # Prepare address data
-        address_data = {
-            'nickname': final_nickname,
-            'house_number': form_data.get('house_number'),
-            'block_name': form_data.get('block_name', ''),
-            'floor_door': form_data.get('floor_door'),
-            'locality': form_data.get('locality'),
-            'city': form_data.get('city'),
-            'pincode': form_data.get('pincode'),
-            'latitude': latitude,
-            'longitude': longitude,
-            'nearby_landmark': form_data.get('nearby_landmark', ''),
-            'contact_number': form_data.get('contact_number', ''),
-            'address_notes': form_data.get('address_notes', ''),
-            'receiver_name': form_data.get('receiver_name', ''),
-            'is_default': bool(form_data.get('is_default'))
-        }
-        
-        # Validate address data
-        is_valid, errors = FormValidator.validate_address_data(address_data)
-        if not is_valid:
-            for error in errors:
-                flash(error, 'error')
-            return redirect(url_for('edit_address', address_id=address_id))
-        
-        # Update address using SecureAddressService
-        if SecureAddressService.update_address(address_id, user_id, address_data):
-            SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
+        if success:
             flash('Address updated successfully!', 'success')
-            return redirect(url_for('addresses'))
+            return '', 200
         else:
-            flash('Error updating address.', 'error')
-            return redirect(url_for('edit_address', address_id=address_id))
-        
+            return 'Failed to update address', 500
+            
     except Exception as e:
         logger.error(f"Error updating address: {e}")
-        flash('An error occurred. Please try again.', 'error')
-        return redirect(url_for('edit_address', address_id=address_id))
+        return f'Error updating address: {str(e)}', 500
 
-@app.route('/delete-address/<int:address_id>')
+@app.route('/set-default-address/<int:address_id>', methods=['POST'])
+@login_required
+def set_default_address(address_id):
+    """Set an address as default."""
+    try:
+        user_id = session['user_id']
+        success = AddressService.set_default_address(user_id, address_id)
+        
+        if success:
+            flash('Default address updated', 'success')
+            # Return updated address HTML for HTMX
+            address = AddressService.get_address_by_id(user_id, address_id)
+            if address:
+                return render_template('partials/address_card.html', address=address)
+        
+        return 'Failed to set default address', 500
+        
+    except Exception as e:
+        logger.error(f"Error setting default address: {e}")
+        return f'Error setting default address: {str(e)}', 500
+
+@app.route('/delete-address/<int:address_id>', methods=['DELETE'])
 @login_required
 def delete_address(address_id):
     """Delete an address."""
     try:
         user_id = session['user_id']
         
-        if SecureAddressService.delete_address(address_id, user_id):
-            SecurityAuditLogger.log_data_access(user_id, "DELETE", "address")
-            flash('Address deleted successfully!', 'success')
+        # Check if it's the default address
+        address = AddressService.get_address_by_id(user_id, address_id)
+        if address and address['is_default']:
+            return 'Cannot delete default address', 400
+        
+        success = AddressService.delete_address(user_id, address_id)
+        
+        if success:
+            flash('Address deleted successfully', 'success')
+            return '', 200
         else:
-            flash('Error deleting address.', 'error')
+            return 'Failed to delete address', 500
             
     except Exception as e:
         logger.error(f"Error deleting address: {e}")
-        flash('An error occurred. Please try again.', 'error')
-    
-    return redirect(url_for('addresses'))
-
-@app.route('/api/addresses')
-@login_required
-def api_addresses():
-    """API endpoint to get user addresses for dropdown."""
-    try:
-        user_id = session['user_id']
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
-        
-        # Convert to simple list for JSON response
-        addresses_list = []
-        for addr in user_addresses:
-            addresses_list.append({
-                'id': addr['id'],
-                'nickname': addr['nickname'],
-                'locality': addr['locality'],
-                'city': addr['city'],
-                'is_default': addr['is_default']
-            })
-        
-        return {'addresses': addresses_list}
-        
-    except Exception as e:
-        logger.error(f"Error fetching addresses API: {e}")
-        return {'addresses': []}
-
-@app.route('/checkout/address')
-@login_required
-def checkout_address():
-    """Checkout address selection and management page."""
-    try:
-        user_id = session['user_id']
-        
-        # Clear checkout session data if not in confirmation step
-        if not request.args.get('step'):
-            session.pop('checkout_address_id', None)
-            session.pop('checkout_one_time_address', None)
-        
-        # Get user's addresses using SecureAddressService
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
-        
-        # Get cart items and totals for display
-        cart_items = CartService.get_cart_items(user_id)
-        if not cart_items:
-            flash('Your cart is empty. Please add items before checkout.', 'error')
-            return redirect(url_for('cart'))
-        
-        # Calculate cart totals (convert to float to handle decimal.Decimal)
-        subtotal = float(sum(item['total_price'] for item in cart_items))
-        delivery_fee = 50.00  # Fixed delivery fee
-        total = subtotal + delivery_fee
-        
-        logger.info(f"Loading checkout address page for user {user_id} with {len(cart_items)} items")
-        
-        return render_template('checkout_address.html', 
-                             addresses=user_addresses,
-                             cart_items=cart_items,
-                             subtotal=subtotal,
-                             delivery_fee=delivery_fee,
-                             total=total,
-                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'),
-                             checkout_one_time_address=session.get('checkout_one_time_address'),
-                             checkout_address_id=session.get('checkout_address_id'))
-        
-    except Exception as e:
-        logger.error(f"Error loading checkout address page: {e}")
-        flash('An error occurred. Please try again.', 'error')
-        return redirect(url_for('cart'))
-
-@app.route('/checkout/save-address', methods=['POST'])
-@login_required
-def checkout_save_address():
-    """Save or update address during checkout and proceed to next step."""
-    try:
-        user_id = session['user_id']
-        
-        # Get form data
-        form_data = request.form.to_dict()
-        action = form_data.get('action')  # 'save' or 'one_time'
-        address_id = form_data.get('address_id')  # For editing existing address
-        
-        # Validate required fields
-        required_fields = ['house_number', 'floor_door', 'locality', 'nickname', 'receiver_name', 'contact_number']
-        missing_fields = [field for field in required_fields if not form_data.get(field)]
-        
-        if missing_fields:
-            flash(f'Please fill in all required fields: {", ".join(missing_fields)}', 'error')
-            return redirect(url_for('checkout_address'))
-        
-        # Validate coordinates
-        try:
-            latitude = float(form_data.get('latitude', 0))
-            longitude = float(form_data.get('longitude', 0))
-            if latitude == 0 or longitude == 0:
-                flash('Please select a location on the map.', 'error')
-                return redirect(url_for('checkout_address'))
-        except (ValueError, TypeError):
-            flash('Invalid location coordinates.', 'error')
-            return redirect(url_for('checkout_address'))
-        
-        # Prepare address data
-        address_data = {
-            'nickname': form_data.get('nickname'),
-            'house_number': form_data.get('house_number'),
-            'block_name': form_data.get('block_name', ''),
-            'floor_door': form_data.get('floor_door'),
-            'locality': form_data.get('locality'),
-            'city': form_data.get('city'),
-            'pincode': form_data.get('pincode'),
-            'latitude': latitude,
-            'longitude': longitude,
-            'nearby_landmark': form_data.get('nearby_landmark', ''),
-            'contact_number': form_data.get('contact_number', ''),
-            'address_notes': form_data.get('address_notes', ''),
-            'receiver_name': form_data.get('receiver_name', ''),
-            'is_default': False  # Default to false for checkout addresses
-        }
-        
-        if action == 'save':
-            # Save address permanently
-            if address_id:
-                # Update existing address
-                if SecureAddressService.update_address(int(address_id), user_id, address_data):
-                    SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
-                    session['checkout_address_id'] = int(address_id)
-                    flash('Address updated successfully!', 'success')
-                else:
-                    flash('Error updating address.', 'error')
-                    return redirect(url_for('checkout_address'))
-            else:
-                # Create new address
-                new_address_id = SecureAddressService.create_address(user_id, address_data)
-                if new_address_id:
-                    SecurityAuditLogger.log_data_access(user_id, "CREATE", "address")
-                    session['checkout_address_id'] = new_address_id
-                    flash('Address saved successfully!', 'success')
-                else:
-                    flash('Error saving address.', 'error')
-                    return redirect(url_for('checkout_address'))
-        
-        elif action == 'one_time':
-            # Store address data in session for one-time use
-            session['checkout_one_time_address'] = address_data
-            session['checkout_address_id'] = None  # Clear any saved address selection
-            flash('Address set for one-time use.', 'success')
-        
-        # Redirect to confirmation step
-        return redirect(url_for('checkout_address') + '?step=confirm')
-        
-    except Exception as e:
-        logger.error(f"Error saving checkout address: {e}")
-        flash('An error occurred while saving the address. Please try again.', 'error')
-        return redirect(url_for('checkout_address'))
+        return f'Error deleting address: {str(e)}', 500
 
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""
     return {"status": "healthy", "message": "Monthly Organics is running"}
-
-@app.route('/admin/migrate-data', methods=['POST'])
-def migrate_data():
-    """Manual endpoint to migrate existing data to encrypted format"""
-    try:
-        from utils.data_migration import DataMigration
-        
-        # Run migration
-        if DataMigration.run_full_migration():
-            # Verify migration
-            DataMigration.verify_migration()
-            return {"status": "success", "message": "Data migration completed successfully"}
-        else:
-            return {"status": "error", "message": "Data migration completed with errors"}, 500
-            
-    except Exception as e:
-        logger.error(f"Manual data migration error: {e}")
-        return {"status": "error", "message": f"Migration failed: {str(e)}"}, 500
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -607,8 +333,8 @@ def send_otp():
     try:
         mobile_number = request.form.get('mobile_number', '').strip()
         
-        # Validate mobile number format
-        if not FormValidator.validate_mobile_number(mobile_number):
+        # Validate mobile number format using utility function
+        if not validate_mobile_number(mobile_number):
             flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
             return redirect(url_for('login'))
         
@@ -620,8 +346,8 @@ def send_otp():
         session['mobile_number'] = mobile_number
         session['otp_attempts'] = 0
         
-        # For testing - log OTP (will be replaced with SMS service)
-        logger.info(f"OTP for {mobile_number} is: {otp} (TEST MODE)")
+        # For testing - print OTP to console
+        print(f"OTP for {mobile_number} is: {otp} (TEST MODE)")
         
         return redirect(url_for('verify'))
         
@@ -663,8 +389,8 @@ def verify_otp():
             flash('Too many failed attempts. Please try again.', 'error')
             return redirect(url_for('login'))
         
-        # Validate OTP format
-        if not FormValidator.validate_otp(submitted_otp):
+        # Validate OTP format using utility function
+        if not validate_otp(submitted_otp):
             flash('Please enter a valid 6-digit OTP.', 'error')
             return redirect(url_for('verify'))
         
@@ -673,33 +399,20 @@ def verify_otp():
             flash(f'Invalid OTP. You have {4 - session["otp_attempts"]} attempts remaining.', 'error')
             return redirect(url_for('verify'))
         
-        # OTP is correct - find or create user using SecureUserService
-        user = SecureUserService.find_user_by_phone(mobile_number)
+        # OTP is correct - find or create user using UserService
+        user = UserService.find_user_by_phone(mobile_number)
         
         if user:
-            user_id = user['id']
-            SecurityAuditLogger.log_authentication_event(
-                DataEncryption.hash_for_search(mobile_number)[:8], 
-                "LOGIN_EXISTING_USER"
-            )
-            logger.info(f"Existing user logged in")
+            user_id = user.id
+            logger.info(f"Existing user logged in: {mobile_number}")
         else:
             # Create new user
-            user = SecureUserService.create_user(mobile_number)
+            user = UserService.create_user(mobile_number)
             if not user:
-                SecurityAuditLogger.log_authentication_event(
-                    DataEncryption.hash_for_search(mobile_number)[:8], 
-                    "USER_CREATION_FAILED", 
-                    False
-                )
                 flash('Error creating user account. Please try again.', 'error')
                 return redirect(url_for('login'))
-            user_id = user['id']
-            SecurityAuditLogger.log_authentication_event(
-                DataEncryption.hash_for_search(mobile_number)[:8], 
-                "NEW_USER_CREATED"
-            )
-            logger.info(f"New user created")
+            user_id = user.id
+            logger.info(f"New user created: {mobile_number}")
         
         # Login user
         session['user_id'] = user_id
@@ -824,188 +537,6 @@ def cart_totals():
     except Exception as e:
         logger.error(f"Error calculating cart totals: {e}", exc_info=True)
         return f"Error calculating totals: {str(e)}", 500
-
-@app.route('/checkout/payment')
-@login_required
-def checkout_payment():
-    """Payment page for finalizing the order."""
-    try:
-        user_id = session['user_id']
-        
-        # Check if we have address confirmation
-        checkout_address_id = session.get('checkout_address_id')
-        checkout_one_time_address = session.get('checkout_one_time_address')
-        
-        if not checkout_address_id and not checkout_one_time_address:
-            flash('Please select a delivery address first.', 'error')
-            return redirect(url_for('checkout_address'))
-        
-        # Get cart items and totals
-        cart_items = CartService.get_cart_items(user_id)
-        if not cart_items:
-            flash('Your cart is empty.', 'error')
-            return redirect(url_for('cart'))
-        
-        # Calculate totals
-        subtotal = sum(Decimal(str(item['total_price'])) for item in cart_items)
-        delivery_fee = Decimal('50.00')
-        total = subtotal + delivery_fee
-        
-        # Get address details for display
-        address_details = None
-        if checkout_address_id:
-            address_details = SecureAddressService.get_address_by_id(checkout_address_id, user_id)
-        elif checkout_one_time_address:
-            address_details = checkout_one_time_address
-            
-        logger.info(f"Payment page for user {user_id} with {len(cart_items)} items, total: ₹{total}")
-        
-        return render_template('checkout_payment.html',
-                             cart_items=cart_items,
-                             subtotal=float(subtotal),
-                             delivery_fee=float(delivery_fee),
-                             total=float(total),
-                             address_details=address_details,
-                             is_saved_address=bool(checkout_address_id))
-                             
-    except Exception as e:
-        logger.error(f"Error loading payment page: {e}")
-        flash('An error occurred. Please try again.', 'error')
-        return redirect(url_for('cart'))
-
-@app.route('/checkout/place-order', methods=['POST'])
-@login_required
-def place_order():
-    """Place the final order."""
-    try:
-        user_id = session['user_id']
-        
-        # Validate cart and address
-        cart_items = CartService.get_cart_items(user_id)
-        if not cart_items:
-            flash('Your cart is empty.', 'error')
-            return redirect(url_for('cart'))
-        
-        checkout_address_id = session.get('checkout_address_id')
-        checkout_one_time_address = session.get('checkout_one_time_address')
-        
-        if not checkout_address_id and not checkout_one_time_address:
-            flash('Please select a delivery address.', 'error')
-            return redirect(url_for('checkout_address'))
-        
-        # Calculate totals
-        subtotal = sum(Decimal(str(item['total_price'])) for item in cart_items)
-        delivery_fee = Decimal('50.00')
-        total = subtotal + delivery_fee
-        
-        # Prepare shipping address
-        if checkout_address_id:
-            address = SecureAddressService.get_address_by_id(checkout_address_id, user_id)
-            shipping_address = f"{address['receiver_name']}, {address['house_number']}, {address['floor_door']}, {address['locality']}, {address['city']}, {address['pincode']}, Phone: {address['contact_number']}"
-        else:
-            addr = checkout_one_time_address
-            shipping_address = f"{addr['receiver_name']}, {addr['house_number']}, {addr['floor_door']}, {addr['locality']}, {addr['city']}, {addr['pincode']}, Phone: {addr['contact_number']}"
-        
-        # Create order using DatabaseService
-        order_query = """
-            INSERT INTO orders (user_id, total_amount, shipping_address, order_status)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id
-        """
-        
-        order_result = DatabaseService.execute_query(
-            order_query,
-            (user_id, float(total), shipping_address, 'confirmed'),
-            fetch_one=True
-        )
-        
-        if not order_result:
-            flash('Failed to create order. Please try again.', 'error')
-            return redirect(url_for('checkout_payment'))
-        
-        order_id = order_result[0]
-        
-        # Create order items
-        for item in cart_items:
-            item_query = """
-                INSERT INTO order_items (order_id, variation_id, quantity, price_at_purchase)
-                VALUES (%s, %s, %s, %s)
-            """
-            DatabaseService.execute_query(
-                item_query,
-                (order_id, item['variation_id'], item['quantity'], float(item['price'])),
-                fetch_one=False,
-                fetch_all=False
-            )
-        
-        # Clear cart after successful order
-        clear_cart_query = "DELETE FROM cart_items WHERE user_id = %s"
-        DatabaseService.execute_query(clear_cart_query, (user_id,), fetch_one=False, fetch_all=False)
-        
-        # Clear checkout session data
-        session.pop('checkout_address_id', None)
-        session.pop('checkout_one_time_address', None)
-        
-        # Store order ID for confirmation page
-        session['last_order_id'] = order_id
-        
-        logger.info(f"Order {order_id} placed successfully for user {user_id}")
-        flash('Order placed successfully!', 'success')
-        
-        return redirect(url_for('order_confirmation'))
-        
-    except Exception as e:
-        logger.error(f"Error placing order: {e}")
-        flash('Failed to place order. Please try again.', 'error')
-        return redirect(url_for('checkout_payment'))
-
-@app.route('/order-confirmation')
-@login_required
-def order_confirmation():
-    """Order confirmation page."""
-    try:
-        user_id = session['user_id']
-        order_id = session.get('last_order_id')
-        
-        if not order_id:
-            flash('No recent order found.', 'error')
-            return redirect(url_for('index'))
-        
-        # Get order details
-        order_query = """
-            SELECT id, total_amount, shipping_address, order_status, created_at
-            FROM orders 
-            WHERE id = %s AND user_id = %s
-        """
-        
-        order = DatabaseService.execute_query(order_query, (order_id, user_id), fetch_one=True)
-        
-        if not order:
-            flash('Order not found.', 'error')
-            return redirect(url_for('index'))
-        
-        # Get order items
-        items_query = """
-            SELECT oi.quantity, oi.price_at_purchase, pv.variation_name, p.name as product_name
-            FROM order_items oi
-            JOIN product_variations pv ON oi.variation_id = pv.id
-            JOIN products p ON pv.product_id = p.id
-            WHERE oi.order_id = %s
-        """
-        
-        order_items = DatabaseService.execute_query(items_query, (order_id,))
-        
-        # Clear the session order ID after displaying
-        session.pop('last_order_id', None)
-        
-        return render_template('order_confirmation.html',
-                             order=order,
-                             order_items=order_items)
-                             
-    except Exception as e:
-        logger.error(f"Error loading order confirmation: {e}")
-        flash('Error loading order details.', 'error')
-        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")

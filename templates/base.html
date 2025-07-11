@@ -59,8 +59,11 @@
     
     <!-- Dynamic Header - Mobile First -->
     {% if request.path == '/' %}
-        <!-- Home Page Header (Single Row) -->
+        <!-- Home Page Header (Two Rows) -->
         <header class="bg-white shadow-sm border-b border-gray-200">
+
+            
+            <!-- Bottom Row - Logo and Search -->
             <div class="max-w-md mx-auto px-4 py-3">
                 <div class="flex items-center space-x-3">
                     <!-- Logo -->
@@ -72,14 +75,18 @@
                     
                     <!-- Search Bar -->
                     <div class="flex-1">
-                        <div class="relative">
+                        <form action="{{ url_for('store') }}" method="GET" class="relative">
                             <input type="text" 
+                                   name="search"
+                                   value="{{ request.args.get('search', '') }}"
                                    placeholder="Search organic products..." 
                                    class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm">
-                            <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
+                            <button type="submit" class="absolute left-3 top-2.5">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -182,30 +189,6 @@
     
     <!-- Local JavaScript -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    
-    <!-- Address Selection Script -->
-    <script>
-        function selectAddress(addressId) {
-            // Set the selected address as default
-            fetch(`/set-default-address/${addressId}`, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Refresh the page to update the selected address
-                    window.location.reload();
-                } else {
-                    console.error('Failed to set default address');
-                }
-            })
-            .catch(error => {
-                console.error('Error setting default address:', error);
-            });
-        }
-    </script>
     
     {% block extra_scripts %}{% endblock %}
 </body>
