@@ -1267,10 +1267,10 @@ def get_all_customers_with_stats():
         if customers:
             for customer in customers:
                 try:
-                    # Get address count using simplified query
-                    addr_count_query = "SELECT COUNT(*) FROM addresses WHERE user_id = %s"
-                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],))
-                    customer['address_count'] = count_result[0][0] if count_result and count_result[0] else 0
+                    # Get address count using proper fetch_one with alias
+                    addr_count_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
+                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],), fetch_one=True)
+                    customer['address_count'] = count_result.get('count', 0) if count_result else 0
                     
                     # Initialize empty addresses list for now
                     customer['addresses'] = []
@@ -1345,14 +1345,14 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         
         customers = DatabaseService.execute_query(query, tuple(params), fetch_all=True)
         
-        # Add simple address count for each customer
+        # Add simple address count for each customer  
         if customers:
             for customer in customers:
                 try:
-                    # Get address count using simplified query
-                    addr_count_query = "SELECT COUNT(*) FROM addresses WHERE user_id = %s"
-                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],))
-                    customer['address_count'] = count_result[0][0] if count_result and count_result[0] else 0
+                    # Get address count using proper fetch_one with alias
+                    addr_count_query = "SELECT COUNT(*) as count FROM addresses WHERE user_id = %s"
+                    count_result = DatabaseService.execute_query(addr_count_query, (customer['id'],), fetch_one=True)
+                    customer['address_count'] = count_result.get('count', 0) if count_result else 0
                     
                     # Initialize empty addresses list for now
                     customer['addresses'] = []
