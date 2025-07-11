@@ -18,6 +18,7 @@ from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
     render_add_to_cart_button, render_cart_totals
 )
+from admin_auth import AdminAuth, admin_required
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -1006,6 +1007,272 @@ def order_confirmation():
         logger.error(f"Error loading order confirmation: {e}")
         flash('Error loading order details.', 'error')
         return redirect(url_for('index'))
+
+# ===== ADMIN SECTION =====
+
+@app.route('/adminlogin', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page and authentication handler"""
+    if request.method == 'GET':
+        # If already logged in, redirect to dashboard
+        if AdminAuth.is_admin_logged_in():
+            return redirect(url_for('admin_dashboard'))
+        return render_template('admin/admin_login.html')
+    
+    # Handle POST - login attempt
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+    
+    if not username or not password:
+        flash('Please enter both username and password.', 'error')
+        return render_template('admin/admin_login.html')
+    
+    if AdminAuth.verify_admin_credentials(username, password):
+        AdminAuth.login_admin(username)
+        flash('Welcome to Monthly Organics Admin Portal!', 'success')
+        return redirect(url_for('admin_dashboard'))
+    else:
+        flash('Invalid credentials. Please try again.', 'error')
+        return render_template('admin/admin_login.html')
+
+@app.route('/admin/logout')
+@admin_required
+def admin_logout():
+    """Admin logout"""
+    AdminAuth.logout_admin()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard with overview statistics"""
+    try:
+        # Get dashboard statistics
+        stats = get_admin_dashboard_stats()
+        recent_orders = get_recent_orders(limit=5)
+        
+        return render_template('admin/admin_dashboard.html', 
+                             stats=stats, 
+                             recent_orders=recent_orders,
+                             admin_user=AdminAuth.get_admin_user())
+    except Exception as e:
+        logger.error(f"Error loading admin dashboard: {str(e)}")
+        flash('Error loading dashboard data.', 'error')
+        return render_template('admin/admin_dashboard.html', 
+                             stats=get_default_stats(), 
+                             recent_orders=[],
+                             admin_user=AdminAuth.get_admin_user())
+
+@app.route('/admin/customers')
+@admin_required
+def admin_customers():
+    """Customer management page"""
+    try:
+        customers = get_all_customers_with_stats()
+        active_customers_count = sum(1 for c in customers if c['is_active'])
+        new_customers_count = get_new_customers_count()
+        
+        return render_template('admin/admin_customers.html',
+                             customers=customers,
+                             active_customers_count=active_customers_count,
+                             new_customers_count=new_customers_count,
+                             admin_user=AdminAuth.get_admin_user())
+    except Exception as e:
+        logger.error(f"Error loading customers: {str(e)}")
+        flash('Error loading customer data.', 'error')
+        return render_template('admin/admin_customers.html',
+                             customers=[],
+                             active_customers_count=0,
+                             new_customers_count=0,
+                             admin_user=AdminAuth.get_admin_user())
+
+@app.route('/admin/sales')
+@admin_required
+def admin_sales():
+    """Sales analysis page"""
+    try:
+        sales_stats = get_sales_statistics()
+        recent_orders = get_recent_orders(limit=10)
+        category_sales = get_category_sales()
+        
+        return render_template('admin/admin_sales.html',
+                             sales_stats=sales_stats,
+                             recent_orders=recent_orders,
+                             category_sales=category_sales,
+                             admin_user=AdminAuth.get_admin_user())
+    except Exception as e:
+        logger.error(f"Error loading sales data: {str(e)}")
+        flash('Error loading sales data.', 'error')
+        return render_template('admin/admin_sales.html',
+                             sales_stats=get_default_sales_stats(),
+                             recent_orders=[],
+                             category_sales=[],
+                             admin_user=AdminAuth.get_admin_user())
+
+# ===== ADMIN DATA FUNCTIONS =====
+
+def get_admin_dashboard_stats():
+    """Get statistics for admin dashboard"""
+    from services.database import DatabaseService
+    
+    try:
+        # Total customers
+        customers_query = "SELECT COUNT(*) as count FROM users"
+        total_customers = DatabaseService.execute_query(customers_query, fetch_one=True)['count']
+        
+        # Total orders
+        orders_query = "SELECT COUNT(*) as count FROM orders"
+        total_orders = DatabaseService.execute_query(orders_query, fetch_one=True)['count']
+        
+        # Monthly revenue (current month)
+        monthly_revenue_query = """
+            SELECT COALESCE(SUM(total_amount), 0) as revenue 
+            FROM orders 
+            WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+        """
+        monthly_revenue = DatabaseService.execute_query(monthly_revenue_query, fetch_one=True)['revenue']
+        
+        # Active products
+        products_query = "SELECT COUNT(*) as count FROM products WHERE is_active = true"
+        active_products = DatabaseService.execute_query(products_query, fetch_one=True)['count']
+        
+        return {
+            'total_customers': total_customers or 0,
+            'total_orders': total_orders or 0,
+            'monthly_revenue': float(monthly_revenue or 0),
+            'active_products': active_products or 0
+        }
+    except Exception as e:
+        logger.error(f"Error getting dashboard stats: {str(e)}")
+        return get_default_stats()
+
+def get_default_stats():
+    """Default stats when database query fails"""
+    return {
+        'total_customers': 0,
+        'total_orders': 0,
+        'monthly_revenue': 0.0,
+        'active_products': 0
+    }
+
+def get_recent_orders(limit=5):
+    """Get recent orders for admin display"""
+    from services.database import DatabaseService
+    
+    try:
+        query = """
+            SELECT id, user_id, total_amount, status, created_at
+            FROM orders 
+            ORDER BY created_at DESC 
+            LIMIT %s
+        """
+        orders = DatabaseService.execute_query(query, (limit,), fetch_all=True)
+        return orders or []
+    except Exception as e:
+        logger.error(f"Error getting recent orders: {str(e)}")
+        return []
+
+def get_all_customers_with_stats():
+    """Get all customers with their order statistics"""
+    from services.database import DatabaseService
+    
+    try:
+        query = """
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
+                   u.created_at, u.is_active,
+                   COUNT(o.id) as order_count
+            FROM users u
+            LEFT JOIN orders o ON u.id = o.user_id
+            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, u.is_active
+            ORDER BY u.created_at DESC
+        """
+        customers = DatabaseService.execute_query(query, fetch_all=True)
+        return customers or []
+    except Exception as e:
+        logger.error(f"Error getting customers: {str(e)}")
+        return []
+
+def get_new_customers_count():
+    """Get count of customers who joined this month"""
+    from services.database import DatabaseService
+    
+    try:
+        query = """
+            SELECT COUNT(*) as count 
+            FROM users 
+            WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+        """
+        result = DatabaseService.execute_query(query, fetch_one=True)
+        return result['count'] if result else 0
+    except Exception as e:
+        logger.error(f"Error getting new customers count: {str(e)}")
+        return 0
+
+def get_sales_statistics():
+    """Get comprehensive sales statistics"""
+    from services.database import DatabaseService
+    
+    try:
+        # Total revenue
+        total_revenue_query = "SELECT COALESCE(SUM(total_amount), 0) as revenue FROM orders"
+        total_revenue = DatabaseService.execute_query(total_revenue_query, fetch_one=True)['revenue']
+        
+        # Total orders
+        total_orders_query = "SELECT COUNT(*) as count FROM orders"
+        total_orders = DatabaseService.execute_query(total_orders_query, fetch_one=True)['count']
+        
+        # Average order value
+        avg_order_query = "SELECT COALESCE(AVG(total_amount), 0) as avg_value FROM orders"
+        avg_order_value = DatabaseService.execute_query(avg_order_query, fetch_one=True)['avg_value']
+        
+        # Monthly revenue
+        monthly_revenue_query = """
+            SELECT COALESCE(SUM(total_amount), 0) as revenue 
+            FROM orders 
+            WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+        """
+        monthly_revenue = DatabaseService.execute_query(monthly_revenue_query, fetch_one=True)['revenue']
+        
+        return {
+            'total_revenue': float(total_revenue or 0),
+            'total_orders': total_orders or 0,
+            'average_order_value': float(avg_order_value or 0),
+            'monthly_revenue': float(monthly_revenue or 0)
+        }
+    except Exception as e:
+        logger.error(f"Error getting sales statistics: {str(e)}")
+        return get_default_sales_stats()
+
+def get_default_sales_stats():
+    """Default sales stats when database query fails"""
+    return {
+        'total_revenue': 0.0,
+        'total_orders': 0,
+        'average_order_value': 0.0,
+        'monthly_revenue': 0.0
+    }
+
+def get_category_sales():
+    """Get sales breakdown by category"""
+    from services.database import DatabaseService
+    
+    try:
+        query = """
+            SELECT c.name, COALESCE(SUM(oi.price * oi.quantity), 0) as revenue
+            FROM categories c
+            LEFT JOIN products p ON c.id = p.category_id
+            LEFT JOIN product_variations pv ON p.id = pv.product_id
+            LEFT JOIN order_items oi ON pv.id = oi.variation_id
+            GROUP BY c.id, c.name
+            HAVING SUM(oi.price * oi.quantity) > 0
+            ORDER BY revenue DESC
+        """
+        categories = DatabaseService.execute_query(query, fetch_all=True)
+        return categories or []
+    except Exception as e:
+        logger.error(f"Error getting category sales: {str(e)}")
+        return []
 
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
