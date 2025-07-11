@@ -222,6 +222,7 @@ function editAddressForm() {
         selectedLocation: null,
         locationConfirmed: true, // Start with form visible for editing
         saving: false,
+        lastClickTime: 0,
         addressId: {{ address.id }},
         formData: {
             house_no: '{{ address.house_no }}',
@@ -274,9 +275,13 @@ function editAddressForm() {
                 this.setMarker(new google.maps.LatLng(this.selectedLocation.lat, this.selectedLocation.lng));
             }
 
-            // Add click listener for manual pin placement
+            // Add click listener for manual pin placement with throttling
             this.map.addListener('click', (event) => {
-                this.setMarker(event.latLng);
+                const now = Date.now();
+                if (now - this.lastClickTime > 300) { // Throttle clicks to prevent rapid firing
+                    this.lastClickTime = now;
+                    this.setMarker(event.latLng);
+                }
             });
         },
 
@@ -303,32 +308,35 @@ function editAddressForm() {
                 this.marker = null;
             }
 
-            // Create new marker
-            this.marker = new google.maps.Marker({
-                position: location,
-                map: this.map,
-                draggable: true,
-                animation: google.maps.Animation.DROP,
-                title: 'Selected Location'
-            });
+            // Small delay to ensure previous marker is fully removed
+            setTimeout(() => {
+                // Create new marker
+                this.marker = new google.maps.Marker({
+                    position: location,
+                    map: this.map,
+                    draggable: true,
+                    animation: google.maps.Animation.DROP,
+                    title: 'Selected Location'
+                });
 
-            // Update selected location
-            this.selectedLocation = {
-                lat: location.lat(),
-                lng: location.lng()
-            };
-
-            // Add drag listener
-            this.marker.addListener('dragend', (event) => {
+                // Update selected location
                 this.selectedLocation = {
-                    lat: event.latLng.lat(),
-                    lng: event.latLng.lng()
+                    lat: location.lat(),
+                    lng: location.lng()
                 };
-                this.reverseGeocode(event.latLng);
-            });
 
-            // Get address from coordinates
-            this.reverseGeocode(location);
+                // Add drag listener
+                this.marker.addListener('dragend', (event) => {
+                    this.selectedLocation = {
+                        lat: event.latLng.lat(),
+                        lng: event.latLng.lng()
+                    };
+                    this.reverseGeocode(event.latLng);
+                });
+
+                // Get address from coordinates
+                this.reverseGeocode(location);
+            }, 50);
         },
 
         detectCurrentLocation() {
