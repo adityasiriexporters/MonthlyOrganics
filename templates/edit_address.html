@@ -297,9 +297,10 @@ function editAddressForm() {
         },
 
         setMarker(location) {
-            // Remove existing marker (ensure only one pin)
+            // Remove existing marker completely (ensure only one pin)
             if (this.marker) {
                 this.marker.setMap(null);
+                this.marker = null;
             }
 
             // Create new marker
