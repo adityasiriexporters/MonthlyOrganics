@@ -77,14 +77,36 @@ class SecureAddressService:
                 WHERE user_id = %s 
                 ORDER BY is_default DESC, created_at DESC
             """
-            addresses = DatabaseService.execute_query(query, (user_id,))
+            addresses = DatabaseService.execute_query(query, (user_id,), fetch_all=True)
             
             if addresses:
                 # Decrypt sensitive data for each address
                 decrypted_addresses = []
                 for addr in addresses:
-                    decrypted_addr = SecureDataHandler.decrypt_address_data(addr)
-                    decrypted_addresses.append(decrypted_addr)
+                    try:
+                        from utils.encryption import SecureDataHandler
+                        decrypted_addr = SecureDataHandler.decrypt_address_data(addr)
+                        # Add computed fields for template display
+                        decrypted_addr['house_flat'] = decrypted_addr.get('house_number', '') or decrypted_addr.get('floor_door', '')
+                        decrypted_addr['area'] = addr.get('locality', '') or addr.get('city', '')
+                        decrypted_addr['landmark'] = decrypted_addr.get('nearby_landmark', '')
+                        decrypted_addr['receiver_phone'] = decrypted_addr.get('contact_number', '')
+                        decrypted_addresses.append(decrypted_addr)
+                    except Exception as decrypt_error:
+                        logger.error(f"Error decrypting address {addr.get('id', 'unknown')}: {decrypt_error}")
+                        # Fallback to basic data
+                        basic_addr = {
+                            'id': addr.get('id'),
+                            'nickname': addr.get('nickname', 'Address'),
+                            'is_default': addr.get('is_default', False),
+                            'house_flat': '',
+                            'area': addr.get('locality', '') or addr.get('city', ''),
+                            'landmark': '',
+                            'pincode': addr.get('pincode', ''),
+                            'receiver_name': 'Customer',
+                            'receiver_phone': ''
+                        }
+                        decrypted_addresses.append(basic_addr)
                 return decrypted_addresses
             
             return []
