@@ -1,7 +1,7 @@
 import os
 import logging
 import re
-from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -169,7 +169,15 @@ def addresses():
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
         logger.info(f"Found {len(user_addresses)} addresses for user {user_id}")
         
-        return render_template('addresses.html', addresses=user_addresses)
+        # Create response with cache control headers to prevent browser caching
+        response = make_response(render_template('addresses.html', addresses=user_addresses))
+        
+        # Set cache control headers to prevent browser caching
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
         
     except Exception as e:
         logger.error(f"Error loading addresses: {e}")
@@ -180,8 +188,16 @@ def addresses():
 @login_required
 def add_address():
     """Add address page route."""
-    return render_template('add_address.html', 
-                         google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+    # Create response with cache control headers to prevent browser caching
+    response = make_response(render_template('add_address.html', 
+                                           google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY')))
+    
+    # Set cache control headers to prevent browser caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
 
 @app.route('/save-address', methods=['POST'])
 @login_required
@@ -235,7 +251,12 @@ def save_address():
         
         if address_id:
             flash('Address saved successfully!', 'success')
-            return redirect(url_for('addresses'))
+            # Create redirect response with cache control headers
+            response = make_response(redirect(url_for('addresses')))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
         else:
             flash('Error saving address. Please try again.', 'error')
             return redirect(url_for('add_address'))
@@ -275,7 +296,12 @@ def set_default_address(address_id):
         else:
             flash('An error occurred. Please try again.', 'error')
     
-    return redirect(url_for('addresses'))
+    # Create redirect response with cache control headers
+    response = make_response(redirect(url_for('addresses')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/edit-address/<int:address_id>')
 @login_required
@@ -299,9 +325,17 @@ def edit_address(address_id):
         
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "address")
         
-        return render_template('edit_address.html', 
-                             address=address,
-                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        # Create response with cache control headers to prevent browser caching
+        response = make_response(render_template('edit_address.html', 
+                                               address=address,
+                                               google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY')))
+        
+        # Set cache control headers to prevent browser caching
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
         
     except Exception as e:
         logger.error(f"Error loading edit address page: {e}")
@@ -379,7 +413,12 @@ def update_address(address_id):
         if SecureAddressService.update_address(address_id, user_id, address_data):
             SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
             flash('Address updated successfully!', 'success')
-            return redirect(url_for('addresses'))
+            # Create redirect response with cache control headers
+            response = make_response(redirect(url_for('addresses')))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
         else:
             flash('Error updating address.', 'error')
             return redirect(url_for('edit_address', address_id=address_id))
@@ -406,7 +445,12 @@ def delete_address(address_id):
         logger.error(f"Error deleting address: {e}")
         flash('An error occurred. Please try again.', 'error')
     
-    return redirect(url_for('addresses'))
+    # Create redirect response with cache control headers
+    response = make_response(redirect(url_for('addresses')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/api/addresses')
 @login_required
