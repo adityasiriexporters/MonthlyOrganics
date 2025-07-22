@@ -565,7 +565,7 @@ def send_otp():
                 # User doesn't exist - redirect to signup with pre-filled phone
                 return redirect(url_for('signup', phone=mobile_number))
         else:
-            # Signup flow - validate name fields
+            # Signup flow - validate name fields first
             if not first_name or len(first_name) < 2:
                 flash('Please enter a valid first name (at least 2 characters).', 'error')
                 return redirect(url_for('signup'))
@@ -574,17 +574,32 @@ def send_otp():
                 flash('Please enter a valid last name (at least 2 characters).', 'error')
                 return redirect(url_for('signup'))
             
-            # Send OTP for signup
-            otp = "290921"
-            session['otp'] = otp
-            session['mobile_number'] = mobile_number
-            session['first_name'] = first_name
-            session['last_name'] = last_name
-            session['otp_attempts'] = 0
-            session['is_existing_user'] = False
-            
-            logger.info(f"OTP for new user {mobile_number} is: {otp} (TEST MODE)")
-            return redirect(url_for('verify'))
+            # Check if user already exists even in signup flow
+            existing_user = SecureUserService.find_user_by_phone(mobile_number)
+            if existing_user:
+                # User already exists - treat as login with existing names
+                otp = "290921"
+                session['otp'] = otp
+                session['mobile_number'] = mobile_number
+                session['first_name'] = existing_user.get('first_name', '')
+                session['last_name'] = existing_user.get('last_name', '')
+                session['otp_attempts'] = 0
+                session['is_existing_user'] = True
+                
+                logger.info(f"OTP for existing user {mobile_number} is: {otp} (TEST MODE)")
+                return redirect(url_for('verify'))
+            else:
+                # Truly new user - proceed with signup
+                otp = "290921"
+                session['otp'] = otp
+                session['mobile_number'] = mobile_number
+                session['first_name'] = first_name
+                session['last_name'] = last_name
+                session['otp_attempts'] = 0
+                session['is_existing_user'] = False
+                
+                logger.info(f"OTP for new user {mobile_number} is: {otp} (TEST MODE)")
+                return redirect(url_for('verify'))
         
     except Exception as e:
         logger.error(f"Error sending OTP: {e}")
@@ -605,7 +620,7 @@ def verify():
     last_name = session.get('last_name', '')
     is_existing_user = session.get('is_existing_user', False)
     
-    # Only show name greeting for existing users
+    # Show name greeting for existing users (both from login and signup detection)
     full_name = ''
     if is_existing_user and first_name and last_name:
         full_name = f"{first_name} {last_name}".strip()
