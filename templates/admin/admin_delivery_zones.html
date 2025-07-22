@@ -187,82 +187,93 @@
         <h3 class="text-lg font-medium text-gray-900 mb-4">Delivery Zones ({{ zones|length }})</h3>
             
             {% if zones %}
-                <div class="space-y-4 max-h-96 overflow-y-auto">
-                    {% for zone in zones %}
-                    <div class="zone-card bg-gray-50 rounded-lg p-4" data-zone-id="{{ zone.id }}">
-                        <!-- Zone name -->
-                        <div class="mb-3">
-                            <h4 class="font-semibold text-gray-900 text-base">{{ zone.name }}</h4>
-                        </div>
-                        
-                        <!-- Zone creation date -->
-                        <div class="mb-3">
-                            <span class="text-sm text-gray-600">Delivery zone creation date: </span>
-                            <span class="text-sm font-medium text-gray-800">{{ zone.created_at.strftime('%b %d, %Y') }}</span>
-                        </div>
-                        
-                        <!-- Free dates count -->
-                        <div class="mb-3">
-                            <span class="text-sm text-gray-600">Total free delivery dates: </span>
-                            <span class="text-sm font-medium text-green-600">{{ zone.free_dates_count or 0 }}</span>
-                        </div>
-                        
-                        <!-- Add new date section -->
-                        <div class="mb-3">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm text-gray-600">Add new date:</span>
-                                <input type="date" 
-                                       class="text-sm border border-gray-300 rounded px-3 py-1 zone-date-input" 
-                                       data-zone-id="{{ zone.id }}">
-                                <button onclick="addFreeDate({{ zone.id }})" 
-                                        class="btn-sm btn-primary">
-                                    Add Date
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Upcoming dates display -->
-                        <div class="mb-3">
-                            <div class="text-sm text-gray-600 mb-2">Upcoming free delivery dates:</div>
-                            <div class="flex flex-wrap gap-1">
-                                {% if zone.upcoming_dates %}
-                                    {% set dates = zone.upcoming_dates.split(', ') %}
-                                    {% for date in dates[:5] %}
-                                        <span class="date-tag-medium" data-date="{{ date }}">
-                                            {{ date.split('-')[2] }}/{{ date.split('-')[1] }}/{{ date.split('-')[0][2:] }}
-                                            <button onclick="removeFreeDate({{ zone.id }}, '{{ date }}')" 
-                                                    class="ml-1 text-white hover:text-red-200">×</button>
-                                        </span>
-                                    {% endfor %}
-                                    {% if dates|length > 5 %}
-                                        <span class="text-sm text-gray-500 ml-2">+{{ dates|length - 5 }} more</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-sm text-gray-400">No upcoming dates</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <!-- Action buttons -->
-                        <div class="flex gap-2 pt-2 border-t border-gray-200">
-                            {% if zone.geojson and zone.geojson != '{}' %}
-                            <button class="btn-sm btn-primary show-zone-btn" 
-                                    data-zone-id="{{ zone.id }}" 
-                                    data-geojson="{{ zone.geojson|string|e }}">
-                                Show on Map
-                            </button>
-                            {% else %}
-                            <button class="btn-sm" style="background-color: #9ca3af; color: white;" disabled>
-                                No Map Data
-                            </button>
-                            {% endif %}
-                            <button class="btn-sm btn-danger delete-zone-btn" 
-                                    data-zone-id="{{ zone.id }}">
-                                Delete Zone
-                            </button>
+                <!-- Table Layout for Delivery Zones -->
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <!-- Table Header -->
+                    <div class="bg-gray-50 border-b border-gray-200 px-4 py-3">
+                        <div class="grid grid-cols-6 gap-4 items-center">
+                            <div class="font-medium text-gray-700 text-sm">Zone Name</div>
+                            <div class="font-medium text-gray-700 text-sm">Creation Date</div>
+                            <div class="font-medium text-gray-700 text-sm">Date Picker</div>
+                            <div class="font-medium text-gray-700 text-sm">Add Date</div>
+                            <div class="font-medium text-gray-700 text-sm">Show Map</div>
+                            <div class="font-medium text-gray-700 text-sm">Delete</div>
                         </div>
                     </div>
-                    {% endfor %}
+                    
+                    <!-- Table Rows -->
+                    <div class="max-h-96 overflow-y-auto">
+                        {% for zone in zones %}
+                        <div class="zone-card border-b border-gray-100 px-4 py-4 hover:bg-gray-50" data-zone-id="{{ zone.id }}">
+                            <div class="grid grid-cols-6 gap-4 items-center">
+                                <!-- Zone Name -->
+                                <div class="flex flex-col">
+                                    <h4 class="font-semibold text-gray-900 text-sm">{{ zone.name }}</h4>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        {% if zone.upcoming_dates %}
+                                            {% set dates = zone.upcoming_dates.split(', ') %}
+                                            {% for date in dates[:3] %}
+                                                <span class="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs mr-1 mb-1">
+                                                    {{ date.split('-')[2] }}/{{ date.split('-')[1] }}/{{ date.split('-')[0][2:] }}
+                                                    <button onclick="removeFreeDate({{ zone.id }}, '{{ date }}')" 
+                                                            class="ml-1 text-green-600 hover:text-red-500">×</button>
+                                                </span>
+                                            {% endfor %}
+                                            {% if dates|length > 3 %}
+                                                <span class="text-xs text-gray-400">+{{ dates|length - 3 }} more</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-xs text-gray-400">No dates set</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Creation Date -->
+                                <div class="text-sm text-gray-700">
+                                    {{ zone.created_at.strftime('%b %d, %Y') }}
+                                </div>
+                                
+                                <!-- Date Picker -->
+                                <div>
+                                    <input type="date" 
+                                           class="w-full text-sm border border-gray-300 rounded px-3 py-2 zone-date-input focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                                           data-zone-id="{{ zone.id }}">
+                                </div>
+                                
+                                <!-- Add Date Button -->
+                                <div>
+                                    <button onclick="addFreeDate({{ zone.id }})" 
+                                            class="w-full btn-sm btn-primary">
+                                        Add Date
+                                    </button>
+                                </div>
+                                
+                                <!-- Show Map Button -->
+                                <div>
+                                    {% if zone.geojson and zone.geojson != '{}' %}
+                                    <button class="w-full btn-sm btn-primary show-zone-btn" 
+                                            data-zone-id="{{ zone.id }}" 
+                                            data-geojson="{{ zone.geojson|string|e }}">
+                                        Show on Map
+                                    </button>
+                                    {% else %}
+                                    <button class="w-full btn-sm" style="background-color: #9ca3af; color: white;" disabled>
+                                        No Map Data
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Delete Button -->
+                                <div>
+                                    <button class="w-full btn-sm btn-danger delete-zone-btn" 
+                                            data-zone-id="{{ zone.id }}">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             {% else %}
                 <div class="text-center py-8">
