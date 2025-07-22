@@ -871,9 +871,17 @@ def pre_checkout():
                 else:
                     addr['is_default'] = False
         
-        # Convert addresses to JSON for JavaScript
+        # Convert addresses to JSON for JavaScript, handling datetime serialization
         import json
-        addresses_json = json.dumps(user_addresses)
+        from datetime import datetime
+        
+        def json_serial(obj):
+            """JSON serializer for objects not serializable by default json code"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError("Type %s not serializable" % type(obj))
+        
+        addresses_json = json.dumps(user_addresses, default=json_serial)
         
         return render_template('pre_checkout.html', 
                              addresses=user_addresses,
@@ -1002,7 +1010,11 @@ def update_address_for_delivery(address_id):
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
             
             # Generate incremental label if nickname conflicts
-            requested_nickname = form_data.get('nickname')
+            requested_nickname = form_data.get('nickname', '')
+            if not requested_nickname:
+                flash('Nickname is required.', 'error')
+                return redirect(url_for('edit_address_for_delivery', address_id=address_id))
+                
             existing_addresses = SecureAddressService.get_user_addresses(user_id)
             existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
             
