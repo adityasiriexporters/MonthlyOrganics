@@ -962,9 +962,7 @@ def admin_delivery_zones():
         
         # Get all delivery zones with their free dates
         zones_query = """
-            SELECT dz.id, dz.name, 
-                   CASE WHEN dz.geojson IS NOT NULL THEN dz.geojson ELSE '{}' END as geojson,
-                   dz.created_at,
+            SELECT dz.id, dz.name, dz.geojson, dz.created_at,
                    COUNT(df.id) as free_dates_count,
                    STRING_AGG(df.free_date::text, ', ' ORDER BY df.free_date) as upcoming_dates
             FROM delivery_zones dz
@@ -972,7 +970,23 @@ def admin_delivery_zones():
             GROUP BY dz.id, dz.name, dz.geojson, dz.created_at
             ORDER BY dz.created_at DESC
         """
-        zones = DatabaseService.execute_query(zones_query, fetch_all=True) or []
+        zones_raw = DatabaseService.execute_query(zones_query, fetch_all=True) or []
+        
+        # Process zones to ensure proper JSON handling
+        zones = []
+        for zone in zones_raw:
+            zone_dict = dict(zone)
+            # Ensure geojson is properly handled
+            if zone_dict.get('geojson'):
+                try:
+                    # If geojson is a string, parse it to validate
+                    if isinstance(zone_dict['geojson'], str):
+                        import json
+                        json.loads(zone_dict['geojson'])  # Validate JSON
+                except (json.JSONDecodeError, TypeError):
+                    logger.warning(f"Invalid GeoJSON for zone {zone_dict['id']}, setting to None")
+                    zone_dict['geojson'] = None
+            zones.append(zone_dict)
         
         return render_template('admin/admin_delivery_zones.html',
                              zones=zones,

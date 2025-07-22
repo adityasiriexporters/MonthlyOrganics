@@ -128,9 +128,10 @@
                         <div class="flex items-center justify-between mb-2">
                             <h4 class="font-medium text-gray-900">{{ zone.name }}</h4>
                             <div class="zone-actions">
-                                {% if zone.geojson %}
-                                <button onclick="showZoneOnMap({{ zone.id }}, {{ zone.geojson|tojson }})" 
-                                        class="btn-sm btn-primary">
+                                {% if zone.geojson and zone.geojson != '{}' %}
+                                <button class="btn-sm btn-primary show-zone-btn" 
+                                        data-zone-id="{{ zone.id }}" 
+                                        data-geojson="{{ zone.geojson|tojson|safe|e }}">
                                     Show on Map
                                 </button>
                                 {% else %}
@@ -138,8 +139,8 @@
                                     No Map Data
                                 </button>
                                 {% endif %}
-                                <button onclick="deleteZone({{ zone.id }})" 
-                                        class="btn-sm btn-danger">
+                                <button class="btn-sm btn-danger delete-zone-btn" 
+                                        data-zone-id="{{ zone.id }}">
                                     Delete
                                 </button>
                             </div>
@@ -410,6 +411,11 @@ function showZoneOnMap(zoneId, geojson) {
         // Clear existing zones display
         existingZones.clearLayers();
         
+        // Parse geojson if it's a string
+        if (typeof geojson === 'string') {
+            geojson = JSON.parse(geojson);
+        }
+        
         // Validate geojson
         if (!geojson || !geojson.geometry || !geojson.geometry.coordinates) {
             alert('Invalid zone geometry data');
@@ -630,6 +636,28 @@ document.getElementById('closeStatsBtn').addEventListener('click', () => {
 });
 document.getElementById('closeHelpBtn').addEventListener('click', () => {
     document.getElementById('helpModal').classList.add('hidden');
+});
+
+// Zone management event listeners
+document.addEventListener('click', function(e) {
+    // Handle show zone on map buttons
+    if (e.target.classList.contains('show-zone-btn')) {
+        const zoneId = e.target.getAttribute('data-zone-id');
+        const geojsonStr = e.target.getAttribute('data-geojson');
+        try {
+            const geojson = JSON.parse(geojsonStr);
+            showZoneOnMap(zoneId, geojson);
+        } catch (error) {
+            console.error('Error parsing zone GeoJSON:', error);
+            alert('Error displaying zone on map');
+        }
+    }
+    
+    // Handle delete zone buttons
+    if (e.target.classList.contains('delete-zone-btn')) {
+        const zoneId = e.target.getAttribute('data-zone-id');
+        deleteZone(zoneId);
+    }
 });
 
 // Initialize map when page loads
