@@ -620,9 +620,9 @@ def verify():
     last_name = session.get('last_name', '')
     is_existing_user = session.get('is_existing_user', False)
     
-    # Show name greeting for existing users (both from login and signup detection)
+    # Show name greeting for all users who have names (existing users and new signups)
     full_name = ''
-    if is_existing_user and first_name and last_name:
+    if first_name and last_name:
         full_name = f"{first_name} {last_name}".strip()
     
     return render_template('verify.html', 
