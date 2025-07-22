@@ -15,6 +15,13 @@
         height: 500px;
         border-radius: 8px;
         overflow: hidden;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .map-container .leaflet-container {
+        position: relative !important;
+        z-index: 1 !important;
     }
     
     .zone-card {
@@ -78,6 +85,21 @@
         font-size: 12px !important;
         font-weight: 500 !important;
     }
+    
+    /* Ensure map section doesn't overlap with page headers */
+    .map-section {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Override any Leaflet positioning that might cause overlap */
+    .leaflet-control-container {
+        position: relative !important;
+    }
+    
+    .leaflet-top, .leaflet-bottom {
+        position: absolute !important;
+    }
 </style>
 {% endblock %}
 
@@ -98,7 +120,7 @@
     </div>
 
     <!-- Map Section -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 map-section">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-medium text-gray-900">Zone Map</h3>
             <div class="flex gap-2">
