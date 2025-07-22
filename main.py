@@ -689,23 +689,31 @@ def verify_otp():
             if not first_name or not last_name:
                 flash('Name information missing. Please sign up again.', 'error')
                 return redirect(url_for('signup'))
+            
+            # Check if user was already created during this session to prevent duplicates
+            existing_user = SecureUserService.find_user_by_phone(mobile_number)
+            if existing_user:
+                # User was already created, use existing user
+                user_id = existing_user['id']
+                logger.info(f"User already exists, using existing account: {user_id}")
+            else:
+                # Create new user
+                user = SecureUserService.create_user_with_details(mobile_number, first_name, last_name)
+                if not user:
+                    SecurityAuditLogger.log_authentication_event(
+                        DataEncryption.hash_for_search(mobile_number)[:8], 
+                        "USER_CREATION_FAILED", 
+                        False
+                    )
+                    flash('Error creating user account. Please try again.', 'error')
+                    return redirect(url_for('signup'))
                 
-            user = SecureUserService.create_user_with_details(mobile_number, first_name, last_name)
-            if not user:
+                user_id = user['id']
                 SecurityAuditLogger.log_authentication_event(
                     DataEncryption.hash_for_search(mobile_number)[:8], 
-                    "USER_CREATION_FAILED", 
-                    False
+                    "NEW_USER_CREATED"
                 )
-                flash('Error creating user account. Please try again.', 'error')
-                return redirect(url_for('signup'))
-            
-            user_id = user['id']
-            SecurityAuditLogger.log_authentication_event(
-                DataEncryption.hash_for_search(mobile_number)[:8], 
-                "NEW_USER_CREATED"
-            )
-            logger.info(f"New user created")
+                logger.info(f"New user created")
         
         # Login user with permanent session
         session.permanent = True  # Make session permanent (lasts 30 days)
