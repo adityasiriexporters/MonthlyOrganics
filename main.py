@@ -952,6 +952,183 @@ def admin_sales():
                              categories=[],
                              admin_user=AdminAuth.get_admin_user())
 
+@app.route('/admin/delivery-zones')
+@admin_required
+def admin_delivery_zones():
+    """Delivery zone management page"""
+    try:
+        from models import DeliveryZone, DeliveryZoneFreeDate
+        from services.database import DatabaseService
+        
+        # Get all delivery zones with their free dates
+        zones_query = """
+            SELECT dz.id, dz.name, dz.geojson, dz.created_at,
+                   COUNT(df.id) as free_dates_count,
+                   STRING_AGG(df.free_date::text, ', ' ORDER BY df.free_date) as upcoming_dates
+            FROM delivery_zones dz
+            LEFT JOIN delivery_zone_free_dates df ON dz.id = df.zone_id AND df.free_date >= CURRENT_DATE
+            GROUP BY dz.id, dz.name, dz.geojson, dz.created_at
+            ORDER BY dz.created_at DESC
+        """
+        zones = DatabaseService.execute_query(zones_query, fetch_all=True) or []
+        
+        return render_template('admin/admin_delivery_zones.html',
+                             zones=zones,
+                             admin_user=AdminAuth.get_admin_user())
+    except Exception as e:
+        logger.error(f"Error loading delivery zones: {str(e)}")
+        flash('Error loading delivery zones data.', 'error')
+        return render_template('admin/admin_delivery_zones.html',
+                             zones=[],
+                             admin_user=AdminAuth.get_admin_user())
+
+@app.route('/admin/delivery-zones/save', methods=['POST'])
+@admin_required
+def admin_save_delivery_zone():
+    """Save a new delivery zone"""
+    try:
+        from services.database import DatabaseService
+        import json
+        
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        geojson = data.get('geojson')
+        
+        if not name or not geojson:
+            return jsonify({'error': 'Zone name and geometry are required'}), 400
+            
+        # Check if zone name already exists
+        existing_zone = DatabaseService.execute_query(
+            "SELECT id FROM delivery_zones WHERE name = %s", 
+            (name,), 
+            fetch_one=True
+        )
+        
+        if existing_zone:
+            return jsonify({'error': 'Zone name already exists'}), 400
+        
+        # Convert GeoJSON to PostGIS geometry
+        coordinates = geojson['geometry']['coordinates'][0]  # Get polygon exterior ring
+        wkt_coords = ', '.join([f"{coord[0]} {coord[1]}" for coord in coordinates])
+        geometry_wkt = f"POLYGON(({wkt_coords}))"
+        
+        # Insert new zone
+        insert_query = """
+            INSERT INTO delivery_zones (name, geometry, geojson) 
+            VALUES (%s, ST_GeomFromText(%s, 4326), %s)
+            RETURNING id
+        """
+        result = DatabaseService.execute_query(
+            insert_query, 
+            (name, geometry_wkt, json.dumps(geojson)), 
+            fetch_one=True
+        )
+        
+        return jsonify({'success': True, 'zone_id': result['id']})
+        
+    except Exception as e:
+        logger.error(f"Error saving delivery zone: {str(e)}")
+        return jsonify({'error': 'Failed to save delivery zone'}), 500
+
+@app.route('/admin/delivery-zones/<int:zone_id>/add-date', methods=['POST'])
+@admin_required
+def admin_add_zone_free_date():
+    """Add free delivery date to a zone"""
+    try:
+        from services.database import DatabaseService
+        from datetime import datetime, date
+        
+        zone_id = request.view_args['zone_id']
+        data = request.get_json()
+        date_str = data.get('date', '').strip()
+        
+        if not date_str:
+            return jsonify({'error': 'Date is required'}), 400
+            
+        # Parse and validate date
+        try:
+            free_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+            
+        # Check if date is in the future
+        if free_date <= date.today():
+            return jsonify({'error': 'Date must be in the future'}), 400
+        
+        # Check if zone exists
+        zone_exists = DatabaseService.execute_query(
+            "SELECT id FROM delivery_zones WHERE id = %s", 
+            (zone_id,), 
+            fetch_one=True
+        )
+        
+        if not zone_exists:
+            return jsonify({'error': 'Zone not found'}), 404
+        
+        # Insert free date (with duplicate handling)
+        try:
+            insert_query = """
+                INSERT INTO delivery_zone_free_dates (zone_id, free_date) 
+                VALUES (%s, %s)
+            """
+            DatabaseService.execute_query(insert_query, (zone_id, free_date))
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            if 'unique constraint' in str(e).lower():
+                return jsonify({'error': 'This date is already assigned to the zone'}), 400
+            raise
+        
+    except Exception as e:
+        logger.error(f"Error adding zone free date: {str(e)}")
+        return jsonify({'error': 'Failed to add free delivery date'}), 500
+
+@app.route('/admin/delivery-zones/<int:zone_id>/remove-date', methods=['POST'])
+@admin_required
+def admin_remove_zone_free_date():
+    """Remove free delivery date from a zone"""
+    try:
+        from services.database import DatabaseService
+        
+        zone_id = request.view_args['zone_id']
+        data = request.get_json()
+        date_str = data.get('date', '').strip()
+        
+        if not date_str:
+            return jsonify({'error': 'Date is required'}), 400
+        
+        # Delete the free date
+        delete_query = """
+            DELETE FROM delivery_zone_free_dates 
+            WHERE zone_id = %s AND free_date = %s
+        """
+        DatabaseService.execute_query(delete_query, (zone_id, date_str))
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error removing zone free date: {str(e)}")
+        return jsonify({'error': 'Failed to remove free delivery date'}), 500
+
+@app.route('/admin/delivery-zones/<int:zone_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_delivery_zone():
+    """Delete a delivery zone"""
+    try:
+        from services.database import DatabaseService
+        
+        zone_id = request.view_args['zone_id']
+        
+        # Delete the zone (cascade will handle free dates)
+        delete_query = "DELETE FROM delivery_zones WHERE id = %s"
+        DatabaseService.execute_query(delete_query, (zone_id,))
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting delivery zone: {str(e)}")
+        return jsonify({'error': 'Failed to delete delivery zone'}), 500
+
 # ===== ADMIN DATA FUNCTIONS =====
 
 def get_admin_dashboard_stats():
@@ -1562,7 +1739,87 @@ def get_filtered_sales_statistics(date_from=None, date_to=None, category_filter=
         logger.error(f"Error getting filtered sales statistics: {str(e)}")
         return get_default_sales_stats()
 
+@app.route('/admin/delivery-zones/cleanup', methods=['POST'])
+@admin_required
+def admin_cleanup_delivery_dates():
+    """Manual trigger for delivery date cleanup (for testing)"""
+    try:
+        from services.delivery_zone_scheduler import DeliveryZoneScheduler
+        
+        result = DeliveryZoneScheduler.cleanup_expired_free_dates()
+        
+        if result['status'] == 'success':
+            flash(f"Cleanup completed successfully: {result['message']}", 'success')
+        else:
+            flash(f"Cleanup failed: {result['message']}", 'error')
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error in manual cleanup: {str(e)}")
+        return jsonify({'error': 'Failed to run cleanup'}), 500
+
+@app.route('/admin/delivery-zones/stats', methods=['GET'])
+@admin_required
+def admin_delivery_zone_stats():
+    """Get delivery zone statistics"""
+    try:
+        from services.delivery_zone_scheduler import DeliveryZoneScheduler
+        
+        stats = DeliveryZoneScheduler.get_zone_statistics()
+        upcoming_dates = DeliveryZoneScheduler.get_upcoming_free_dates(days_ahead=7)
+        
+        return jsonify({
+            'statistics': stats,
+            'upcoming_dates': upcoming_dates
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting delivery zone stats: {str(e)}")
+        return jsonify({'error': 'Failed to get statistics'}), 500
+
+# ===== SCHEDULED TASKS =====
+
+def setup_scheduled_tasks():
+    """Setup scheduled tasks for the application"""
+    import threading
+    import time
+    from services.delivery_zone_scheduler import run_daily_cleanup
+    
+    def daily_scheduler():
+        """Run daily tasks at 2 AM"""
+        while True:
+            try:
+                current_time = datetime.now()
+                
+                # Check if it's 2 AM (or close to it)
+                if current_time.hour == 2 and current_time.minute < 5:
+                    logger.info("Running daily scheduled tasks")
+                    
+                    # Run delivery zone cleanup
+                    cleanup_result = run_daily_cleanup()
+                    logger.info(f"Daily cleanup result: {cleanup_result}")
+                    
+                    # Sleep for 1 hour to avoid running multiple times
+                    time.sleep(3600)
+                
+                # Check every 5 minutes
+                time.sleep(300)
+                
+            except Exception as e:
+                logger.error(f"Error in daily scheduler: {str(e)}")
+                time.sleep(3600)  # Sleep for 1 hour on error
+    
+    # Start the scheduler in a separate thread
+    scheduler_thread = threading.Thread(target=daily_scheduler, daemon=True)
+    scheduler_thread.start()
+    logger.info("Daily scheduler started successfully")
+
 if __name__ == '__main__':
     logger.info("Starting Monthly Organics Flask application")
     logger.info(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    
+    # Setup scheduled tasks
+    setup_scheduled_tasks()
+    
     app.run(host='0.0.0.0', port=5000, debug=True)

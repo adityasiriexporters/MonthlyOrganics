@@ -50,6 +50,38 @@ class Product(db.Model):
 
 # Additional models handled through service layer
 
+class DeliveryZone(db.Model):
+    """Delivery zone model for managing hyper-local delivery areas."""
+    __tablename__ = 'delivery_zones'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    geometry = db.Column(db.Text, nullable=False)  # PostGIS GEOMETRY stored as text for SQLAlchemy
+    geojson = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<DeliveryZone {self.name}>'
+
+
+class DeliveryZoneFreeDate(db.Model):
+    """Free delivery dates for specific zones."""
+    __tablename__ = 'delivery_zone_free_dates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    zone_id = db.Column(db.Integer, db.ForeignKey('delivery_zones.id'), nullable=False)
+    free_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    zone = db.relationship('DeliveryZone', backref=db.backref('free_dates', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (db.UniqueConstraint('zone_id', 'free_date'),)
+
+    def __repr__(self):
+        return f'<DeliveryZoneFreeDate Zone:{self.zone_id} Date:{self.free_date}>'
+
 # Database initialization function
 def init_db(app):
     """Initialize the database with the Flask app."""

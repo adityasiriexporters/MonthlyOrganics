@@ -1,0 +1,619 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Delivery Zone Management - Monthly Organics Admin{% endblock %}
+{% block page_title %}Delivery Zone Management{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet.js CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<!-- Leaflet Draw CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+<style>
+    .map-container {
+        height: 500px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .zone-card {
+        transition: all 0.2s ease;
+    }
+    
+    .zone-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
+    
+    .date-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 2px;
+        background-color: #10b981;
+        color: white;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+    
+    .zone-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+        border-radius: 0.375rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+        background-color: #10b981;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #059669;
+    }
+    
+    .btn-danger {
+        background-color: #ef4444;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #dc2626;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="px-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="md:flex md:items-center md:justify-between">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                    Delivery Zone Management
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Create hyper-local delivery zones and manage free delivery schedules
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Map Section -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Zone Map</h3>
+                <div class="flex gap-2">
+                    <button id="clearMapBtn" class="btn-sm btn-danger" style="display: none;">
+                        Clear Drawing
+                    </button>
+                    <button id="saveZoneBtn" class="btn-sm btn-primary" style="display: none;">
+                        Save Zone
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Map Container -->
+            <div id="map" class="map-container mb-4"></div>
+            
+            <!-- Zone Name Input (shown when polygon is drawn) -->
+            <div id="zoneNameSection" style="display: none;">
+                <label for="zoneName" class="block text-sm font-medium text-gray-700 mb-2">
+                    Zone Name (e.g., 'Safilguda 0001')
+                </label>
+                <input type="text" 
+                       id="zoneName" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                       placeholder="Enter unique zone name">
+            </div>
+        </div>
+
+        <!-- Zone List Section -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Delivery Zones ({{ zones|length }})</h3>
+            
+            {% if zones %}
+                <div class="space-y-4 max-h-96 overflow-y-auto">
+                    {% for zone in zones %}
+                    <div class="zone-card bg-gray-50 rounded-lg p-4" data-zone-id="{{ zone.id }}">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-medium text-gray-900">{{ zone.name }}</h4>
+                            <div class="zone-actions">
+                                <button onclick="showZoneOnMap({{ zone.id }}, {{ zone.geojson|tojson|safe }})" 
+                                        class="btn-sm btn-primary">
+                                    Show on Map
+                                </button>
+                                <button onclick="deleteZone({{ zone.id }})" 
+                                        class="btn-sm btn-danger">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="text-sm text-gray-600 mb-3">
+                            <p>Created: {{ zone.created_at.strftime('%B %d, %Y') }}</p>
+                            <p>Free delivery dates: {{ zone.free_dates_count or 0 }}</p>
+                        </div>
+                        
+                        <!-- Free Delivery Dates -->
+                        <div class="mb-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="date" 
+                                       class="text-sm border border-gray-300 rounded px-2 py-1 zone-date-input" 
+                                       data-zone-id="{{ zone.id }}">
+                                <button onclick="addFreeDate({{ zone.id }})" 
+                                        class="btn-sm btn-primary">
+                                    Add Date
+                                </button>
+                            </div>
+                            
+                            <div class="upcoming-dates" data-zone-id="{{ zone.id }}">
+                                {% if zone.upcoming_dates %}
+                                    {% set dates = zone.upcoming_dates.split(', ') %}
+                                    {% for date in dates %}
+                                        <span class="date-tag" data-date="{{ date }}">
+                                            {{ date }}
+                                            <button onclick="removeFreeDate({{ zone.id }}, '{{ date }}')" 
+                                                    class="ml-1 text-white hover:text-red-200">×</button>
+                                        </span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-sm text-gray-500">No upcoming free delivery dates</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No delivery zones created</h3>
+                    <p class="mt-1 text-sm text-gray-500">Start by drawing your first delivery zone on the map</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Admin Controls Section -->
+    <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">System Controls</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Manual Cleanup -->
+            <div class="text-center">
+                <button id="manualCleanupBtn" class="btn-sm btn-danger mb-2">
+                    Run Date Cleanup
+                </button>
+                <p class="text-sm text-gray-600">
+                    Manually trigger cleanup of tomorrow's delivery dates (for testing)
+                </p>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="text-center">
+                <button id="showStatsBtn" class="btn-sm btn-primary mb-2">
+                    Show Statistics
+                </button>
+                <p class="text-sm text-gray-600">
+                    View zone statistics and upcoming free delivery dates
+                </p>
+            </div>
+            
+            <!-- Help -->
+            <div class="text-center">
+                <button id="helpBtn" class="btn-sm" style="background-color: #6b7280; color: white;">
+                    How It Works
+                </button>
+                <p class="text-sm text-gray-600">
+                    Learn about the automatic cleanup system
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Modal -->
+    <div id="statsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Delivery Zone Statistics</h3>
+                <div id="statsContent">
+                    <!-- Stats will be loaded here -->
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button id="closeStatsBtn" class="btn-sm" style="background-color: #6b7280; color: white;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help Modal -->
+    <div id="helpModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Automatic Delivery Date Cleanup System</h3>
+                <div class="text-sm text-gray-700 space-y-3">
+                    <p><strong>How it works:</strong></p>
+                    <ul class="list-disc list-inside space-y-1 ml-4">
+                        <li>The system runs automatically every day at 2:00 AM</li>
+                        <li>It scans all delivery zones for free delivery dates</li>
+                        <li>Any date set for the next day (tomorrow) gets automatically deleted</li>
+                        <li>This happens 24 hours before the actual delivery day starts (at midnight)</li>
+                    </ul>
+                    
+                    <p><strong>Example:</strong></p>
+                    <p class="bg-gray-100 p-3 rounded">
+                        If today is January 15th and you have a free delivery date set for January 16th, 
+                        the system will delete that date during the 2:00 AM cleanup on January 15th.
+                    </p>
+                    
+                    <p><strong>Testing:</strong></p>
+                    <p>Use the "Run Date Cleanup" button to manually trigger the cleanup process for testing purposes.</p>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button id="closeHelpBtn" class="btn-sm" style="background-color: #6b7280; color: white;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet.js JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Leaflet Draw JavaScript -->
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+// Initialize map
+let map;
+let drawnItems;
+let currentPolygon = null;
+let existingZones = new L.LayerGroup();
+
+function initializeMap() {
+    // Initialize map centered on Hyderabad, India (adjust as needed)
+    map = L.map('map').setView([17.3850, 78.4867], 12);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Initialize drawing layer
+    drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    map.addLayer(existingZones);
+    
+    // Initialize drawing controls
+    const drawControl = new L.Control.Draw({
+        edit: {
+            featureGroup: drawnItems,
+            remove: true
+        },
+        draw: {
+            polygon: {
+                allowIntersection: false,
+                drawError: {
+                    color: '#e1e100',
+                    message: '<strong>Error:</strong> Polygon edges cannot cross!'
+                },
+                shapeOptions: {
+                    color: '#10b981',
+                    fillOpacity: 0.3
+                }
+            },
+            polyline: false,
+            rectangle: false,
+            circle: false,
+            marker: false,
+            circlemarker: false
+        }
+    });
+    map.addControl(drawControl);
+    
+    // Handle drawing events
+    map.on(L.Draw.Event.CREATED, function(e) {
+        const layer = e.layer;
+        currentPolygon = layer;
+        
+        // Clear any existing drawings
+        drawnItems.clearLayers();
+        drawnItems.addLayer(layer);
+        
+        // Show zone name input and save button
+        document.getElementById('zoneNameSection').style.display = 'block';
+        document.getElementById('clearMapBtn').style.display = 'inline-block';
+        document.getElementById('saveZoneBtn').style.display = 'inline-block';
+    });
+    
+    map.on(L.Draw.Event.DELETED, function(e) {
+        clearDrawing();
+    });
+}
+
+function clearDrawing() {
+    drawnItems.clearLayers();
+    currentPolygon = null;
+    document.getElementById('zoneNameSection').style.display = 'none';
+    document.getElementById('clearMapBtn').style.display = 'none';
+    document.getElementById('saveZoneBtn').style.display = 'none';
+    document.getElementById('zoneName').value = '';
+}
+
+function saveZone() {
+    const zoneName = document.getElementById('zoneName').value.trim();
+    
+    if (!zoneName) {
+        alert('Please enter a zone name');
+        return;
+    }
+    
+    if (!currentPolygon) {
+        alert('Please draw a zone first');
+        return;
+    }
+    
+    // Convert Leaflet polygon to GeoJSON
+    const geojson = currentPolygon.toGeoJSON();
+    
+    // Send to server
+    fetch('/admin/delivery-zones/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: zoneName,
+            geojson: geojson
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Zone saved successfully!');
+            location.reload(); // Refresh to show new zone
+        } else {
+            alert('Error: ' + (data.error || 'Failed to save zone'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving zone');
+    });
+}
+
+function showZoneOnMap(zoneId, geojson) {
+    // Clear existing zones display
+    existingZones.clearLayers();
+    
+    // Add zone to map
+    const geoJsonLayer = L.geoJSON(geojson, {
+        style: {
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.2,
+            weight: 2
+        }
+    }).addTo(existingZones);
+    
+    // Fit map to zone bounds
+    map.fitBounds(geoJsonLayer.getBounds());
+}
+
+function addFreeDate(zoneId) {
+    const dateInput = document.querySelector(`input[data-zone-id="${zoneId}"]`);
+    const date = dateInput.value;
+    
+    if (!date) {
+        alert('Please select a date');
+        return;
+    }
+    
+    fetch(`/admin/delivery-zones/${zoneId}/add-date`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date: date })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add date tag to UI
+            const datesContainer = document.querySelector(`.upcoming-dates[data-zone-id="${zoneId}"]`);
+            const newDateTag = document.createElement('span');
+            newDateTag.className = 'date-tag';
+            newDateTag.setAttribute('data-date', date);
+            newDateTag.innerHTML = `${date} <button onclick="removeFreeDate(${zoneId}, '${date}')" class="ml-1 text-white hover:text-red-200">×</button>`;
+            datesContainer.appendChild(newDateTag);
+            
+            // Clear input
+            dateInput.value = '';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to add date'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding date');
+    });
+}
+
+function removeFreeDate(zoneId, date) {
+    if (!confirm(`Remove free delivery date ${date}?`)) {
+        return;
+    }
+    
+    fetch(`/admin/delivery-zones/${zoneId}/remove-date`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date: date })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove date tag from UI
+            const dateTag = document.querySelector(`[data-date="${date}"]`);
+            if (dateTag) {
+                dateTag.remove();
+            }
+        } else {
+            alert('Error: ' + (data.error || 'Failed to remove date'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error removing date');
+    });
+}
+
+function deleteZone(zoneId) {
+    if (!confirm('Are you sure you want to delete this delivery zone? This will also remove all associated free delivery dates.')) {
+        return;
+    }
+    
+    fetch(`/admin/delivery-zones/${zoneId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Refresh to remove deleted zone
+        } else {
+            alert('Error: ' + (data.error || 'Failed to delete zone'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting zone');
+    });
+}
+
+// Admin Controls Functions
+function runManualCleanup() {
+    if (!confirm('Run manual cleanup of delivery dates? This will delete dates scheduled for tomorrow.')) {
+        return;
+    }
+    
+    fetch('/admin/delivery-zones/cleanup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(`Cleanup completed: ${data.message}`);
+            if (data.deleted_count > 0) {
+                location.reload(); // Refresh if dates were deleted
+            }
+        } else {
+            alert(`Cleanup failed: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error running cleanup');
+    });
+}
+
+function showStatistics() {
+    fetch('/admin/delivery-zones/stats')
+    .then(response => response.json())
+    .then(data => {
+        const stats = data.statistics;
+        const upcoming = data.upcoming_dates;
+        
+        let content = `
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-gray-100 p-3 rounded">
+                        <div class="font-medium">Total Zones</div>
+                        <div class="text-xl font-bold text-green-600">${stats.total_zones}</div>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded">
+                        <div class="font-medium">Active Free Dates</div>
+                        <div class="text-xl font-bold text-blue-600">${stats.upcoming_free_dates}</div>
+                    </div>
+                </div>
+                
+                <div class="text-sm">
+                    <div><strong>Next Free Delivery:</strong> ${stats.next_free_date || 'None scheduled'}</div>
+                    <div><strong>Last Scheduled:</strong> ${stats.last_scheduled_date || 'None'}</div>
+                </div>
+        `;
+        
+        if (upcoming.length > 0) {
+            content += `
+                <div>
+                    <h4 class="font-medium mb-2">Upcoming Free Delivery Dates (Next 7 Days)</h4>
+                    <div class="space-y-1 text-sm max-h-32 overflow-y-auto">
+            `;
+            
+            upcoming.forEach(item => {
+                content += `
+                    <div class="flex justify-between py-1 border-b border-gray-200">
+                        <span>${item.zone_name}</span>
+                        <span>${item.free_date} (in ${item.days_until} days)</span>
+                    </div>
+                `;
+            });
+            
+            content += '</div></div>';
+        }
+        
+        content += '</div>';
+        
+        document.getElementById('statsContent').innerHTML = content;
+        document.getElementById('statsModal').classList.remove('hidden');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading statistics');
+    });
+}
+
+// Event listeners
+document.getElementById('clearMapBtn').addEventListener('click', clearDrawing);
+document.getElementById('saveZoneBtn').addEventListener('click', saveZone);
+document.getElementById('manualCleanupBtn').addEventListener('click', runManualCleanup);
+document.getElementById('showStatsBtn').addEventListener('click', showStatistics);
+document.getElementById('helpBtn').addEventListener('click', () => {
+    document.getElementById('helpModal').classList.remove('hidden');
+});
+document.getElementById('closeStatsBtn').addEventListener('click', () => {
+    document.getElementById('statsModal').classList.add('hidden');
+});
+document.getElementById('closeHelpBtn').addEventListener('click', () => {
+    document.getElementById('helpModal').classList.add('hidden');
+});
+
+// Initialize map when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMap();
+});
+</script>
+{% endblock %}
