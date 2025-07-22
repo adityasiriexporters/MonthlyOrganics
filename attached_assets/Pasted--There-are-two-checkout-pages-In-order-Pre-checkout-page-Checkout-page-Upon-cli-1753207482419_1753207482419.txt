@@ -1,0 +1,41 @@
+(There are two checkout pages, In order 
+• 'Pre-checkout' page.
+• 'Checkout' page. )
+
+
+Upon clicking 'proceed to checkout' button in the 'cart' page. 
+
+we should be taken to 'pre-checkout' page. Which is for delivery address confirmation. 
+There should be two sections in the page, as follows.
+
+- 'address selection' section
+
+There should be a dropdown,
+   * first option is '+ add address' to add a new address before checkout.
+   * from Second option onwards. There are saved addresses, which are previously added/saved in the 'Saved addresses'.
+
+[By selection the (first option) '+ add address' option from the drop-down. Then the user should be taken to 'create new address for delivery' page. 
+    * Build this page as same as 'Add new address' page. but, the final button should be 'Save & use'. 
+    * This 'Save & use' button should take us back to 'Pre-checkout' page. With the newly saved address, automatically selected from the drop-down. (The address which is just now created in the 'Create new address for delivery' page is automatically selected from the drop-down.)]
+
+[In the drop-down itself, the user should be able to get the edit option corresponding to the respective saved addresses. On clicking this option, user should be taken to 'edit address for delivery' page.
+    * Build this page as same as 'Edit address' page. but, the final buttons should be 'Update & use' & 'discard changes & use'.
+    * This 'Update & use' button should update the address and take us back to 'Pre-checkout' page. With the recently updated address, automatically selected from the drop-down. (The address which is recently updated in the 'edit address for delivery' page is automatically selected from the drop-down.)
+    * This 'discard changes & use' button should discard the edits made to the address (cancel the edits) and take us back to 'Pre-checkout' page. With the same old address (which the user tried to edit), automatically selected from the drop-down. (The address which the user tried to edit, but discarded in the 'edit address for delivery' page is automatically selected from the drop-down.) ]
+
+
+- 'Address confirmation' section 
+
+Under this section, the following details of the address which is selected from the drop-down in the 'address selection' section should be appeared in-order. For the user to check and confirm the address with a checkbox.
+ 
+   * There should be the map window, with the pin marked. just like after confirming location in 'add new address' page. But the user cannot edit pin location from here. But he can just view.
+   * Address label (As a Title)
+   * Hno/Plot No/Building/Community Name
+   * Block Name/No
+   * Floor/Door Number
+   * Locality
+   * Pincode
+   * Receiver's name (In bold and slightly bigger font)
+   * Receiver's Number (In bold and slightly bigger font)
+
+'Confirm address' button should be just below the checkbox. And should become active upon checking the checkbox. 
