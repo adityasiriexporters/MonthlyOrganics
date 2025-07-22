@@ -847,7 +847,6 @@ def cart_totals():
 # ===== ADMIN SECTION =====
 
 @app.route('/adminlogin', methods=['GET', 'POST'])
-@app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     """Admin login page and authentication handler"""
     if request.method == 'GET':
