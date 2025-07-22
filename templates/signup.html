@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join Monthly Organics</title>
+    <title>Sign Up - Monthly Organics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -29,7 +29,7 @@
                          class="w-full h-full object-contain">
                 </div>
                 <p class="text-sm text-gray-600 mb-1">
-                    Login
+                    Sign up
                 </p>
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">
                     Monthly Organics
@@ -65,72 +65,79 @@
                 {% endif %}
             {% endwith %}
 
-            <!-- Login Form -->
+            <!-- Registration Form -->
             <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
                 <form action="{{ url_for('send_otp') }}" method="POST" class="space-y-6">
-                    <!-- Mobile Number -->
+                    <input type="hidden" name="signup" value="true">
+                    
+                    <!-- Name Fields -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                First Name
+                            </label>
+                            <input id="first_name" 
+                                   name="first_name" 
+                                   type="text" 
+                                   required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                                   placeholder="Enter your first name">
+                        </div>
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                Last Name
+                            </label>
+                            <input id="last_name" 
+                                   name="last_name" 
+                                   type="text" 
+                                   required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                                   placeholder="Enter your last name">
+                        </div>
+                    </div>
+
+                    <!-- Phone Number -->
                     <div>
                         <label for="mobile_number" class="block text-sm font-medium text-gray-700 mb-2">
-                            Mobile Number
+                            Phone Number
                         </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <span class="text-gray-500 text-sm">+91</span>
-                            </div>
+                        <div class="flex">
+                            <span class="inline-flex items-center px-4 py-3 border border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm rounded-l-lg">
+                                +91
+                            </span>
                             <input id="mobile_number" 
                                    name="mobile_number" 
                                    type="tel" 
                                    required 
-                                   class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm"
-                                   placeholder="Enter 10-digit number"
-                                   pattern="[6-9][0-9]{9}"
+                                   pattern="[0-9]{10}"
                                    maxlength="10"
-                                   minlength="10"
-                                   title="Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9">
+                                   class="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                                   placeholder="Enter 10-digit mobile number">
                         </div>
-                        <p class="mt-2 text-xs text-gray-500">
-                            We'll send a 6-digit OTP to verify your number
-                        </p>
                     </div>
 
                     <!-- Submit Button -->
                     <button type="submit" 
                             class="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                        Continue with OTP
+                        Send OTP
                     </button>
-
-                    <!-- Terms and Privacy -->
-                    <p class="text-xs text-gray-500 text-center leading-relaxed">
-                        By continuing, you agree to our Terms of Service and Privacy Policy. 
-                        We'll only use your information for order delivery and communication.
-                    </p>
                 </form>
             </div>
 
-            <!-- Signup Link -->
+            <!-- Login Link -->
             <div class="text-center mt-6">
                 <p class="text-gray-600 text-sm">
-                    Don't have an account? 
-                    <a href="{{ url_for('signup') }}" class="text-primary hover:text-primary-dark font-medium transition-colors">
-                        Sign up here
+                    Already have an account? 
+                    <a href="{{ url_for('login') }}" class="text-primary hover:text-primary-dark font-medium transition-colors">
+                        Login here
                     </a>
                 </p>
-            </div>
-
-            <!-- Back to Home -->
-            <div class="text-center mt-4">
-                <a href="/" class="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm transition-colors">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    Back to Home
-                </a>
             </div>
         </div>
     </div>
 
     <script>
-        // Auto-format mobile number input
+        // Auto-format phone number
         document.getElementById('mobile_number').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
             if (value.length > 10) {
@@ -139,25 +146,8 @@
             e.target.value = value;
         });
 
-        // Auto-format name inputs
-        function formatName(input) {
-            let value = input.value;
-            // Allow only letters, spaces, and common name characters
-            value = value.replace(/[^a-zA-Z\s'-]/g, '');
-            // Capitalize first letter of each word
-            value = value.replace(/\b\w/g, function(char) {
-                return char.toUpperCase();
-            });
-            input.value = value;
-        }
-
-        document.getElementById('first_name').addEventListener('input', function(e) {
-            formatName(e.target);
-        });
-
-        document.getElementById('last_name').addEventListener('input', function(e) {
-            formatName(e.target);
-        });
+        // Auto-focus on first name input
+        document.getElementById('first_name').focus();
     </script>
 </body>
 </html>

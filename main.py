@@ -523,6 +523,11 @@ def login():
     """Mobile number login page."""
     return render_template('login.html')
 
+@app.route('/signup')
+def signup():
+    """New user signup page."""
+    return render_template('signup.html')
+
 @app.route('/send-otp', methods=['POST'])
 def send_otp():
     """Generate and send OTP for mobile number verification."""
@@ -531,20 +536,22 @@ def send_otp():
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         mobile_number = request.form.get('mobile_number', '').strip()
+        is_signup = request.form.get('signup') == 'true'  # Check if this is signup
         
-        # Validate all required fields
-        if not first_name or len(first_name) < 2:
-            flash('Please enter a valid first name (at least 2 characters).', 'error')
-            return redirect(url_for('login'))
-        
-        if not last_name or len(last_name) < 2:
-            flash('Please enter a valid last name (at least 2 characters).', 'error')
-            return redirect(url_for('login'))
+        # For signup, validate name fields
+        if is_signup:
+            if not first_name or len(first_name) < 2:
+                flash('Please enter a valid first name (at least 2 characters).', 'error')
+                return redirect(url_for('signup'))
+            
+            if not last_name or len(last_name) < 2:
+                flash('Please enter a valid last name (at least 2 characters).', 'error')
+                return redirect(url_for('signup'))
         
         # Validate mobile number format
         if not FormValidator.validate_mobile_number(mobile_number):
             flash('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.', 'error')
-            return redirect(url_for('login'))
+            return redirect(url_for('signup' if is_signup else 'login'))
         
         # Use fixed OTP for testing (will be replaced with MSG91 API later)
         otp = "290921"
@@ -564,7 +571,9 @@ def send_otp():
     except Exception as e:
         logger.error(f"Error sending OTP: {e}")
         flash('An error occurred. Please try again.', 'error')
-        return redirect(url_for('login'))
+        # Redirect back to appropriate form based on whether it was signup
+        is_signup = request.form.get('signup') == 'true'
+        return redirect(url_for('signup' if is_signup else 'login'))
 
 @app.route('/verify')
 def verify():
@@ -623,9 +632,7 @@ def verify_otp():
         user = SecureUserService.find_user_by_phone(mobile_number)
         
         if user:
-            # Update existing user's name if provided
-            if first_name and last_name:
-                SecureUserService.update_user_name(user['id'], first_name, last_name)
+            # Existing user login
             user_id = user['id']
             SecurityAuditLogger.log_authentication_event(
                 DataEncryption.hash_for_search(mobile_number)[:8], 
@@ -633,8 +640,15 @@ def verify_otp():
             )
             logger.info(f"Existing user logged in")
         else:
-            # Create new user with provided name
-            user = SecureUserService.create_user_with_details(mobile_number, first_name, last_name)
+            # New user signup - create user with provided name or defaults
+            if first_name and last_name:
+                # Signup flow with names provided
+                user = SecureUserService.create_user_with_details(mobile_number, first_name, last_name)
+            else:
+                # Login flow for non-existent user - redirect to signup
+                flash('Phone number not found. Please sign up first.', 'error')
+                return redirect(url_for('signup'))
+            
             if not user:
                 SecurityAuditLogger.log_authentication_event(
                     DataEncryption.hash_for_search(mobile_number)[:8], 
@@ -642,7 +656,7 @@ def verify_otp():
                     False
                 )
                 flash('Error creating user account. Please try again.', 'error')
-                return redirect(url_for('login'))
+                return redirect(url_for('signup'))
             user_id = user['id']
             SecurityAuditLogger.log_authentication_event(
                 DataEncryption.hash_for_search(mobile_number)[:8], 
