@@ -962,7 +962,9 @@ def admin_delivery_zones():
         
         # Get all delivery zones with their free dates
         zones_query = """
-            SELECT dz.id, dz.name, dz.geojson, dz.created_at,
+            SELECT dz.id, dz.name, 
+                   CASE WHEN dz.geojson IS NOT NULL THEN dz.geojson ELSE '{}' END as geojson,
+                   dz.created_at,
                    COUNT(df.id) as free_dates_count,
                    STRING_AGG(df.free_date::text, ', ' ORDER BY df.free_date) as upcoming_dates
             FROM delivery_zones dz

@@ -128,10 +128,16 @@
                         <div class="flex items-center justify-between mb-2">
                             <h4 class="font-medium text-gray-900">{{ zone.name }}</h4>
                             <div class="zone-actions">
-                                <button onclick="showZoneOnMap({{ zone.id }}, {{ zone.geojson|tojson|safe }})" 
+                                {% if zone.geojson %}
+                                <button onclick="showZoneOnMap({{ zone.id }}, {{ zone.geojson|tojson }})" 
                                         class="btn-sm btn-primary">
                                     Show on Map
                                 </button>
+                                {% else %}
+                                <button class="btn-sm" style="background-color: #9ca3af; color: white;" disabled>
+                                    No Map Data
+                                </button>
+                                {% endif %}
                                 <button onclick="deleteZone({{ zone.id }})" 
                                         class="btn-sm btn-danger">
                                     Delete
@@ -400,21 +406,36 @@ function saveZone() {
 }
 
 function showZoneOnMap(zoneId, geojson) {
-    // Clear existing zones display
-    existingZones.clearLayers();
-    
-    // Add zone to map
-    const geoJsonLayer = L.geoJSON(geojson, {
-        style: {
-            color: '#3b82f6',
-            fillColor: '#3b82f6',
-            fillOpacity: 0.2,
-            weight: 2
+    try {
+        // Clear existing zones display
+        existingZones.clearLayers();
+        
+        // Validate geojson
+        if (!geojson || !geojson.geometry || !geojson.geometry.coordinates) {
+            alert('Invalid zone geometry data');
+            return;
         }
-    }).addTo(existingZones);
-    
-    // Fit map to zone bounds
-    map.fitBounds(geoJsonLayer.getBounds());
+        
+        // Add zone to map
+        const geoJsonLayer = L.geoJSON(geojson, {
+            style: {
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.2,
+                weight: 2
+            }
+        }).addTo(existingZones);
+        
+        // Fit map to zone bounds
+        map.fitBounds(geoJsonLayer.getBounds());
+        
+        // Show success message
+        console.log(`Zone ${zoneId} displayed on map successfully`);
+        
+    } catch (error) {
+        console.error('Error showing zone on map:', error);
+        alert('Error displaying zone on map. Please check the zone data.');
+    }
 }
 
 function addFreeDate(zoneId) {
