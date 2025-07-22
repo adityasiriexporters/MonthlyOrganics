@@ -26,9 +26,15 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50">
-    <div class="min-h-screen flex">
+    <div class="min-h-screen flex" x-data="{ sidebarOpen: true, isMobile: window.innerWidth < 1024 }" 
+         x-init="window.addEventListener('resize', () => { isMobile = window.innerWidth < 1024; if (!isMobile) sidebarOpen = true; })">
         <!-- Sidebar -->
-        <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0" id="sidebar">
+        <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:static lg:inset-0"
+             :class="{ 
+                '-translate-x-full': !sidebarOpen,
+                'translate-x-0': sidebarOpen
+             }"
+             id="sidebar">
             <div class="flex items-center justify-center h-16 px-4 bg-green-600">
                 <img src="{{ url_for('static', filename='images/fulllogo_transparent.png') }}" 
                      alt="Monthly Organics" class="h-8 w-auto filter brightness-0 invert">
@@ -85,17 +91,22 @@
         </div>
         
         <!-- Mobile sidebar overlay -->
-        <div class="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden hidden" id="sidebar-overlay"></div>
+        <div class="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden" 
+             x-show="sidebarOpen && isMobile"
+             @click="sidebarOpen = false"
+             id="sidebar-overlay"></div>
         
         <!-- Main content -->
-        <div class="flex-1 lg:pl-0">
+        <div class="flex-1 transition-all duration-300 ease-in-out"
+             :class="{ 'lg:pl-64': sidebarOpen, 'lg:pl-0': !sidebarOpen }">
             <!-- Top header -->
             <div class="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200">
                 <div class="flex items-center justify-between h-16 px-6">
-                    <!-- Mobile menu button -->
+                    <!-- Sidebar toggle button -->
                     <button type="button" 
-                            class="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500"
-                            id="mobile-menu-button">
+                            @click="sidebarOpen = !sidebarOpen"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500"
+                            id="sidebar-toggle-button">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
