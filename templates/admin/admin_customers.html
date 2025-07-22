@@ -199,7 +199,7 @@
                                             </div>
                                             <div class="ml-4">
                                                 <div class="text-sm font-medium text-gray-900">
-                                                    {{ customer.first_name }} {{ customer.last_name }}
+                                                    {{ customer.first_name.title() }} {{ customer.last_name.title() }}
                                                 </div>
                                                 <div class="text-sm text-gray-500">
                                                     ID: {{ customer.custom_id or customer.id }}
@@ -284,7 +284,7 @@
                                                             </div>
                                                             <div class="text-sm text-gray-600 space-y-1">
                                                                 {% if address.receiver_name %}
-                                                                    <div><strong>Receiver:</strong> {{ address.receiver_name }}</div>
+                                                                    <div><strong>Receiver:</strong> {{ address.receiver_name.title() }}</div>
                                                                 {% endif %}
                                                                 {% if address.receiver_phone %}
                                                                     <div><strong>Phone:</strong> {{ address.receiver_phone }}</div>
