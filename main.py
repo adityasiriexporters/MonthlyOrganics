@@ -523,7 +523,19 @@ def login():
 def send_otp():
     """Generate and send OTP for mobile number verification."""
     try:
+        # Get form data
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
         mobile_number = request.form.get('mobile_number', '').strip()
+        
+        # Validate all required fields
+        if not first_name or len(first_name) < 2:
+            flash('Please enter a valid first name (at least 2 characters).', 'error')
+            return redirect(url_for('login'))
+        
+        if not last_name or len(last_name) < 2:
+            flash('Please enter a valid last name (at least 2 characters).', 'error')
+            return redirect(url_for('login'))
         
         # Validate mobile number format
         if not FormValidator.validate_mobile_number(mobile_number):
@@ -533,9 +545,11 @@ def send_otp():
         # Use fixed OTP for testing (will be replaced with MSG91 API later)
         otp = "290921"
         
-        # Store OTP and mobile number in session
+        # Store all data in session for OTP verification
         session['otp'] = otp
         session['mobile_number'] = mobile_number
+        session['first_name'] = first_name
+        session['last_name'] = last_name
         session['otp_attempts'] = 0
         
         # For testing - log OTP (will be replaced with SMS service)
@@ -556,7 +570,13 @@ def verify():
         return redirect(url_for('login'))
     
     mobile_number = session.get('mobile_number')
-    return render_template('verify.html', mobile_number=mobile_number)
+    first_name = session.get('first_name', '')
+    last_name = session.get('last_name', '')
+    full_name = f"{first_name} {last_name}".strip()
+    
+    return render_template('verify.html', 
+                         mobile_number=mobile_number,
+                         full_name=full_name)
 
 @app.route('/verify-otp', methods=['POST'])
 def verify_otp():
@@ -591,10 +611,17 @@ def verify_otp():
             flash(f'Invalid OTP. You have {4 - session["otp_attempts"]} attempts remaining.', 'error')
             return redirect(url_for('verify'))
         
+        # Get user data from session
+        first_name = session.get('first_name')
+        last_name = session.get('last_name')
+        
         # OTP is correct - find or create user using SecureUserService
         user = SecureUserService.find_user_by_phone(mobile_number)
         
         if user:
+            # Update existing user's name if provided
+            if first_name and last_name:
+                SecureUserService.update_user_name(user['id'], first_name, last_name)
             user_id = user['id']
             SecurityAuditLogger.log_authentication_event(
                 DataEncryption.hash_for_search(mobile_number)[:8], 
@@ -602,8 +629,8 @@ def verify_otp():
             )
             logger.info(f"Existing user logged in")
         else:
-            # Create new user
-            user = SecureUserService.create_user(mobile_number)
+            # Create new user with provided name
+            user = SecureUserService.create_user_with_details(mobile_number, first_name, last_name)
             if not user:
                 SecurityAuditLogger.log_authentication_event(
                     DataEncryption.hash_for_search(mobile_number)[:8], 
@@ -625,6 +652,8 @@ def verify_otp():
         # Clear OTP data from session
         session.pop('otp', None)
         session.pop('mobile_number', None)
+        session.pop('first_name', None)
+        session.pop('last_name', None)
         session.pop('otp_attempts', None)
         
         flash('Login successful!', 'success')

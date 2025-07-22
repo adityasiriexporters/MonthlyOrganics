@@ -60,6 +60,53 @@ class SecureUserService:
         except Exception as e:
             logger.error(f"Error creating user: {e}")
             return None
+    
+    @staticmethod
+    def create_user_with_details(phone: str, first_name: str, last_name: str) -> Optional[Dict]:
+        """Create new user with provided details"""
+        try:
+            query = """
+                INSERT INTO users (phone, first_name, last_name, email)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, phone, first_name, last_name, email, created_at
+            """
+            
+            # Generate a placeholder email for now
+            email = f"user_{phone[-4:]}@monthlyorganics.com"
+            
+            user_data = DatabaseService.execute_query(
+                query, 
+                (
+                    phone,
+                    first_name,
+                    last_name,
+                    email
+                ),
+                fetch_one=True
+            )
+            
+            return user_data
+            
+        except Exception as e:
+            logger.error(f"Error creating user with details: {e}")
+            return None
+    
+    @staticmethod
+    def update_user_name(user_id: int, first_name: str, last_name: str) -> bool:
+        """Update user's first and last name"""
+        try:
+            query = """
+                UPDATE users 
+                SET first_name = %s, last_name = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """
+            
+            DatabaseService.execute_query(query, (first_name, last_name, user_id))
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating user name: {e}")
+            return False
 
 class SecureAddressService:
     """Secure address operations with data encryption"""

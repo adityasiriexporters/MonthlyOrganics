@@ -5,23 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify OTP - Monthly Organics</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#16a34a',
+                        'primary-dark': '#15803d',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <div class="mx-auto h-12 w-12 text-center">
-                <span class="text-3xl">📱</span>
+<body class="bg-gradient-to-br from-green-50 to-white min-h-screen">
+    <div class="min-h-screen flex items-center justify-center px-4 py-8">
+        <div class="max-w-md w-full">
+            <!-- Logo and Header -->
+            <div class="text-center mb-8">
+                <div class="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4 shadow-lg">
+                    <span class="text-3xl">📱</span>
+                </div>
+                {% if full_name %}
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                    Hi {{ full_name }}!
+                </h1>
+                <p class="text-gray-600 mb-1">
+                    Please verify your number
+                </p>
+                {% else %}
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                    Verify Your Number
+                </h1>
+                {% endif %}
+                <p class="text-sm text-gray-600">
+                    We've sent a 6-digit OTP to
+                </p>
+                <p class="text-lg font-semibold text-primary">
+                    +91 {{ mobile_number }}
+                </p>
             </div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Verify Your Number
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                We've sent a 6-digit OTP to
-            </p>
-            <p class="text-center text-lg font-semibold text-gray-900">
-                +91 {{ mobile_number }}
-            </p>
-        </div>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -49,56 +72,56 @@
             {% endif %}
         {% endwith %}
 
-        <form class="mt-8 space-y-6" action="{{ url_for('verify_otp') }}" method="POST">
-            <div class="rounded-md shadow-sm -space-y-px">
-                <div>
-                    <label for="otp" class="sr-only">OTP</label>
-                    <input id="otp" 
-                           name="otp" 
-                           type="text" 
-                           required 
-                           class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 text-center text-2xl tracking-widest focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10" 
-                           placeholder="000000"
-                           pattern="[0-9]{6}"
-                           maxlength="6"
-                           minlength="6"
-                           title="Please enter the 6-digit OTP"
-                           autocomplete="one-time-code">
-                </div>
+            <!-- OTP Form -->
+            <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
+                <form action="{{ url_for('verify_otp') }}" method="POST" class="space-y-6">
+                    <!-- OTP Input -->
+                    <div>
+                        <label for="otp" class="block text-sm font-medium text-gray-700 mb-3 text-center">
+                            Enter 6-Digit OTP
+                        </label>
+                        <input id="otp" 
+                               name="otp" 
+                               type="text" 
+                               required 
+                               class="w-full px-4 py-4 border border-gray-300 rounded-lg text-center text-2xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                               placeholder="000000"
+                               pattern="[0-9]{6}"
+                               maxlength="6"
+                               minlength="6"
+                               title="Please enter the 6-digit OTP"
+                               autocomplete="one-time-code">
+                    </div>
+
+                    <!-- Test Mode Notice -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p class="text-xs text-blue-800 text-center">
+                            <strong>Test Mode:</strong> Use OTP <span class="font-mono bg-blue-100 px-1 rounded">290921</span>
+                        </p>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" 
+                            class="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        Verify & Continue
+                    </button>
+                </form>
             </div>
 
-            <div class="text-xs text-gray-500 text-center">
-                <p>Didn't receive the code? Check your console for testing</p>
-            </div>
-
-            <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                    Verify OTP
-                </button>
-            </div>
-
-            <div class="text-center space-y-2">
-                <a href="{{ url_for('send_otp') }}" 
-                   onclick="event.preventDefault(); document.getElementById('resend-form').submit();"
-                   class="text-sm text-green-600 hover:text-green-500">
-                    Resend OTP
+            <!-- Back to Edit -->
+            <div class="text-center mt-6">
+                <a href="{{ url_for('login') }}" class="inline-flex items-center text-primary hover:text-primary-dark text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Change Details
                 </a>
-                <br>
-                <a href="{{ url_for('login') }}" class="text-sm text-gray-600 hover:text-gray-500">
-                    ← Change Number
-                </a>
             </div>
-        </form>
-
-        <!-- Hidden form for resending OTP -->
-        <form id="resend-form" action="{{ url_for('send_otp') }}" method="POST" style="display: none;">
-            <input type="hidden" name="mobile_number" value="{{ mobile_number }}">
-        </form>
+        </div>
     </div>
 
     <script>
-        // Auto-format OTP input and auto-submit when 6 digits entered
+        // Auto-format OTP input
         document.getElementById('otp').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
             if (value.length > 6) {
@@ -110,12 +133,24 @@
             if (value.length === 6) {
                 setTimeout(() => {
                     e.target.form.submit();
-                }, 500); // Small delay for user feedback
+                }, 300);
             }
         });
 
-        // Auto-focus on OTP input
-        document.getElementById('otp').focus();
+        // Focus on OTP input when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('otp').focus();
+        });
+
+        // Paste handling
+        document.getElementById('otp').addEventListener('paste', function(e) {
+            setTimeout(() => {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length === 6) {
+                    e.target.form.submit();
+                }
+            }, 100);
+        });
     </script>
 </body>
 </html>
