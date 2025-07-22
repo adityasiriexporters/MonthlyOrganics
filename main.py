@@ -566,12 +566,14 @@ def send_otp():
                 return redirect(url_for('signup', phone=mobile_number))
         else:
             # Signup flow - validate name fields first
-            if not first_name or len(first_name) < 2:
-                flash('Please enter a valid first name (at least 2 characters).', 'error')
+            first_name_valid, first_name_error = FormValidator.validate_first_name(first_name)
+            if not first_name_valid:
+                flash(first_name_error, 'error')
                 return redirect(url_for('signup'))
             
-            if not last_name or len(last_name) < 2:
-                flash('Please enter a valid last name (at least 2 characters).', 'error')
+            last_name_valid, last_name_error = FormValidator.validate_last_name(last_name)
+            if not last_name_valid:
+                flash(last_name_error, 'error')
                 return redirect(url_for('signup'))
             
             # Check if user already exists even in signup flow

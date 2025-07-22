@@ -80,6 +80,8 @@
                                    name="first_name" 
                                    type="text" 
                                    required 
+                                   pattern="[A-Za-z\s]{2,}"
+                                   title="First name can only contain letters and spaces (minimum 2 characters)"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                                    placeholder="Enter your first name">
                         </div>
@@ -91,6 +93,8 @@
                                    name="last_name" 
                                    type="text" 
                                    required 
+                                   pattern="[A-Za-z\s]{2,}"
+                                   title="Last name can only contain letters and spaces (minimum 2 characters)"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                                    placeholder="Enter your last name">
                         </div>
@@ -138,6 +142,19 @@
     </div>
 
     <script>
+        // Validate name fields - only allow letters and spaces
+        function validateNameInput(e) {
+            let value = e.target.value;
+            // Remove any character that's not a letter or space
+            let filteredValue = value.replace(/[^A-Za-z\s]/g, '');
+            // Limit consecutive spaces to one
+            filteredValue = filteredValue.replace(/\s+/g, ' ');
+            // Update the input if changed
+            if (value !== filteredValue) {
+                e.target.value = filteredValue;
+            }
+        }
+
         // Auto-format phone number
         document.getElementById('mobile_number').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
@@ -146,6 +163,10 @@
             }
             e.target.value = value;
         });
+
+        // Add name validation to first and last name fields
+        document.getElementById('first_name').addEventListener('input', validateNameInput);
+        document.getElementById('last_name').addEventListener('input', validateNameInput);
 
         // Auto-focus on first name input
         document.getElementById('first_name').focus();

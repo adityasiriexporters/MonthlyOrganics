@@ -23,6 +23,35 @@ class FormValidator:
         return bool(otp and re.match(r'^\d{6}$', otp))
     
     @staticmethod
+    def validate_name(name: str) -> bool:
+        """Validate name - only alphabets and spaces allowed"""
+        return bool(name and re.match(r'^[A-Za-z\s]+$', name.strip()) and len(name.strip()) >= 2)
+    
+    @staticmethod
+    def validate_first_name(first_name: str) -> Tuple[bool, str]:
+        """Validate first name with specific error message"""
+        name = first_name.strip() if first_name else ''
+        if not name:
+            return False, 'First name is required'
+        if len(name) < 2:
+            return False, 'First name must be at least 2 characters long'
+        if not re.match(r'^[A-Za-z\s]+$', name):
+            return False, 'First name can only contain letters and spaces'
+        return True, ''
+    
+    @staticmethod
+    def validate_last_name(last_name: str) -> Tuple[bool, str]:
+        """Validate last name with specific error message"""
+        name = last_name.strip() if last_name else ''
+        if not name:
+            return False, 'Last name is required'
+        if len(name) < 2:
+            return False, 'Last name must be at least 2 characters long'
+        if not re.match(r'^[A-Za-z\s]+$', name):
+            return False, 'Last name can only contain letters and spaces'
+        return True, ''
+    
+    @staticmethod
     def validate_address_data(address_data: Dict) -> Tuple[bool, List[str]]:
         """
         Validate address form data
