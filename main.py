@@ -1032,13 +1032,11 @@ def admin_save_delivery_zone():
 
 @app.route('/admin/delivery-zones/<int:zone_id>/add-date', methods=['POST'])
 @admin_required
-def admin_add_zone_free_date():
+def admin_add_zone_free_date(zone_id):
     """Add free delivery date to a zone"""
     try:
         from services.database import DatabaseService
         from datetime import datetime, date
-        
-        zone_id = request.view_args['zone_id']
         data = request.get_json()
         date_str = data.get('date', '').strip()
         
@@ -1085,12 +1083,10 @@ def admin_add_zone_free_date():
 
 @app.route('/admin/delivery-zones/<int:zone_id>/remove-date', methods=['POST'])
 @admin_required
-def admin_remove_zone_free_date():
+def admin_remove_zone_free_date(zone_id):
     """Remove free delivery date from a zone"""
     try:
         from services.database import DatabaseService
-        
-        zone_id = request.view_args['zone_id']
         data = request.get_json()
         date_str = data.get('date', '').strip()
         
@@ -1112,12 +1108,10 @@ def admin_remove_zone_free_date():
 
 @app.route('/admin/delivery-zones/<int:zone_id>/delete', methods=['POST'])
 @admin_required
-def admin_delete_delivery_zone():
+def admin_delete_delivery_zone(zone_id):
     """Delete a delivery zone"""
     try:
         from services.database import DatabaseService
-        
-        zone_id = request.view_args['zone_id']
         
         # Delete the zone (cascade will handle free dates)
         delete_query = "DELETE FROM delivery_zones WHERE id = %s"
