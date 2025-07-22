@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Dict, List, Optional
 from utils.encryption import DataEncryption, SecureDataHandler
+from utils.id_generator import CustomIDGenerator
 from .database import DatabaseService
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class SecureUserService:
         """Find user by phone number - simplified for current schema"""
         try:
             query = """
-                SELECT id, phone, first_name, last_name, email, 
+                SELECT id, phone, first_name, last_name, email, custom_id,
                        created_at, is_active
                 FROM users 
                 WHERE phone = %s AND is_active = true
@@ -35,10 +36,13 @@ class SecureUserService:
     def create_user(phone: str) -> Optional[Dict]:
         """Create new user - simplified for current schema"""
         try:
+            # Generate custom ID
+            custom_id = CustomIDGenerator.generate_user_id()
+            
             query = """
-                INSERT INTO users (phone, first_name, last_name)
-                VALUES (%s, %s, %s)
-                RETURNING id, phone, first_name, last_name, email, created_at
+                INSERT INTO users (phone, first_name, last_name, custom_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, phone, first_name, last_name, email, custom_id, created_at
             """
             
             user_data = DatabaseService.execute_query(
@@ -46,7 +50,8 @@ class SecureUserService:
                 (
                     phone,
                     "Customer",  # Default name
-                    ""
+                    "",
+                    custom_id
                 ),
                 fetch_one=True
             )
@@ -61,10 +66,13 @@ class SecureUserService:
     def create_user_with_details(phone: str, first_name: str, last_name: str) -> Optional[Dict]:
         """Create new user with provided details"""
         try:
+            # Generate custom ID
+            custom_id = CustomIDGenerator.generate_user_id()
+            
             query = """
-                INSERT INTO users (phone, first_name, last_name)
-                VALUES (%s, %s, %s)
-                RETURNING id, phone, first_name, last_name, email, created_at
+                INSERT INTO users (phone, first_name, last_name, custom_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, phone, first_name, last_name, email, custom_id, created_at
             """
             
             user_data = DatabaseService.execute_query(
@@ -72,7 +80,8 @@ class SecureUserService:
                 (
                     phone,
                     first_name,
-                    last_name
+                    last_name,
+                    custom_id
                 ),
                 fetch_one=True
             )

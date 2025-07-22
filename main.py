@@ -1086,14 +1086,14 @@ def get_all_customers_with_stats():
         
         # Get customer data with order statistics
         query = """
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.custom_id,
                    u.created_at, u.is_active,
                    COUNT(o.id) as order_count,
                    MAX(o.created_at) as last_order_date,
                    COALESCE(SUM(o.total_amount), 0) as total_spent
             FROM users u
             LEFT JOIN orders o ON u.id = o.user_id
-            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, u.is_active
+            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.custom_id, u.created_at, u.is_active
             ORDER BY u.created_at DESC
         """
         cursor.execute(query)
@@ -1151,7 +1151,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         
         # Base query with parameterized conditions
         base_query = """
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, 
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.custom_id,
                    u.created_at, u.is_active,
                    COUNT(o.id) as order_count,
                    MAX(o.created_at) as last_order_date,
@@ -1192,7 +1192,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
             query = base_query
             
         query += """
-            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, u.is_active
+            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.custom_id, u.created_at, u.is_active
         """
         
         # Minimum orders filter (applied after GROUP BY)
