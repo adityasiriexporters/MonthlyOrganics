@@ -36,21 +36,17 @@ class SecureUserService:
         """Create new user - simplified for current schema"""
         try:
             query = """
-                INSERT INTO users (phone, first_name, last_name, email)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO users (phone, first_name, last_name)
+                VALUES (%s, %s, %s)
                 RETURNING id, phone, first_name, last_name, email, created_at
             """
-            
-            # Generate a placeholder email for now
-            email = f"user_{phone[-4:]}@monthlyorganics.com"
             
             user_data = DatabaseService.execute_query(
                 query, 
                 (
                     phone,
                     "Customer",  # Default name
-                    "",
-                    email
+                    ""
                 ),
                 fetch_one=True
             )
@@ -66,21 +62,17 @@ class SecureUserService:
         """Create new user with provided details"""
         try:
             query = """
-                INSERT INTO users (phone, first_name, last_name, email)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO users (phone, first_name, last_name)
+                VALUES (%s, %s, %s)
                 RETURNING id, phone, first_name, last_name, email, created_at
             """
-            
-            # Generate a placeholder email for now
-            email = f"user_{phone[-4:]}@monthlyorganics.com"
             
             user_data = DatabaseService.execute_query(
                 query, 
                 (
                     phone,
                     first_name,
-                    last_name,
-                    email
+                    last_name
                 ),
                 fetch_one=True
             )
