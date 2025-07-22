@@ -2,92 +2,145 @@
 
 {% block title %}Admin Dashboard - Monthly Organics{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}Overview{% endblock %}
+{% block page_description %}Monitor your business performance and key metrics{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
     <!-- Welcome Section -->
     <div class="mb-8">
-        <div class="bg-gradient-to-r from-green-600 to-green-700 rounded-lg shadow-sm p-6 text-white">
-            <div class="flex items-center justify-between">
+        <div class="bg-gradient-to-br from-green-500 via-green-600 to-green-700 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
+            <div class="absolute inset-0 bg-black/10 rounded-2xl"></div>
+            <div class="absolute top-0 right-0 transform translate-x-16 -translate-y-8">
+                <div class="w-40 h-40 bg-white/10 rounded-full"></div>
+            </div>
+            <div class="absolute bottom-0 left-0 transform -translate-x-8 translate-y-8">
+                <div class="w-32 h-32 bg-white/5 rounded-full"></div>
+            </div>
+            <div class="relative z-10 flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-bold">Welcome to Monthly Organics Admin</h2>
-                    <p class="mt-2 text-green-100">Manage your organic produce delivery business efficiently</p>
+                    <h2 class="text-3xl font-bold mb-2">Welcome to Monthly Organics Admin</h2>
+                    <p class="text-green-100 text-lg">Manage your organic produce delivery business with powerful insights</p>
+                    <div class="mt-4 flex items-center space-x-6 text-green-100">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-200 rounded-full animate-pulse"></div>
+                            <span class="text-sm">System Status: Online</span>
+                        </div>
+                        <div class="text-sm">Last updated: {{ moment().format('MMM DD, YYYY') }}</div>
+                    </div>
                 </div>
-                <div class="hidden md:block">
-                    <svg class="h-16 w-16 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V5a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
+                <div class="hidden lg:block relative z-10">
+                    <div class="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                        <svg class="h-12 w-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V5a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         <!-- Total Customers -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                        </svg>
+        <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-200 transition-all duration-300 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Customers</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ stats.total_customers }}</p>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Total Customers</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_customers }}</p>
+                    <div class="flex items-center mt-2">
+                        <div class="flex items-center text-green-600 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            +12%
+                        </div>
+                        <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Total Orders -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                        </svg>
+        <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-green-200 transition-all duration-300 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Orders</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ stats.total_orders }}</p>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Total Orders</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_orders }}</p>
+                    <div class="flex items-center mt-2">
+                        <div class="flex items-center text-green-600 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            +8%
+                        </div>
+                        <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Monthly Revenue -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
+        <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-yellow-200 transition-all duration-300 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Monthly Revenue</p>
-                    <p class="text-2xl font-semibold text-gray-900">₹{{ "%.2f"|format(stats.monthly_revenue) }}</p>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Monthly Revenue</p>
+                    <p class="text-3xl font-bold text-gray-900">₹{{ "%.0f"|format(stats.monthly_revenue) }}</p>
+                    <div class="flex items-center mt-2">
+                        <div class="flex items-center text-green-600 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            +25%
+                        </div>
+                        <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Active Products -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                        </svg>
+        <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Active Products</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ stats.active_products }}</p>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Active Products</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.active_products }}</p>
+                    <div class="flex items-center mt-2">
+                        <div class="flex items-center text-blue-600 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                            In stock
+                        </div>
+                        <span class="text-gray-500 text-sm ml-2">available</span>
+                    </div>
                 </div>
             </div>
         </div>
