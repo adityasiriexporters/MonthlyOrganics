@@ -93,6 +93,9 @@
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-gray-900">Zone Map</h3>
                 <div class="flex gap-2">
+                    <button id="showAllZonesBtn" class="btn-sm btn-primary">
+                        Show All Zones
+                    </button>
                     <button id="clearMapBtn" class="btn-sm btn-danger" style="display: none;">
                         Clear Drawing
                     </button>
@@ -444,6 +447,77 @@ function showZoneOnMap(zoneId, geojson) {
     }
 }
 
+function showAllZones() {
+    try {
+        // Clear existing zones display
+        existingZones.clearLayers();
+        
+        // Get all zone cards with geojson data
+        const zoneCards = document.querySelectorAll('.zone-card');
+        let allBounds = null;
+        let zonesDisplayed = 0;
+        
+        zoneCards.forEach((card, index) => {
+            const showBtn = card.querySelector('.show-zone-btn');
+            if (showBtn) {
+                const geojsonStr = showBtn.getAttribute('data-geojson');
+                const zoneName = card.querySelector('h4').textContent;
+                
+                try {
+                    // Parse and decode GeoJSON
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = geojsonStr;
+                    const cleanedStr = tempDiv.textContent || tempDiv.innerText || geojsonStr;
+                    const geojson = JSON.parse(cleanedStr);
+                    
+                    if (geojson && geojson.geometry && geojson.geometry.coordinates) {
+                        // Create different colors for each zone
+                        const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16'];
+                        const color = colors[index % colors.length];
+                        
+                        // Add zone to map with unique styling
+                        const geoJsonLayer = L.geoJSON(geojson, {
+                            style: {
+                                color: color,
+                                fillColor: color,
+                                fillOpacity: 0.3,
+                                weight: 2
+                            }
+                        }).addTo(existingZones);
+                        
+                        // Add popup with zone name
+                        geoJsonLayer.bindPopup(`<strong>${zoneName}</strong>`);
+                        
+                        // Extend bounds to include this zone
+                        const layerBounds = geoJsonLayer.getBounds();
+                        if (!allBounds) {
+                            allBounds = layerBounds;
+                        } else {
+                            allBounds.extend(layerBounds);
+                        }
+                        
+                        zonesDisplayed++;
+                    }
+                } catch (error) {
+                    console.error(`Error processing zone ${zoneName}:`, error);
+                }
+            }
+        });
+        
+        if (zonesDisplayed > 0) {
+            // Fit map to show all zones
+            map.fitBounds(allBounds, { padding: [20, 20] });
+            console.log(`Displayed ${zonesDisplayed} zones on map`);
+        } else {
+            alert('No zones found to display on map');
+        }
+        
+    } catch (error) {
+        console.error('Error showing all zones:', error);
+        alert('Error displaying zones on map');
+    }
+}
+
 function addFreeDate(zoneId) {
     const dateInput = document.querySelector(`input[data-zone-id="${zoneId}"]`);
     const date = dateInput.value;
@@ -626,6 +700,7 @@ function showStatistics() {
 // Event listeners
 document.getElementById('clearMapBtn').addEventListener('click', clearDrawing);
 document.getElementById('saveZoneBtn').addEventListener('click', saveZone);
+document.getElementById('showAllZonesBtn').addEventListener('click', showAllZones);
 document.getElementById('manualCleanupBtn').addEventListener('click', runManualCleanup);
 document.getElementById('showStatsBtn').addEventListener('click', showStatistics);
 document.getElementById('helpBtn').addEventListener('click', () => {
