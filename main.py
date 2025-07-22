@@ -979,12 +979,15 @@ def admin_delivery_zones():
             # Ensure geojson is properly handled
             if zone_dict.get('geojson'):
                 try:
-                    # If geojson is a string, parse it to validate
-                    if isinstance(zone_dict['geojson'], str):
-                        import json
-                        json.loads(zone_dict['geojson'])  # Validate JSON
-                except (json.JSONDecodeError, TypeError):
-                    logger.warning(f"Invalid GeoJSON for zone {zone_dict['id']}, setting to None")
+                    import json
+                    # If geojson is already a dict, convert to string for template
+                    if isinstance(zone_dict['geojson'], dict):
+                        zone_dict['geojson'] = json.dumps(zone_dict['geojson'])
+                    elif isinstance(zone_dict['geojson'], str):
+                        # Validate it's valid JSON
+                        json.loads(zone_dict['geojson'])  # This will raise an error if invalid
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(f"Invalid GeoJSON for zone {zone_dict['id']}: {e}, setting to None")
                     zone_dict['geojson'] = None
             zones.append(zone_dict)
         

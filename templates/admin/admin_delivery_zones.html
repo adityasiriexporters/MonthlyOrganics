@@ -131,7 +131,7 @@
                                 {% if zone.geojson and zone.geojson != '{}' %}
                                 <button class="btn-sm btn-primary show-zone-btn" 
                                         data-zone-id="{{ zone.id }}" 
-                                        data-geojson="{{ zone.geojson|tojson|safe|e }}">
+                                        data-geojson="{{ zone.geojson|string|e }}">
                                     Show on Map
                                 </button>
                                 {% else %}
@@ -644,12 +644,22 @@ document.addEventListener('click', function(e) {
     if (e.target.classList.contains('show-zone-btn')) {
         const zoneId = e.target.getAttribute('data-zone-id');
         const geojsonStr = e.target.getAttribute('data-geojson');
+        console.log('Raw GeoJSON string:', geojsonStr); // Debug log
         try {
-            const geojson = JSON.parse(geojsonStr);
+            // Handle potential double-encoding or HTML entity issues
+            let cleanedStr = geojsonStr;
+            // Decode HTML entities if present
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = geojsonStr;
+            cleanedStr = tempDiv.textContent || tempDiv.innerText || geojsonStr;
+            
+            console.log('Cleaned GeoJSON string:', cleanedStr); // Debug log
+            const geojson = JSON.parse(cleanedStr);
             showZoneOnMap(zoneId, geojson);
         } catch (error) {
             console.error('Error parsing zone GeoJSON:', error);
-            alert('Error displaying zone on map');
+            console.error('Failed string was:', geojsonStr);
+            alert('Error displaying zone on map. Check console for details.');
         }
     }
     
