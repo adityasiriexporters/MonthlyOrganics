@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}Add Delivery Address - Monthly Organics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header with back button -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-md mx-auto px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('pre_checkout') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-lg font-semibold text-gray-900">Add Delivery Address</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto">
+        <!-- Address Form -->
+        <div class="bg-white shadow-sm mt-4">
+            <form method="POST" action="{{ url_for('save_address_for_delivery') }}" class="p-4 space-y-4">
+                <!-- Address Label -->
+                <div>
+                    <label for="nickname" class="block text-sm font-medium text-gray-700 mb-2">Address Label *</label>
+                    <input type="text" 
+                           id="nickname" 
+                           name="nickname" 
+                           placeholder="e.g., Home, Office, etc."
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                           required>
+                </div>
+
+                <!-- House/Building Number -->
+                <div>
+                    <label for="house_number" class="block text-sm font-medium text-gray-700 mb-2">House/Plot/Building Number *</label>
+                    <input type="text" 
+                           id="house_number" 
+                           name="house_number" 
+                           placeholder="e.g., 123, A-45, Building Name"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                           required>
+                </div>
+
+                <!-- Block Name -->
+                <div>
+                    <label for="block_name" class="block text-sm font-medium text-gray-700 mb-2">Block Name/Number</label>
+                    <input type="text" 
+                           id="block_name" 
+                           name="block_name" 
+                           placeholder="e.g., Block A, Tower 1"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+
+                <!-- Floor/Door -->
+                <div>
+                    <label for="floor_door" class="block text-sm font-medium text-gray-700 mb-2">Floor/Door Number *</label>
+                    <input type="text" 
+                           id="floor_door" 
+                           name="floor_door" 
+                           placeholder="e.g., 2nd Floor, Flat 201"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                           required>
+                </div>
+
+                <!-- Locality -->
+                <div>
+                    <label for="locality" class="block text-sm font-medium text-gray-700 mb-2">Locality *</label>
+                    <input type="text" 
+                           id="locality" 
+                           name="locality" 
+                           placeholder="e.g., Sector 15, MG Road"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                           required>
+                </div>
+
+                <!-- City -->
+                <div>
+                    <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                    <input type="text" 
+                           id="city" 
+                           name="city" 
+                           placeholder="e.g., Delhi, Mumbai"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                           required>
+                </div>
+
+                <!-- Pincode -->
+                <div>
+                    <label for="pincode" class="block text-sm font-medium text-gray-700 mb-2">Pincode *</label>
+                    <input type="text" 
+                           id="pincode" 
+                           name="pincode" 
+                           placeholder="e.g., 110001"
+                           pattern="[0-9]{6}"
+                           maxlength="6"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                           required>
+                </div>
+
+                <!-- Receiver Details -->
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Receiver Information</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- Receiver Name -->
+                        <div>
+                            <label for="receiver_name" class="block text-sm font-medium text-gray-700 mb-2">Receiver's Name *</label>
+                            <input type="text" 
+                                   id="receiver_name" 
+                                   name="receiver_name" 
+                                   placeholder="Who will receive the order?"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                                   required>
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div>
+                            <label for="contact_number" class="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
+                            <input type="tel" 
+                                   id="contact_number" 
+                                   name="contact_number" 
+                                   placeholder="10-digit mobile number"
+                                   pattern="[6-9][0-9]{9}"
+                                   maxlength="10"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                                   required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location Picker -->
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Pin Your Location</h3>
+                    
+                    <!-- Map Container -->
+                    <div id="map" class="w-full h-64 bg-gray-100 rounded-lg border mb-3"></div>
+                    
+                    <!-- Current Location Button -->
+                    <button type="button" 
+                            onclick="getCurrentLocation()" 
+                            class="w-full bg-blue-50 text-blue-600 border border-blue-200 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors mb-3">
+                        📍 Use Current Location
+                    </button>
+                    
+                    <!-- Hidden inputs for coordinates -->
+                    <input type="hidden" id="latitude" name="latitude" required>
+                    <input type="hidden" id="longitude" name="longitude" required>
+                    
+                    <!-- Location Status -->
+                    <div id="location-status" class="text-xs text-gray-500 text-center">
+                        Please select your location on the map
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div>
+                    <label for="address_notes" class="block text-sm font-medium text-gray-700 mb-2">Delivery Instructions (Optional)</label>
+                    <textarea id="address_notes" 
+                              name="address_notes" 
+                              rows="3"
+                              placeholder="e.g., Ring the bell twice, Ask security for directions"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary resize-none"></textarea>
+                </div>
+
+                <!-- Default Address Checkbox -->
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" 
+                           id="is_default" 
+                           name="is_default" 
+                           class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2">
+                    <label for="is_default" class="text-sm text-gray-700">
+                        Set as default delivery address
+                    </label>
+                </div>
+
+                <!-- Save Button -->
+                <div class="pt-4">
+                    <button type="submit" 
+                            id="save-button"
+                            disabled
+                            class="w-full bg-gray-300 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed disabled:opacity-50 transition-all">
+                        Save & Use This Address
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Include Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
+
+<script>
+let map;
+let marker;
+let isLocationSelected = false;
+
+// Initialize map
+function initMap() {
+    // Default to Delhi center
+    const defaultLocation = { lat: 28.6139, lng: 77.2090 };
+    
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: defaultLocation,
+        zoom: 13
+    });
+    
+    // Click listener for map
+    map.addListener('click', function(event) {
+        placeMarker(event.latLng);
+        updateLocationInputs(event.latLng.lat(), event.latLng.lng());
+    });
+}
+
+function placeMarker(location) {
+    if (marker) {
+        marker.setPosition(location);
+    } else {
+        marker = new google.maps.Marker({
+            position: location,
+            map: map,
+            draggable: true
+        });
+        
+        // Drag listener for marker
+        marker.addListener('dragend', function(event) {
+            updateLocationInputs(event.latLng.lat(), event.latLng.lng());
+        });
+    }
+    
+    map.panTo(location);
+}
+
+function updateLocationInputs(lat, lng) {
+    document.getElementById('latitude').value = lat;
+    document.getElementById('longitude').value = lng;
+    isLocationSelected = true;
+    
+    document.getElementById('location-status').textContent = 
+        `Location selected: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    
+    checkFormValidity();
+}
+
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        const locationStatus = document.getElementById('location-status');
+        locationStatus.textContent = 'Getting your location...';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                
+                map.setCenter(userLocation);
+                map.setZoom(16);
+                placeMarker(userLocation);
+                updateLocationInputs(userLocation.lat, userLocation.lng);
+                
+                locationStatus.textContent = 'Current location selected';
+            },
+            function(error) {
+                locationStatus.textContent = 'Unable to get location. Please select manually.';
+                console.error('Geolocation error:', error);
+            }
+        );
+    } else {
+        document.getElementById('location-status').textContent = 
+            'Geolocation not supported. Please select manually.';
+    }
+}
+
+function checkFormValidity() {
+    const saveButton = document.getElementById('save-button');
+    const requiredFields = document.querySelectorAll('input[required], textarea[required]');
+    let allFieldsFilled = true;
+    
+    // Check all required fields
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            allFieldsFilled = false;
+        }
+    });
+    
+    // Enable button if all fields are filled and location is selected
+    if (allFieldsFilled && isLocationSelected) {
+        saveButton.disabled = false;
+        saveButton.className = 'w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors cursor-pointer';
+        saveButton.textContent = 'Save & Use This Address';
+    } else {
+        saveButton.disabled = true;
+        saveButton.className = 'w-full bg-gray-300 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed disabled:opacity-50 transition-all';
+        saveButton.textContent = 'Save & Use This Address';
+    }
+}
+
+// Add event listeners to required fields
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    
+    const requiredFields = document.querySelectorAll('input[required], textarea[required]');
+    requiredFields.forEach(field => {
+        field.addEventListener('input', checkFormValidity);
+        field.addEventListener('change', checkFormValidity);
+    });
+    
+    // Phone number validation
+    const phoneInput = document.getElementById('contact_number');
+    phoneInput.addEventListener('input', function(e) {
+        // Remove non-digits
+        let value = e.target.value.replace(/\D/g, '');
+        
+        // Limit to 10 digits
+        if (value.length > 10) {
+            value = value.substring(0, 10);
+        }
+        
+        e.target.value = value;
+        checkFormValidity();
+    });
+    
+    // Pincode validation
+    const pincodeInput = document.getElementById('pincode');
+    pincodeInput.addEventListener('input', function(e) {
+        // Remove non-digits
+        let value = e.target.value.replace(/\D/g, '');
+        
+        // Limit to 6 digits
+        if (value.length > 6) {
+            value = value.substring(0, 6);
+        }
+        
+        e.target.value = value;
+        checkFormValidity();
+    });
+});
+</script>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="fixed bottom-4 left-4 right-4 z-50">
+            {% for category, message in messages %}
+                <div class="bg-white rounded-lg shadow-lg border p-4 mb-2 max-w-md mx-auto
+                    {% if category == 'error' %}border-red-200{% else %}border-green-200{% endif %}">
+                    <div class="flex items-center space-x-2">
+                        {% if category == 'error' %}
+                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        {% else %}
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        {% endif %}
+                        <span class="text-sm {% if category == 'error' %}text-red-700{% else %}text-green-700{% endif %}">{{ message }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+{% endblock %}

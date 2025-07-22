@@ -843,6 +843,266 @@ def cart_totals():
         return f"Error calculating totals: {str(e)}", 500
 
 
+# ===== CHECKOUT SECTION =====
+
+@app.route('/pre-checkout')
+@login_required
+def pre_checkout():
+    """Pre-checkout page for address selection and confirmation."""
+    try:
+        user_id = session['user_id']
+        
+        # Check if cart has items
+        cart_items = CartService.get_cart_items(user_id)
+        if not cart_items:
+            flash('Your cart is empty. Please add items before checkout.', 'error')
+            return redirect(url_for('cart'))
+        
+        # Get user's addresses
+        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses_checkout")
+        
+        # Check if a specific address should be selected (from query params)
+        selected_address_id = request.args.get('selected_address', type=int)
+        if selected_address_id:
+            for addr in user_addresses:
+                if addr['id'] == selected_address_id:
+                    addr['is_default'] = True
+                else:
+                    addr['is_default'] = False
+        
+        # Convert addresses to JSON for JavaScript
+        import json
+        addresses_json = json.dumps(user_addresses)
+        
+        return render_template('pre_checkout.html', 
+                             addresses=user_addresses,
+                             addresses_json=addresses_json,
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        
+    except Exception as e:
+        logger.error(f"Error loading pre-checkout: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('cart'))
+
+@app.route('/add-new-address-for-delivery')
+@login_required
+def add_new_address_for_delivery():
+    """Add new address page specifically for delivery checkout."""
+    try:
+        return render_template('add_address_for_delivery.html',
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+    except Exception as e:
+        logger.error(f"Error loading add address for delivery page: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('pre_checkout'))
+
+@app.route('/save-address-for-delivery', methods=['POST'])
+@login_required
+def save_address_for_delivery():
+    """Save new address and return to pre-checkout with new address selected."""
+    try:
+        user_id = session['user_id']
+        
+        # Generate incremental label if nickname already exists
+        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
+        final_nickname = generate_incremental_label(user_id, requested_nickname)
+        
+        # Get form data
+        address_data = {
+            'nickname': final_nickname,
+            'house_number': FormValidator.sanitize_string(request.form.get('house_number', '')),
+            'block_name': FormValidator.sanitize_string(request.form.get('block_name', '')),
+            'floor_door': FormValidator.sanitize_string(request.form.get('floor_door', '')),
+            'contact_number': FormValidator.sanitize_string(request.form.get('contact_number', '')),
+            'receiver_name': FormValidator.sanitize_string(request.form.get('receiver_name', '')),
+            'latitude': float(request.form.get('latitude', 0)),
+            'longitude': float(request.form.get('longitude', 0)),
+            'locality': FormValidator.sanitize_string(request.form.get('locality', '')),
+            'city': FormValidator.sanitize_string(request.form.get('city', '')),
+            'pincode': FormValidator.sanitize_string(request.form.get('pincode', '')),
+            'nearby_landmark': FormValidator.sanitize_string(request.form.get('nearby_landmark', '')),
+            'address_notes': FormValidator.sanitize_string(request.form.get('address_notes', '')),
+            'is_default': request.form.get('is_default') == 'on'
+        }
+        
+        # Validate address data
+        is_valid, errors = FormValidator.validate_address_data(address_data)
+        if not is_valid:
+            for error in errors:
+                flash(error, 'error')
+            return redirect(url_for('add_new_address_for_delivery'))
+        
+        # Save address
+        address_id = SecureAddressService.create_address(user_id, address_data)
+        SecurityAuditLogger.log_data_access(user_id, "CREATE", "address_delivery", bool(address_id))
+        
+        if address_id:
+            flash('Address saved successfully!', 'success')
+            # Redirect to pre-checkout with new address selected
+            return redirect(url_for('pre_checkout', selected_address=address_id))
+        else:
+            flash('Error saving address. Please try again.', 'error')
+            return redirect(url_for('add_new_address_for_delivery'))
+            
+    except Exception as e:
+        logger.error(f"Error saving address for delivery: {e}")
+        flash('An error occurred while saving the address. Please try again.', 'error')
+        return redirect(url_for('add_new_address_for_delivery'))
+
+@app.route('/edit-address-for-delivery/<int:address_id>')
+@login_required
+def edit_address_for_delivery(address_id):
+    """Edit address page specifically for delivery checkout."""
+    try:
+        user_id = session['user_id']
+        
+        # Get the specific address
+        addresses = SecureAddressService.get_user_addresses(user_id)
+        address = None
+        
+        for addr in addresses:
+            if addr['id'] == address_id:
+                address = addr
+                break
+        
+        if not address:
+            flash('Address not found.', 'error')
+            return redirect(url_for('pre_checkout'))
+        
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "address_edit_delivery")
+        
+        return render_template('edit_address_for_delivery.html',
+                             address=address,
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        
+    except Exception as e:
+        logger.error(f"Error loading edit address for delivery: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('pre_checkout'))
+
+@app.route('/update-address-for-delivery/<int:address_id>', methods=['POST'])
+@login_required
+def update_address_for_delivery(address_id):
+    """Update address and return to pre-checkout with updated address selected."""
+    try:
+        user_id = session['user_id']
+        action = request.form.get('action', 'update_and_use')
+        
+        if action == 'update_and_use':
+            # Get form data
+            form_data = dict(request.form)
+            
+            # Validate latitude and longitude
+            try:
+                latitude = float(form_data.get('latitude', 0))
+                longitude = float(form_data.get('longitude', 0))
+            except (ValueError, TypeError):
+                flash('Invalid location coordinates.', 'error')
+                return redirect(url_for('edit_address_for_delivery', address_id=address_id))
+            
+            # Generate incremental label if nickname conflicts
+            requested_nickname = form_data.get('nickname')
+            existing_addresses = SecureAddressService.get_user_addresses(user_id)
+            existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
+            
+            final_nickname = requested_nickname
+            if requested_nickname.lower() in existing_nicknames:
+                final_nickname = generate_incremental_label(user_id, requested_nickname)
+            
+            # Prepare address data
+            address_data = {
+                'nickname': final_nickname,
+                'house_number': form_data.get('house_number'),
+                'block_name': form_data.get('block_name', ''),
+                'floor_door': form_data.get('floor_door'),
+                'locality': form_data.get('locality'),
+                'city': form_data.get('city'),
+                'pincode': form_data.get('pincode'),
+                'latitude': latitude,
+                'longitude': longitude,
+                'nearby_landmark': form_data.get('nearby_landmark', ''),
+                'contact_number': form_data.get('contact_number', ''),
+                'address_notes': form_data.get('address_notes', ''),
+                'receiver_name': form_data.get('receiver_name', ''),
+                'is_default': bool(form_data.get('is_default'))
+            }
+            
+            # Validate address data
+            is_valid, errors = FormValidator.validate_address_data(address_data)
+            if not is_valid:
+                for error in errors:
+                    flash(error, 'error')
+                return redirect(url_for('edit_address_for_delivery', address_id=address_id))
+            
+            # Update address
+            if SecureAddressService.update_address(address_id, user_id, address_data):
+                SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_delivery")
+                flash('Address updated successfully!', 'success')
+                return redirect(url_for('pre_checkout', selected_address=address_id))
+            else:
+                flash('Error updating address.', 'error')
+                return redirect(url_for('edit_address_for_delivery', address_id=address_id))
+        
+        # If we reach here, there was an error
+        flash('Invalid action.', 'error')
+        return redirect(url_for('edit_address_for_delivery', address_id=address_id))
+        
+    except Exception as e:
+        logger.error(f"Error updating address for delivery: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('edit_address_for_delivery', address_id=address_id))
+
+@app.route('/checkout')
+@login_required
+def checkout():
+    """Final checkout page with order summary and payment."""
+    try:
+        user_id = session['user_id']
+        address_id = request.args.get('address_id', type=int)
+        
+        if not address_id:
+            flash('Please select a delivery address.', 'error')
+            return redirect(url_for('pre_checkout'))
+        
+        # Get cart items
+        cart_items = CartService.get_cart_items(user_id)
+        if not cart_items:
+            flash('Your cart is empty.', 'error')
+            return redirect(url_for('cart'))
+        
+        # Get selected address
+        addresses = SecureAddressService.get_user_addresses(user_id)
+        selected_address = None
+        
+        for addr in addresses:
+            if addr['id'] == address_id:
+                selected_address = addr
+                break
+        
+        if not selected_address:
+            flash('Selected address not found.', 'error')
+            return redirect(url_for('pre_checkout'))
+        
+        # Calculate totals
+        subtotal = sum(item['total_price'] for item in cart_items)
+        delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
+        total = subtotal + delivery_fee
+        
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "checkout")
+        
+        return render_template('checkout.html',
+                             cart_items=cart_items,
+                             selected_address=selected_address,
+                             subtotal=subtotal,
+                             delivery_fee=delivery_fee,
+                             total=total)
+        
+    except Exception as e:
+        logger.error(f"Error loading checkout: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('pre_checkout'))
+
 
 # ===== ADMIN SECTION =====
 

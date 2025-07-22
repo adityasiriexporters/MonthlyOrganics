@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Pre-Checkout - Monthly Organics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header with back button -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-md mx-auto px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('cart') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-lg font-semibold text-gray-900">Delivery Address</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto">
+        <!-- Address Selection Section -->
+        <div class="bg-white shadow-sm mt-4">
+            <div class="p-4">
+                <h2 class="font-medium text-gray-900 mb-3">Select Delivery Address</h2>
+                
+                <div class="mb-4">
+                    <select id="address-dropdown" 
+                            class="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary bg-white"
+                            onchange="handleAddressSelection()">
+                        <option value="add_new">+ Add New Address</option>
+                        {% for address in addresses %}
+                            <option value="{{ address.id }}" 
+                                    data-address="{{ address.id }}"
+                                    {% if address.is_default %}selected{% endif %}>
+                                {{ address.nickname }} - {{ address.locality }}, {{ address.city }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Edit Address Option for Selected Address -->
+                <div id="edit-address-section" class="hidden">
+                    <button onclick="editSelectedAddress()" 
+                            class="text-primary text-sm underline hover:no-underline">
+                        Edit this address
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address Confirmation Section -->
+        <div id="address-confirmation" class="bg-white shadow-sm mt-4 {% if not addresses or not addresses|selectattr('is_default')|list %}hidden{% endif %}">
+            <div class="p-4">
+                <h2 class="font-medium text-gray-900 mb-4">Address Confirmation</h2>
+                
+                <!-- Map Container -->
+                <div id="confirmation-map" class="w-full h-48 bg-gray-100 rounded-lg mb-4 border">
+                    <div class="flex items-center justify-center h-full text-gray-500">
+                        <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span class="text-sm">Location Map</span>
+                    </div>
+                </div>
+
+                <!-- Address Details -->
+                <div id="address-details" class="space-y-2 mb-4">
+                    <!-- Address details will be populated by JavaScript -->
+                </div>
+
+                <!-- Confirmation Checkbox -->
+                <div class="flex items-start space-x-2 mb-4">
+                    <input type="checkbox" 
+                           id="address-confirm-checkbox" 
+                           class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2"
+                           onchange="toggleConfirmButton()">
+                    <label for="address-confirm-checkbox" class="text-sm text-gray-700">
+                        I confirm this is the correct delivery address
+                    </label>
+                </div>
+
+                <!-- Confirm Address Button -->
+                <button id="confirm-address-btn" 
+                        onclick="confirmAddress()"
+                        disabled
+                        class="w-full bg-gray-300 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed disabled:opacity-50 transition-all">
+                    Confirm Address
+                </button>
+            </div>
+        </div>
+
+        <!-- No Addresses Message -->
+        {% if not addresses %}
+        <div class="bg-white shadow-sm mt-4">
+            <div class="text-center py-8 px-4">
+                <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No saved addresses</h3>
+                <p class="text-sm text-gray-500 mb-4">Please add a delivery address to continue with checkout</p>
+                
+                <a href="{{ url_for('add_new_address_for_delivery') }}" 
+                   class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                    Add Delivery Address
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Include Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
+
+<script>
+// Store addresses data for JavaScript access
+const addressesData = {{ addresses_json|safe }};
+let confirmationMap = null;
+let selectedAddressId = null;
+
+// Initialize with default address if available
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdown = document.getElementById('address-dropdown');
+    const defaultAddress = addressesData.find(addr => addr.is_default);
+    
+    if (defaultAddress) {
+        dropdown.value = defaultAddress.id;
+        selectedAddressId = defaultAddress.id;
+        showAddressConfirmation(defaultAddress);
+    }
+});
+
+function handleAddressSelection() {
+    const dropdown = document.getElementById('address-dropdown');
+    const selectedValue = dropdown.value;
+    
+    if (selectedValue === 'add_new') {
+        // Redirect to add new address page
+        window.location.href = "{{ url_for('add_new_address_for_delivery') }}";
+        return;
+    }
+    
+    selectedAddressId = parseInt(selectedValue);
+    const selectedAddress = addressesData.find(addr => addr.id === selectedAddressId);
+    
+    if (selectedAddress) {
+        showAddressConfirmation(selectedAddress);
+        document.getElementById('edit-address-section').classList.remove('hidden');
+    }
+}
+
+function showAddressConfirmation(address) {
+    // Show the confirmation section
+    document.getElementById('address-confirmation').classList.remove('hidden');
+    
+    // Populate address details
+    const detailsContainer = document.getElementById('address-details');
+    detailsContainer.innerHTML = `
+        <div class="border-b border-gray-100 pb-2 mb-2">
+            <h3 class="font-semibold text-gray-900 text-lg">${address.nickname}</h3>
+        </div>
+        <div class="space-y-1 text-sm text-gray-700">
+            <p><span class="font-medium">House/Building:</span> ${address.house_number}</p>
+            ${address.block_name ? `<p><span class="font-medium">Block:</span> ${address.block_name}</p>` : ''}
+            ${address.floor_door ? `<p><span class="font-medium">Floor/Door:</span> ${address.floor_door}</p>` : ''}
+            <p><span class="font-medium">Locality:</span> ${address.locality}</p>
+            <p><span class="font-medium">Pincode:</span> ${address.pincode}</p>
+        </div>
+        <div class="border-t border-gray-100 pt-2 mt-3">
+            <p class="font-semibold text-gray-900 text-base">${address.receiver_name}</p>
+            <p class="font-semibold text-gray-900">${address.contact_number}</p>
+        </div>
+    `;
+    
+    // Initialize map with the address location
+    initConfirmationMap(address.latitude, address.longitude);
+    
+    // Reset checkbox and button
+    document.getElementById('address-confirm-checkbox').checked = false;
+    toggleConfirmButton();
+}
+
+function initConfirmationMap(lat, lng) {
+    const mapElement = document.getElementById('confirmation-map');
+    
+    if (confirmationMap) {
+        confirmationMap = null;
+    }
+    
+    confirmationMap = new google.maps.Map(mapElement, {
+        center: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        zoom: 16,
+        disableDefaultUI: true,
+        zoomControl: true,
+        gestureHandling: 'none' // Disable interaction
+    });
+    
+    // Add marker
+    new google.maps.Marker({
+        position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        map: confirmationMap,
+        title: 'Delivery Location'
+    });
+}
+
+function editSelectedAddress() {
+    if (selectedAddressId) {
+        window.location.href = `/edit-address-for-delivery/${selectedAddressId}`;
+    }
+}
+
+function toggleConfirmButton() {
+    const checkbox = document.getElementById('address-confirm-checkbox');
+    const button = document.getElementById('confirm-address-btn');
+    
+    if (checkbox.checked) {
+        button.disabled = false;
+        button.className = 'w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors cursor-pointer';
+        button.textContent = 'Confirm Address';
+    } else {
+        button.disabled = true;
+        button.className = 'w-full bg-gray-300 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed disabled:opacity-50 transition-all';
+        button.textContent = 'Confirm Address';
+    }
+}
+
+function confirmAddress() {
+    if (selectedAddressId && document.getElementById('address-confirm-checkbox').checked) {
+        // Proceed to checkout with selected address
+        window.location.href = `/checkout?address_id=${selectedAddressId}`;
+    }
+}
+</script>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="fixed bottom-4 left-4 right-4 z-50">
+            {% for category, message in messages %}
+                <div class="bg-white rounded-lg shadow-lg border p-4 mb-2 max-w-md mx-auto
+                    {% if category == 'error' %}border-red-200{% else %}border-green-200{% endif %}">
+                    <div class="flex items-center space-x-2">
+                        {% if category == 'error' %}
+                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        {% else %}
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        {% endif %}
+                        <span class="text-sm {% if category == 'error' %}text-red-700{% else %}text-green-700{% endif %}">{{ message }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+{% endblock %}
