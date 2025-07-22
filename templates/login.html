@@ -139,25 +139,8 @@
             e.target.value = value;
         });
 
-        // Auto-format name inputs
-        function formatName(input) {
-            let value = input.value;
-            // Allow only letters, spaces, and common name characters
-            value = value.replace(/[^a-zA-Z\s'-]/g, '');
-            // Capitalize first letter of each word
-            value = value.replace(/\b\w/g, function(char) {
-                return char.toUpperCase();
-            });
-            input.value = value;
-        }
-
-        document.getElementById('first_name').addEventListener('input', function(e) {
-            formatName(e.target);
-        });
-
-        document.getElementById('last_name').addEventListener('input', function(e) {
-            formatName(e.target);
-        });
+        // Auto-focus on mobile number input
+        document.getElementById('mobile_number').focus();
     </script>
 </body>
 </html>
