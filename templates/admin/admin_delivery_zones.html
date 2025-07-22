@@ -184,7 +184,7 @@
                             <!-- Zone name and basic info -->
                             <div class="flex items-center gap-3 flex-1 min-w-0">
                                 <h4 class="font-medium text-gray-900 text-sm truncate">{{ zone.name }}</h4>
-                                <span class="text-xs text-gray-500 whitespace-nowrap">{{ zone.created_at.strftime('%b %d') }}</span>
+                                <span class="text-xs text-gray-500 whitespace-nowrap">{{ zone.created_at.strftime('%b %d, %Y') }}</span>
                                 <div class="flex items-center gap-1">
                                     <span class="text-xs text-gray-600">Dates:</span>
                                     <span class="text-xs font-medium text-green-600">{{ zone.free_dates_count or 0 }}</span>
@@ -204,18 +204,18 @@
                             </div>
                             
                             <!-- Upcoming dates display -->
-                            <div class="flex items-center gap-1" style="min-width: 120px;">
+                            <div class="flex items-center gap-1 flex-wrap" style="min-width: 200px; max-width: 300px;">
                                 {% if zone.upcoming_dates %}
                                     {% set dates = zone.upcoming_dates.split(', ') %}
-                                    {% for date in dates[:2] %}
+                                    {% for date in dates[:5] %}
                                         <span class="date-tag-small" data-date="{{ date }}">
-                                            {{ date.split('-')[2] }}/{{ date.split('-')[1] }}
+                                            {{ date.split('-')[2] }}/{{ date.split('-')[1] }}/{{ date.split('-')[0][2:] }}
                                             <button onclick="removeFreeDate({{ zone.id }}, '{{ date }}')" 
                                                     class="ml-1 text-white hover:text-red-200">×</button>
                                         </span>
                                     {% endfor %}
-                                    {% if dates|length > 2 %}
-                                        <span class="text-xs text-gray-500">+{{ dates|length - 2 }}</span>
+                                    {% if dates|length > 5 %}
+                                        <span class="text-xs text-gray-500">+{{ dates|length - 5 }}</span>
                                     {% endif %}
                                 {% else %}
                                     <span class="text-xs text-gray-400">No dates</span>
