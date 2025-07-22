@@ -97,42 +97,41 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Map Section -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Zone Map</h3>
-                <div class="flex gap-2">
-                    <button id="showAllZonesBtn" class="btn-sm btn-primary">
-                        Show All Zones
-                    </button>
-                    <button id="clearMapBtn" class="btn-sm btn-danger" style="display: none;">
-                        Clear Drawing
-                    </button>
-                    <button id="saveZoneBtn" class="btn-sm btn-primary" style="display: none;">
-                        Save Zone
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Map Container -->
-            <div id="map" class="map-container mb-4"></div>
-            
-            <!-- Zone Name Input (shown when polygon is drawn) -->
-            <div id="zoneNameSection" style="display: none;">
-                <label for="zoneName" class="block text-sm font-medium text-gray-700 mb-2">
-                    Zone Name (e.g., 'Safilguda 0001')
-                </label>
-                <input type="text" 
-                       id="zoneName" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                       placeholder="Enter unique zone name">
+    <!-- Map Section -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Zone Map</h3>
+            <div class="flex gap-2">
+                <button id="showAllZonesBtn" class="btn-sm btn-primary">
+                    Show All Zones
+                </button>
+                <button id="clearMapBtn" class="btn-sm btn-danger" style="display: none;">
+                    Clear Drawing
+                </button>
+                <button id="saveZoneBtn" class="btn-sm btn-primary" style="display: none;">
+                    Save Zone
+                </button>
             </div>
         </div>
+        
+        <!-- Map Container -->
+        <div id="map" class="map-container mb-4"></div>
+        
+        <!-- Zone Name Input (shown when polygon is drawn) -->
+        <div id="zoneNameSection" style="display: none;">
+            <label for="zoneName" class="block text-sm font-medium text-gray-700 mb-2">
+                Zone Name (e.g., 'Safilguda 0001')
+            </label>
+            <input type="text" 
+                   id="zoneName" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                   placeholder="Enter unique zone name">
+        </div>
+    </div>
 
-        <!-- Zone List Section -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Delivery Zones ({{ zones|length }})</h3>
+    <!-- Zone List Section -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Delivery Zones ({{ zones|length }})</h3>
             
             {% if zones %}
                 <div class="space-y-4 max-h-96 overflow-y-auto">
@@ -205,7 +204,6 @@
                 </div>
             {% endif %}
         </div>
-    </div>
 
     <!-- Admin Controls Section -->
     <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
