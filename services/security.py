@@ -66,6 +66,10 @@ class SecureUserService:
     def create_user_with_details(phone: str, first_name: str, last_name: str) -> Optional[Dict]:
         """Create new user with provided details"""
         try:
+            # Auto-capitalize first letter of names
+            first_name = first_name.strip().title() if first_name else ""
+            last_name = last_name.strip().title() if last_name else ""
+            
             # Generate custom ID
             custom_id = CustomIDGenerator.generate_user_id()
             
@@ -96,6 +100,10 @@ class SecureUserService:
     def update_user_name(user_id: int, first_name: str, last_name: str) -> bool:
         """Update user's first and last name"""
         try:
+            # Auto-capitalize first letter of names
+            first_name = first_name.strip().title() if first_name else ""
+            last_name = last_name.strip().title() if last_name else ""
+            
             query = """
                 UPDATE users 
                 SET first_name = %s, last_name = %s, updated_at = CURRENT_TIMESTAMP
