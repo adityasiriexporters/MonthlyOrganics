@@ -68,6 +68,16 @@
     .btn-danger:hover {
         background-color: #dc2626;
     }
+    
+    .zone-tooltip {
+        background-color: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+    }
 </style>
 {% endblock %}
 
@@ -485,8 +495,12 @@ function showAllZones() {
                             }
                         }).addTo(existingZones);
                         
-                        // Add popup with zone name
-                        geoJsonLayer.bindPopup(`<strong>${zoneName}</strong>`);
+                        // Add tooltip with zone name (shows on hover)
+                        geoJsonLayer.bindTooltip(`<strong>${zoneName}</strong>`, {
+                            permanent: false,
+                            direction: 'center',
+                            className: 'zone-tooltip'
+                        });
                         
                         // Extend bounds to include this zone
                         const layerBounds = geoJsonLayer.getBounds();
