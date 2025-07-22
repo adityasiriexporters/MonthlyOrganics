@@ -23,11 +23,16 @@
         <div class="max-w-md w-full">
             <!-- Logo and Header -->
             <div class="text-center mb-8">
-                <div class="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4 shadow-lg">
-                    <span class="text-3xl">🥬</span>
+                <div class="mx-auto w-24 h-24 mb-6">
+                    <img src="{{ url_for('static', filename='images/fulllogo_transparent.png') }}" 
+                         alt="Monthly Organics Logo" 
+                         class="w-full h-full object-contain">
                 </div>
+                <p class="text-sm text-gray-600 mb-1">
+                    Login/Sign up
+                </p>
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                    Join Monthly Organics
+                    Monthly Organics
                 </h1>
                 <p class="text-gray-600">
                     Fresh organic produce delivered to your door

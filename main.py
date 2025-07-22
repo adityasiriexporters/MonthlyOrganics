@@ -1,6 +1,7 @@
 import os
 import logging
 import re
+from datetime import timedelta
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -64,6 +65,9 @@ class Base(DeclarativeBase):
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# Configure persistent sessions (30 days)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 # Configure the database
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
@@ -646,7 +650,8 @@ def verify_otp():
             )
             logger.info(f"New user created")
         
-        # Login user
+        # Login user with permanent session
+        session.permanent = True  # Make session permanent (lasts 30 days)
         session['user_id'] = user_id
         
         # Clear OTP data from session
