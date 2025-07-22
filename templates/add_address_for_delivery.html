@@ -2,368 +2,504 @@
 
 {% block title %}Add Delivery Address - Monthly Organics{% endblock %}
 
+{% block extra_head %}
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
+<style>
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    /* Prevent body scroll when modal is open */
+    body.modal-open {
+        overflow: hidden;
+    }
+    /* Map modal specific styles */
+    #mapModal {
+        touch-action: none;
+    }
+    #mapModal #map {
+        padding-top: 80px; /* Account for header */
+        padding-bottom: 200px; /* Account for controls + mobile nav */
+    }
+    /* Map controls positioning */
+    .map-controls {
+        bottom: 80px; /* Above mobile navigation bar */
+    }
+    @media (min-width: 768px) {
+        .map-controls {
+            bottom: 20px; /* Normal position on desktop */
+        }
+        #mapModal #map {
+            padding-bottom: 160px; /* Less padding on desktop */
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="min-h-screen bg-gray-50">
-    <!-- Header with back button -->
-    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-        <div class="max-w-md mx-auto px-4 py-3">
-            <div class="flex items-center space-x-3">
-                <a href="{{ url_for('pre_checkout') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+<div class="min-h-screen pb-20 md:pb-0 bg-gray-50">
+    <div class="max-w-md mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Add Delivery Address</h1>
+            <p class="text-gray-600 text-sm mt-1">Please provide your delivery address details</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Open Map Button -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
+                <button id="changeLocationBtn" class="text-primary hover:text-primary/80 text-sm font-medium hidden">
+                    Change
+                </button>
+            </div>
+            
+            <!-- Location Status Display -->
+            <div id="locationDisplay" class="mb-4 hidden">
+                <div class="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                </a>
-                <h1 class="text-lg font-semibold text-gray-900">Add Delivery Address</h1>
+                    <div>
+                        <div class="text-sm font-medium text-green-800">Location Selected</div>
+                        <div id="selectedLocationDisplay" class="text-xs text-green-600"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Open Map Button -->
+            <button id="openMapBtn" 
+                    class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Select Location on Map</span>
+            </button>
+        </div>
+
+        <!-- Selected Location Map Display -->
+        <div id="selectedLocationMap" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 hidden">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Selected Location</h3>
+            <div id="miniMap" style="height: 200px; width: 100%; border-radius: 8px;"></div>
+            <div class="mt-3 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span id="selectedLocationText">Location confirmed</span>
+                </div>
+                <button type="button" onclick="openMapModal()" class="text-primary hover:text-primary/80 text-sm font-medium">
+                    Change Location
+                </button>
             </div>
         </div>
-    </div>
 
-    <div class="max-w-md mx-auto">
         <!-- Address Form -->
-        <div class="bg-white shadow-sm mt-4">
-            <form method="POST" action="{{ url_for('save_address_for_delivery') }}" class="p-4 space-y-4">
-                <!-- Address Label -->
-                <div>
-                    <label for="nickname" class="block text-sm font-medium text-gray-700 mb-2">Address Label *</label>
-                    <input type="text" 
-                           id="nickname" 
-                           name="nickname" 
-                           placeholder="e.g., Home, Office, etc."
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                           required>
-                </div>
-
-                <!-- House/Building Number -->
-                <div>
-                    <label for="house_number" class="block text-sm font-medium text-gray-700 mb-2">House/Plot/Building Number *</label>
-                    <input type="text" 
-                           id="house_number" 
-                           name="house_number" 
-                           placeholder="e.g., 123, A-45, Building Name"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                           required>
-                </div>
-
-                <!-- Block Name -->
-                <div>
-                    <label for="block_name" class="block text-sm font-medium text-gray-700 mb-2">Block Name/Number</label>
-                    <input type="text" 
-                           id="block_name" 
-                           name="block_name" 
-                           placeholder="e.g., Block A, Tower 1"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary">
-                </div>
-
-                <!-- Floor/Door -->
-                <div>
-                    <label for="floor_door" class="block text-sm font-medium text-gray-700 mb-2">Floor/Door Number *</label>
-                    <input type="text" 
-                           id="floor_door" 
-                           name="floor_door" 
-                           placeholder="e.g., 2nd Floor, Flat 201"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                           required>
-                </div>
-
-                <!-- Locality -->
-                <div>
-                    <label for="locality" class="block text-sm font-medium text-gray-700 mb-2">Locality *</label>
-                    <input type="text" 
-                           id="locality" 
-                           name="locality" 
-                           placeholder="e.g., Sector 15, MG Road"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                           required>
-                </div>
-
-                <!-- City -->
-                <div>
-                    <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                    <input type="text" 
-                           id="city" 
-                           name="city" 
-                           placeholder="e.g., Delhi, Mumbai"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                           required>
-                </div>
-
-                <!-- Pincode -->
-                <div>
-                    <label for="pincode" class="block text-sm font-medium text-gray-700 mb-2">Pincode *</label>
-                    <input type="text" 
-                           id="pincode" 
-                           name="pincode" 
-                           placeholder="e.g., 110001"
-                           pattern="[0-9]{6}"
-                           maxlength="6"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                           required>
-                </div>
-
-                <!-- Receiver Details -->
-                <div class="border-t border-gray-200 pt-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Receiver Information</h3>
+        <form id="addressForm" method="POST" action="{{ url_for('save_address_for_delivery') }}" 
+              class="space-y-6" style="display: none;">
+            
+            <!-- Hidden Map Data -->
+            <input type="hidden" id="latitude" name="latitude" value="0">
+            <input type="hidden" id="longitude" name="longitude" value="0">
+            
+            <!-- Address Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- House Number (Required) -->
+                    <div>
+                        <label for="house_number" class="block text-sm font-medium text-gray-700 required-field">
+                            House No/Plot No/Building/Community Name
+                        </label>
+                        <input type="text" id="house_number" name="house_number" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
                     
-                    <div class="space-y-4">
-                        <!-- Receiver Name -->
-                        <div>
-                            <label for="receiver_name" class="block text-sm font-medium text-gray-700 mb-2">Receiver's Name *</label>
-                            <input type="text" 
-                                   id="receiver_name" 
-                                   name="receiver_name" 
-                                   placeholder="Who will receive the order?"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                                   required>
-                        </div>
-
-                        <!-- Contact Number -->
-                        <div>
-                            <label for="contact_number" class="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
-                            <input type="tel" 
-                                   id="contact_number" 
-                                   name="contact_number" 
-                                   placeholder="10-digit mobile number"
-                                   pattern="[6-9][0-9]{9}"
-                                   maxlength="10"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                                   required>
-                        </div>
+                    <!-- Block Name (Optional) -->
+                    <div>
+                        <label for="block_name" class="block text-sm font-medium text-gray-700">
+                            Block Name/No
+                        </label>
+                        <input type="text" id="block_name" name="block_name"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Floor/Door (Required) -->
+                    <div>
+                        <label for="floor_door" class="block text-sm font-medium text-gray-700 required-field">
+                            Floor/Door Number
+                        </label>
+                        <input type="text" id="floor_door" name="floor_door" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <!-- Locality (Required, Auto-filled) -->
+                    <div>
+                        <label for="locality" class="block text-sm font-medium text-gray-700 required-field">
+                            Locality
+                        </label>
+                        <input type="text" id="locality" name="locality" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- City (Auto-filled, Non-editable) -->
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700">
+                            City
+                        </label>
+                        <input type="text" id="city" name="city" readonly
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- Pincode (Auto-filled, Non-editable) -->
+                    <div>
+                        <label for="pincode" class="block text-sm font-medium text-gray-700">
+                            Pincode
+                        </label>
+                        <input type="text" id="pincode" name="pincode" readonly
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
+                    </div>
+                    
+                    <!-- Nearby Landmark (Optional) -->
+                    <div>
+                        <label for="nearby_landmark" class="block text-sm font-medium text-gray-700">
+                            Nearby Landmark
+                        </label>
+                        <input type="text" id="nearby_landmark" name="nearby_landmark"
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
                 </div>
+            </div>
 
-                <!-- Location Picker -->
-                <div class="border-t border-gray-200 pt-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Pin Your Location</h3>
+            <!-- Address Label Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
+                
+                <div class="space-y-4">
+                    <!-- Manual Label Input -->
+                    <div>
+                        <label for="custom_label" class="block text-sm font-medium text-gray-700 required-field">
+                            Enter Address Label
+                        </label>
+                        <input type="text" id="custom_label" name="custom_label" required
+                               placeholder="e.g., Home, Office, Friend's Place, etc."
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
                     
-                    <!-- Map Container -->
-                    <div id="map" class="w-full h-64 bg-gray-100 rounded-lg border mb-3"></div>
+                    <!-- Hidden nickname field that gets populated -->
+                    <input type="hidden" id="nickname" name="nickname" value="">
+                </div>
+            </div>
+
+            <!-- Receiver Details Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
+                
+                <div class="space-y-4">
+                    <!-- Receiver Name (Required) -->
+                    <div>
+                        <label for="receiver_name" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Name
+                        </label>
+                        <div class="mt-1 relative">
+                            <input type="text" id="receiver_name" name="receiver_name" required
+                                   class="block w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-primary focus:border-primary">
+                            <button type="button" id="contactsBtn" 
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                     
-                    <!-- Current Location Button -->
-                    <button type="button" 
-                            onclick="getCurrentLocation()" 
-                            class="w-full bg-blue-50 text-blue-600 border border-blue-200 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors mb-3">
-                        📍 Use Current Location
-                    </button>
+                    <!-- Receiver Phone (Required) -->
+                    <div>
+                        <label for="contact_number" class="block text-sm font-medium text-gray-700 required-field">
+                            Receiver's Phone Number
+                        </label>
+                        <input type="tel" id="contact_number" name="contact_number" pattern="[0-9]{10}" required
+                               class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+                    </div>
                     
-                    <!-- Hidden inputs for coordinates -->
-                    <input type="hidden" id="latitude" name="latitude" required>
-                    <input type="hidden" id="longitude" name="longitude" required>
-                    
-                    <!-- Location Status -->
-                    <div id="location-status" class="text-xs text-gray-500 text-center">
-                        Please select your location on the map
+                    <!-- Address Notes -->
+                    <div>
+                        <label for="address_notes" class="block text-sm font-medium text-gray-700">
+                            Address Notes (Optional)
+                        </label>
+                        <textarea id="address_notes" name="address_notes" rows="3" 
+                                  class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary"
+                                  placeholder="Any additional delivery instructions..."></textarea>
                     </div>
                 </div>
+            </div>
 
-                <!-- Additional Notes -->
-                <div>
-                    <label for="address_notes" class="block text-sm font-medium text-gray-700 mb-2">Delivery Instructions (Optional)</label>
-                    <textarea id="address_notes" 
-                              name="address_notes" 
-                              rows="3"
-                              placeholder="e.g., Ring the bell twice, Ask security for directions"
-                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary resize-none"></textarea>
-                </div>
+            <!-- Submit Button -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <button type="submit" 
+                        class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                    Save & Use This Address
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-                <!-- Default Address Checkbox -->
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" 
-                           id="is_default" 
-                           name="is_default" 
-                           class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2">
-                    <label for="is_default" class="text-sm text-gray-700">
-                        Set as default delivery address
-                    </label>
-                </div>
-
-                <!-- Save Button -->
-                <div class="pt-4">
-                    <button type="submit" 
-                            id="save-button"
-                            disabled
-                            class="w-full bg-gray-300 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed disabled:opacity-50 transition-all">
-                        Save & Use This Address
-                    </button>
-                </div>
-            </form>
+<!-- Full Screen Map Modal -->
+<div id="mapModal" class="fixed inset-0 bg-white z-50 hidden overflow-hidden">
+    <!-- Map Header -->
+    <div class="absolute top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-10">
+        <div class="flex items-center justify-between p-4">
+            <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
+            <button id="closeMapBtn" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Full Screen Map -->
+    <div id="map" class="w-full h-full"></div>
+    
+    <!-- Map Controls - Fixed at bottom -->
+    <div class="absolute left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-10 map-controls">
+        <!-- Location Status -->
+        <div id="locationStatus" class="text-sm text-gray-600 mb-4 text-center">
+            Tap on the map to select your location or use current location
+        </div>
+        
+        <!-- Control Buttons -->
+        <div class="flex space-x-2">
+            <button id="getCurrentLocation" 
+                    class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span>Current Location</span>
+            </button>
+            <button id="confirmLocation" 
+                    class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium" 
+                    style="display: none;">
+                Confirm Location
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Include Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
-
 <script>
 let map;
 let marker;
-let isLocationSelected = false;
+let miniMap;
+let selectedLocation = null;
+let geocoder;
 
-// Initialize map
-function initMap() {
-    // Default to Delhi center
-    const defaultLocation = { lat: 28.6139, lng: 77.2090 };
+function initializeMap() {
+    geocoder = new google.maps.Geocoder();
     
+    // Initialize main map (hidden initially)
     map = new google.maps.Map(document.getElementById('map'), {
-        center: defaultLocation,
-        zoom: 13
+        center: { lat: 28.6139, lng: 77.2090 }, // Default to Delhi
+        zoom: 13,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
     });
-    
-    // Click listener for map
+
+    // Add click listener to map
     map.addListener('click', function(event) {
-        placeMarker(event.latLng);
-        updateLocationInputs(event.latLng.lat(), event.latLng.lng());
+        setMarkerPosition(event.latLng);
     });
 }
 
-function placeMarker(location) {
+function openMapModal() {
+    document.getElementById('mapModal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    
+    // Resize map
+    setTimeout(() => {
+        google.maps.event.trigger(map, 'resize');
+        if (selectedLocation) {
+            map.setCenter(selectedLocation);
+            map.setZoom(16);
+        }
+    }, 100);
+}
+
+function closeMapModal() {
+    document.getElementById('mapModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+}
+
+function setMarkerPosition(latLng) {
     if (marker) {
-        marker.setPosition(location);
-    } else {
-        marker = new google.maps.Marker({
-            position: location,
-            map: map,
-            draggable: true
-        });
-        
-        // Drag listener for marker
-        marker.addListener('dragend', function(event) {
-            updateLocationInputs(event.latLng.lat(), event.latLng.lng());
-        });
+        marker.setMap(null);
     }
     
-    map.panTo(location);
+    marker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        draggable: true
+    });
+    
+    marker.addListener('dragend', function() {
+        updateSelectedLocation(marker.getPosition());
+    });
+    
+    updateSelectedLocation(latLng);
+    document.getElementById('confirmLocation').style.display = 'block';
 }
 
-function updateLocationInputs(lat, lng) {
-    document.getElementById('latitude').value = lat;
-    document.getElementById('longitude').value = lng;
-    isLocationSelected = true;
+function updateSelectedLocation(latLng) {
+    selectedLocation = latLng;
+    document.getElementById('latitude').value = latLng.lat();
+    document.getElementById('longitude').value = latLng.lng();
     
-    document.getElementById('location-status').textContent = 
-        `Location selected: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    // Update status
+    document.getElementById('locationStatus').textContent = 
+        `Selected: ${latLng.lat().toFixed(6)}, ${latLng.lng().toFixed(6)}`;
     
-    checkFormValidity();
+    // Reverse geocode to get address
+    geocoder.geocode({ location: latLng }, function(results, status) {
+        if (status === 'OK' && results[0]) {
+            parseAddressComponents(results[0]);
+        }
+    });
+}
+
+function parseAddressComponents(result) {
+    const components = result.address_components;
+    let locality = '';
+    let city = '';
+    let pincode = '';
+    
+    components.forEach(component => {
+        const types = component.types;
+        if (types.includes('sublocality_level_1') || types.includes('neighborhood')) {
+            locality = component.long_name;
+        } else if (types.includes('locality')) {
+            city = component.long_name;
+        } else if (types.includes('postal_code')) {
+            pincode = component.long_name;
+        }
+    });
+    
+    // Update form fields
+    document.getElementById('locality').value = locality;
+    document.getElementById('city').value = city;
+    document.getElementById('pincode').value = pincode;
+    
+    // Update display
+    document.getElementById('selectedLocationDisplay').textContent = 
+        `${locality}, ${city} - ${pincode}`;
+}
+
+function confirmLocationSelection() {
+    if (!selectedLocation) return;
+    
+    closeMapModal();
+    
+    // Show location display
+    document.getElementById('locationDisplay').classList.remove('hidden');
+    document.getElementById('changeLocationBtn').classList.remove('hidden');
+    
+    // Hide open map button
+    document.getElementById('openMapBtn').style.display = 'none';
+    
+    // Show mini map
+    document.getElementById('selectedLocationMap').classList.remove('hidden');
+    
+    // Initialize mini map
+    setTimeout(() => {
+        miniMap = new google.maps.Map(document.getElementById('miniMap'), {
+            center: selectedLocation,
+            zoom: 16,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+            zoomControl: false,
+            gestureHandling: 'none'
+        });
+        
+        new google.maps.Marker({
+            position: selectedLocation,
+            map: miniMap
+        });
+    }, 100);
+    
+    // Show address form
+    document.getElementById('addressForm').style.display = 'block';
 }
 
 function getCurrentLocation() {
     if (navigator.geolocation) {
-        const locationStatus = document.getElementById('location-status');
-        locationStatus.textContent = 'Getting your location...';
+        document.getElementById('locationStatus').textContent = 'Getting your location...';
         
         navigator.geolocation.getCurrentPosition(
             function(position) {
-                const userLocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
+                const userLocation = new google.maps.LatLng(
+                    position.coords.latitude,
+                    position.coords.longitude
+                );
                 
                 map.setCenter(userLocation);
                 map.setZoom(16);
-                placeMarker(userLocation);
-                updateLocationInputs(userLocation.lat, userLocation.lng);
-                
-                locationStatus.textContent = 'Current location selected';
+                setMarkerPosition(userLocation);
             },
             function(error) {
-                locationStatus.textContent = 'Unable to get location. Please select manually.';
-                console.error('Geolocation error:', error);
+                document.getElementById('locationStatus').textContent = 
+                    'Unable to get location. Please select manually on the map.';
             }
         );
     } else {
-        document.getElementById('location-status').textContent = 
-            'Geolocation not supported. Please select manually.';
+        document.getElementById('locationStatus').textContent = 
+            'Geolocation not supported. Please select manually on the map.';
     }
 }
 
-function checkFormValidity() {
-    const saveButton = document.getElementById('save-button');
-    const requiredFields = document.querySelectorAll('input[required], textarea[required]');
-    let allFieldsFilled = true;
-    
-    // Check all required fields
-    requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-            allFieldsFilled = false;
-        }
-    });
-    
-    // Enable button if all fields are filled and location is selected
-    if (allFieldsFilled && isLocationSelected) {
-        saveButton.disabled = false;
-        saveButton.className = 'w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors cursor-pointer';
-        saveButton.textContent = 'Save & Use This Address';
-    } else {
-        saveButton.disabled = true;
-        saveButton.className = 'w-full bg-gray-300 text-gray-500 py-3 rounded-lg font-medium cursor-not-allowed disabled:opacity-50 transition-all';
-        saveButton.textContent = 'Save & Use This Address';
-    }
-}
-
-// Add event listeners to required fields
+// Event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    initMap();
+    initializeMap();
     
-    const requiredFields = document.querySelectorAll('input[required], textarea[required]');
-    requiredFields.forEach(field => {
-        field.addEventListener('input', checkFormValidity);
-        field.addEventListener('change', checkFormValidity);
+    // Map modal controls
+    document.getElementById('openMapBtn').addEventListener('click', openMapModal);
+    document.getElementById('closeMapBtn').addEventListener('click', closeMapModal);
+    document.getElementById('getCurrentLocation').addEventListener('click', getCurrentLocation);
+    document.getElementById('confirmLocation').addEventListener('click', confirmLocationSelection);
+    
+    // Form validation
+    document.getElementById('custom_label').addEventListener('input', function() {
+        document.getElementById('nickname').value = this.value;
     });
     
-    // Phone number validation
-    const phoneInput = document.getElementById('contact_number');
-    phoneInput.addEventListener('input', function(e) {
-        // Remove non-digits
-        let value = e.target.value.replace(/\D/g, '');
-        
-        // Limit to 10 digits
-        if (value.length > 10) {
-            value = value.substring(0, 10);
+    // Form submission validation
+    document.getElementById('addressForm').addEventListener('submit', function(e) {
+        if (!selectedLocation) {
+            e.preventDefault();
+            alert('Please select a location on the map first.');
+            return false;
         }
-        
-        e.target.value = value;
-        checkFormValidity();
-    });
-    
-    // Pincode validation
-    const pincodeInput = document.getElementById('pincode');
-    pincodeInput.addEventListener('input', function(e) {
-        // Remove non-digits
-        let value = e.target.value.replace(/\D/g, '');
-        
-        // Limit to 6 digits
-        if (value.length > 6) {
-            value = value.substring(0, 6);
-        }
-        
-        e.target.value = value;
-        checkFormValidity();
     });
 });
 </script>
-
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="fixed bottom-4 left-4 right-4 z-50">
-            {% for category, message in messages %}
-                <div class="bg-white rounded-lg shadow-lg border p-4 mb-2 max-w-md mx-auto
-                    {% if category == 'error' %}border-red-200{% else %}border-green-200{% endif %}">
-                    <div class="flex items-center space-x-2">
-                        {% if category == 'error' %}
-                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        {% else %}
-                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                        {% endif %}
-                        <span class="text-sm {% if category == 'error' %}text-red-700{% else %}text-green-700{% endif %}">{{ message }}</span>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
-
 {% endblock %}
