@@ -600,16 +600,8 @@ function addFreeDate(zoneId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Add date tag to UI
-            const datesContainer = document.querySelector(`.upcoming-dates[data-zone-id="${zoneId}"]`);
-            const newDateTag = document.createElement('span');
-            newDateTag.className = 'date-tag';
-            newDateTag.setAttribute('data-date', date);
-            newDateTag.innerHTML = `${date} <button onclick="removeFreeDate(${zoneId}, '${date}')" class="ml-1 text-white hover:text-red-200">×</button>`;
-            datesContainer.appendChild(newDateTag);
-            
-            // Clear input
-            dateInput.value = '';
+            // Refresh the page to show updated dates (simpler and more reliable)
+            location.reload();
         } else {
             alert('Error: ' + (data.error || 'Failed to add date'));
         }
@@ -635,11 +627,8 @@ function removeFreeDate(zoneId, date) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Remove date tag from UI
-            const dateTag = document.querySelector(`[data-date="${date}"]`);
-            if (dateTag) {
-                dateTag.remove();
-            }
+            // Refresh the page to show updated dates (simpler and more reliable)
+            location.reload();
         } else {
             alert('Error: ' + (data.error || 'Failed to remove date'));
         }
