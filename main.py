@@ -1800,13 +1800,13 @@ def setup_scheduled_tasks():
     from services.delivery_zone_scheduler import run_daily_cleanup
     
     def daily_scheduler():
-        """Run daily tasks at 2 AM"""
+        """Run daily tasks at 11 AM"""
         while True:
             try:
                 current_time = datetime.now()
                 
-                # Check if it's 2 AM (or close to it)
-                if current_time.hour == 2 and current_time.minute < 5:
+                # Check if it's 11 AM (or close to it)
+                if current_time.hour == 11 and current_time.minute < 5:
                     logger.info("Running daily scheduled tasks")
                     
                     # Run delivery zone cleanup
