@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin Dashboard - Monthly Organics{% endblock %}</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -19,10 +19,10 @@
             }
         }
     </script>
-    
+
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50">
@@ -34,7 +34,7 @@
                      alt="Monthly Organics" class="h-8 w-auto filter brightness-0 invert">
                 <span class="ml-2 text-white font-semibold text-lg">Admin</span>
             </div>
-            
+
             <nav class="mt-8">
                 <div class="px-4 space-y-2">
                     <!-- Dashboard -->
@@ -46,7 +46,7 @@
                         </svg>
                         Dashboard
                     </a>
-                    
+
                     <!-- Customer Management -->
                     <a href="{{ url_for('admin_customers') }}" 
                        class="group flex items-center px-2 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 hover:text-gray-900 {% if request.endpoint == 'admin_customers' %}bg-green-100 text-green-700{% else %}text-gray-600{% endif %}">
@@ -55,7 +55,7 @@
                         </svg>
                         Customer Management
                     </a>
-                    
+
                     <!-- Sales Analysis -->
                     <a href="{{ url_for('admin_sales') }}" 
                        class="group flex items-center px-2 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 hover:text-gray-900 {% if request.endpoint == 'admin_sales' %}bg-green-100 text-green-700{% else %}text-gray-600{% endif %}">
@@ -64,7 +64,7 @@
                         </svg>
                         Sales Analysis
                     </a>
-                    
+
                     <!-- Delivery Zones -->
                     <a href="{{ url_for('admin_delivery_zones') }}" 
                        class="group flex items-center px-2 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 hover:text-gray-900 {% if request.endpoint == 'admin_delivery_zones' %}bg-green-100 text-green-700{% else %}text-gray-600{% endif %}">
@@ -74,8 +74,15 @@
                         </svg>
                         Delivery Zones
                     </a>
+                    <a href="{{ url_for('admin_export_database') }}" 
+                       class="group flex items-center px-2 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 hover:text-gray-900">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                        </svg>
+                        Export Database
+                    </a>
                 </div>
-                
+
                 <!-- Admin Actions -->
                 <div class="mt-8 px-4">
                     <h3 class="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -93,10 +100,10 @@
                 </div>
             </nav>
         </div>
-        
+
         <!-- Mobile sidebar overlay -->
         <div class="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden hidden" id="sidebar-overlay"></div>
-        
+
         <!-- Main content -->
         <div class="flex-1 lg:pl-0">
             <!-- Top header -->
@@ -110,12 +117,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                     </button>
-                    
+
                     <!-- Page title -->
                     <div class="flex-1 lg:flex-none">
                         <h1 class="text-lg font-semibold text-gray-900">{% block page_title %}Dashboard{% endblock %}</h1>
                     </div>
-                    
+
                     <!-- Admin info -->
                     <div class="flex items-center space-x-4">
                         <div class="text-sm text-gray-500">
@@ -129,7 +136,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Page content -->
             <main class="flex-1">
                 <div class="py-4">
@@ -138,26 +145,26 @@
             </main>
         </div>
     </div>
-    
+
     <!-- JavaScript for mobile menu -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const sidebar = document.getElementById('sidebar');
             const sidebarOverlay = document.getElementById('sidebar-overlay');
-            
+
             mobileMenuButton.addEventListener('click', function() {
                 sidebar.classList.toggle('-translate-x-full');
                 sidebarOverlay.classList.toggle('hidden');
             });
-            
+
             sidebarOverlay.addEventListener('click', function() {
                 sidebar.classList.add('-translate-x-full');
                 sidebarOverlay.classList.add('hidden');
             });
         });
     </script>
-    
+
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
