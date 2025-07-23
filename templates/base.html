@@ -86,16 +86,21 @@
             </div>
         </header>
         {% else %}
-            <!-- Other Pages Header (Simple) - Flex Shrink -->
+            <!-- Other Pages Header (Store Style) - Flex Shrink -->
             <header class="flex-shrink-0 bg-white shadow-sm border-b border-gray-200">
-                <div class="max-w-md mx-auto px-4 py-4">
-                    <div class="flex items-center space-x-3">
-                        <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
-                            <img src="{{ url_for('static', filename='img/fulllogo_transparent.png') }}" 
-                                 alt="Monthly Organics Logo" 
-                                 class="h-10 w-auto">
-                            <span class="text-xl font-bold text-primary">Monthly Organics</span>
-                        </a>
+                <div class="max-w-md mx-auto flex items-center justify-between p-4">
+                    <!-- Logo Only (Left) -->
+                    <div class="flex items-center flex-shrink-0">
+                        <img src="{{ url_for('static', filename='img/icononly_transparent_nobuffer.png') }}" 
+                             alt="Monthly Organics Logo" 
+                             class="h-10 w-auto">
+                    </div>
+                    
+                    <!-- Brand Name with Font Style (Right) -->
+                    <div class="flex items-center flex-1 justify-end">
+                        <img src="{{ url_for('static', filename='img/brand_name_with_font.png') }}" 
+                             alt="Monthly Organics" 
+                             class="h-8 w-auto max-w-full">
                     </div>
                 </div>
             </header>
