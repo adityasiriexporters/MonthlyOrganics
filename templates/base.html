@@ -60,7 +60,7 @@
     <!-- Dynamic Header - Mobile First -->
     {% if request.path == '/' %}
         <!-- Home Page Header (Single Row) - Fixed Position -->
-        <header class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+        <header class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-[9999]">
             <div class="max-w-md mx-auto px-4 py-3">
                 <div class="flex items-center space-x-3">
                     <!-- Logo -->
@@ -86,7 +86,7 @@
         </header>
     {% else %}
         <!-- Other Pages Header (Simple) - Fixed Position -->
-        <header class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+        <header class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-[9999]">
             <div class="max-w-md mx-auto px-4 py-4">
                 <div class="flex items-center space-x-3">
                     <a href="{{ url_for('index') }}" class="flex items-center space-x-3">

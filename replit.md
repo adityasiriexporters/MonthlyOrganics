@@ -157,6 +157,7 @@ Changelog:
 - July 23, 2025. Store Page Header Logo Update: Updated store page header with new logo assets - replaced single centered logo with split layout featuring icon-only logo on left and brand name with custom font style on right, using icononly_transparent_nobuffer.png and brand_name_with_font.png assets
 - July 23, 2025. Unified Header Design: Applied consistent header layout to cart and checkout pages matching store page design with icon-only logo on left and brand name on right, moved page headings to content area with "Go Back" buttons for improved navigation flow
 - July 23, 2025. Cart Delivery Fee Update: Changed cart page delivery fee display from specific amount to "To be calculated at checkout" message, updated cart totals to show subtotal only with note that final total will include delivery fee, created render_cart_totals_without_delivery template helper function
+- July 23, 2025. Header Z-Index Fix: Fixed scrollbar appearing above header by updating z-index from z-50 to z-[9999] across all pages (store, cart, pre-checkout, checkout, and base template headers) to ensure headers always stay above scrollbars and other content
 ```
 
 ## User Preferences
