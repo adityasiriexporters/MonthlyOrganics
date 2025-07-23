@@ -3,7 +3,7 @@
 {% block title %}Your Cart - Monthly Organics{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 pt-16 pb-20">
+<div class="min-h-screen bg-gray-50 pt-14 pb-20">
     <!-- Header with back button -->
     <div class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
         <div class="max-w-md mx-auto px-4 py-3">
@@ -24,7 +24,7 @@
     <div class="max-w-md mx-auto">
         {% if cart_items %}
             <!-- Cart Items -->
-            <div class="bg-white shadow-sm">
+            <div class="bg-white shadow-sm mt-4">
                 {% for item in cart_items %}
                     <div class="cart-item-wrapper border-b border-gray-100 p-4 last:border-b-0">
                         <div class="flex items-start space-x-3">
