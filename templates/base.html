@@ -135,7 +135,7 @@
         Skip to main content
     </a>
     
-    <div class="main-container flex flex-col relative">
+    <div class="main-container">
         <!-- Dynamic Header - Mobile First -->
         {% if request.path != '/' %}
             <!-- Other Pages Header (Simple) - Fixed -->
@@ -154,14 +154,14 @@
         {% endif %}
         
         <!-- Scrollable Main Content -->
-        <div class="page-content {% if request.path != '/' %}pt-20{% endif %}">
-            <main id="main-content">
+        <div class="page-content">
+            <main id="main-content" class="{% if request.path != '/' %}pt-20{% endif %} pb-24">
                 {% block content %}{% endblock %}
             </main>
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="mobile-nav-bar md:hidden flex-shrink-0">
+        <nav class="mobile-nav-bar md:hidden">
         <div class="w-full">
             <div class="flex items-center justify-around py-2">
                 <!-- Home -->
