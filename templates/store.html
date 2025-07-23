@@ -63,11 +63,12 @@
         /* Store page main container */
         .store-container {
             height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for modern browsers */
-            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
+            height: 100dvh;
             max-width: 448px;
             margin: 0 auto;
             background: white;
+            display: flex;
+            flex-direction: column;
         }
         
         /* Fixed header positioning */
@@ -87,62 +88,64 @@
             }
         }
         
-        /* Store content natural flow */
+        /* Store content with contained scrolling */
         .store-content {
-            min-height: calc(100vh - 160px); /* Minimum height for full coverage */
-            min-height: calc(100dvh - 160px);
+            flex: 1;
+            height: calc(100vh - 160px); /* Header (80px) + Navigation (80px) */
+            height: calc(100dvh - 160px);
+            overflow: hidden; /* Prevent this container from scrolling */
+            position: relative;
         }
         
-        /* Fixed category sidebar with consistent background */
+        /* Category sidebar with contained scrolling */
         .category-sidebar {
-            position: fixed;
-            top: 80px; /* Header height */
-            bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
-            left: 50%;
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 89.6px; /* 20% of 448px container */
-            margin-left: -224px; /* Half of container width (224px) to align left edge */
-            background: #f9fafb !important; /* Force consistent background */
+            height: 100%;
+            background: #f9fafb !important;
             border-right: 1px solid #e5e7eb;
             overflow-y: auto;
             overflow-x: hidden;
-            z-index: 10; /* Below navigation but above products */
+            z-index: 10;
         }
         
-        /* Products main area with proper spacing and background */
+        /* Products main area with contained scrolling */
         .products-main {
-            margin-left: 89.6px; /* Match sidebar width exactly */
-            width: calc(100% - 89.6px);
-            background: white !important; /* Ensure consistent white background */
-            min-height: 100vh; /* Full height coverage */
-            position: relative;
-            z-index: 5; /* Below sidebar, proper layering */
+            position: absolute;
+            top: 0;
+            left: 89.6px; /* Match sidebar width exactly */
+            right: 0;
+            height: 100%;
+            background: white !important;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 5;
         }
         
         /* Mobile responsive adjustments */
         @media (max-width: 448px) {
             .category-sidebar {
-                left: 0;
-                margin-left: 0;
                 width: 20vw;
                 background: #f9fafb !important;
-                z-index: 10; /* Consistent z-index on mobile */
+                z-index: 10;
             }
             
             .products-main {
-                margin-left: 20vw;
-                width: calc(100% - 20vw);
+                left: 20vw;
                 background: white !important;
-                z-index: 5; /* Consistent z-index on mobile */
+                z-index: 5;
             }
         }
         
         /* Fallback for browsers that don't support dvh */
         @supports not (height: 100dvh) {
-            .store-content {
-                min-height: calc(100vh - 160px);
+            .store-container {
+                height: 100vh;
             }
-            .category-sidebar {
-                bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
+            .store-content {
+                height: calc(100vh - 160px);
             }
         }
         
@@ -187,7 +190,7 @@
     </header>
 
     <!-- Main Content Area -->
-    <div class="store-content pt-20">
+    <div class="store-content" style="margin-top: 80px; margin-bottom: 80px;">
         <!-- Fixed Left Sidebar - Categories -->
         <aside class="category-sidebar">
             <div class="p-1.5 pt-3">
