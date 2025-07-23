@@ -85,21 +85,23 @@
         will-change: height;
     }
     
-    /* Map controls positioning - stable during transitions */
+    /* Map controls positioning - completely stable */
     .map-controls {
-        position: absolute;
-        bottom: 0;
+        position: fixed;
+        bottom: env(safe-area-inset-bottom, 0px);
         left: 0;
         right: 0;
         height: 80px;
         background: white;
         border-top: 1px solid #e5e7eb;
         box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 20;
-        /* Prevent movement during browser UI transitions */
-        transform: translateZ(0);
+        z-index: 99999;
+        /* Hardware acceleration for stable positioning */
+        transform: translate3d(0, 0, 0);
         backface-visibility: hidden;
-        will-change: transform;
+        will-change: auto;
+        /* Prevent displacement during transitions */
+        contain: layout style paint;
     }
     
     /* Header positioning - stable during transitions */

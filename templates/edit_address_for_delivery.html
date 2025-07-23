@@ -78,28 +78,31 @@
     
     /* Map container with proper height calculation */
     #mapModal #map {
-        height: calc(var(--app-height) - 140px); /* Header (60px) + Controls (80px) */
+        height: calc(var(--app-height) - 60px); /* Only header height, controls are fixed */
         margin-top: 60px; /* Header height */
+        margin-bottom: 80px; /* Controls height for content spacing */
         /* Smooth transitions during viewport changes */
         transition: height 0.2s ease-out;
         will-change: height;
     }
     
-    /* Map controls positioning - stable during transitions */
+    /* Map controls positioning - completely stable */
     .map-controls {
-        position: absolute;
-        bottom: 0;
+        position: fixed;
+        bottom: env(safe-area-inset-bottom, 0px);
         left: 0;
         right: 0;
         height: 80px;
         background: white;
         border-top: 1px solid #e5e7eb;
         box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 20;
-        /* Prevent movement during browser UI transitions */
-        transform: translateZ(0);
+        z-index: 99999;
+        /* Hardware acceleration for stable positioning */
+        transform: translate3d(0, 0, 0);
         backface-visibility: hidden;
-        will-change: transform;
+        will-change: auto;
+        /* Prevent displacement during transitions */
+        contain: layout style paint;
     }
     
     /* Header positioning - stable during transitions */
@@ -119,31 +122,11 @@
     @media (min-width: 768px) {
         /* Desktop adjustments */
         #mapModal #map {
-            height: calc(var(--app-height) - 120px);
-            height: calc(var(--app-height-dvh) - 120px);
+            height: calc(var(--app-height) - 60px);
+            margin-bottom: 60px; /* Smaller controls on desktop */
         }
         .map-controls {
             height: 60px;
-        }
-    }
-    
-    /* Prevent layout shifts during browser UI transitions */
-    @supports (height: 100dvh) {
-        #mapModal {
-            height: 100dvh;
-        }
-        #mapModal #map {
-            height: calc(100dvh - 140px);
-        }
-    }
-    
-    /* Fallback for older browsers */
-    @supports not (height: 100dvh) {
-        #mapModal {
-            height: 100vh;
-        }
-        #mapModal #map {
-            height: calc(100vh - 140px);
         }
     }
 </style>
@@ -450,18 +433,24 @@ let geocoder;
 
 // Dynamic viewport height handler for mobile browser UI
 function setViewportHeight() {
-    // Use the most stable height available
+    // Use visual viewport for most accurate height during browser UI transitions
     const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${height}px`);
     
-    // Force layout recalculation for smooth transitions
+    // Update controls positioning if map modal is open
     if (document.getElementById('mapModal') && !document.getElementById('mapModal').classList.contains('hidden')) {
+        const controls = document.querySelector('.map-controls');
+        if (controls) {
+            // Ensure controls stay at the bottom during transitions
+            controls.style.bottom = `${window.visualViewport ? 0 : 0}px`;
+        }
+        
+        // Trigger map resize after viewport change
         const mapElement = document.getElementById('map');
-        if (mapElement && window.google && window.google.maps) {
-            // Trigger map resize after viewport change
+        if (mapElement && window.google && window.google.maps && map) {
             setTimeout(() => {
                 google.maps.event.trigger(map, 'resize');
-            }, 100);
+            }, 50); // Faster response
         }
     }
 }
