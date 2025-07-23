@@ -64,7 +64,6 @@
         .store-container {
             height: 100vh;
             height: 100dvh; /* Dynamic viewport height for modern browsers */
-            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
             max-width: 448px;
             margin: 0 auto;
             background: white;
@@ -89,22 +88,20 @@
         
         /* Store content scrolling area - full height minus header and nav */
         .store-content {
-            height: calc(100vh - var(--nav-height) - 80px); /* Account for header (80px) + nav */
-            height: calc(100dvh - var(--nav-height) - 80px);
+            height: calc(100vh - 80px - var(--nav-height) - var(--safe-area-inset-bottom));
+            height: calc(100dvh - 80px - var(--nav-height) - var(--safe-area-inset-bottom));
         }
         
-        /* Main product area within store content */
+        /* Sidebar and main content get full height */
+        .store-content aside,
         .store-content main {
             height: 100%;
         }
         
         /* Fallback for browsers that don't support dvh */
         @supports not (height: 100dvh) {
-            .store-container {
-                height: 100vh;
-            }
             .store-content {
-                height: calc(100vh - var(--nav-height) - 80px);
+                height: calc(100vh - 80px - var(--nav-height) - var(--safe-area-inset-bottom));
             }
         }
         
@@ -151,7 +148,7 @@
     <!-- Main Content Area (Flexbox) -->
     <div class="store-content flex pt-20">
         <!-- Fixed Left Sidebar - Categories (20%) -->
-        <aside class="w-1/5 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+        <aside class="w-1/5 bg-gray-50 border-r border-gray-200 overflow-y-auto h-full">
             <div class="p-1.5 pt-3">
                 <h2 class="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide text-center" style="font-size: 0.65rem !important;">Categories</h2>
                 <div class="space-y-1.5">
