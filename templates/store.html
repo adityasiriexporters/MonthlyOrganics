@@ -93,39 +93,45 @@
             min-height: calc(100dvh - 160px);
         }
         
-        /* Fixed category sidebar with proper positioning */
+        /* Fixed category sidebar with consistent background */
         .category-sidebar {
             position: fixed;
             top: 80px; /* Header height */
             bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
             left: 50%;
-            transform: translateX(-50%);
             width: 89.6px; /* 20% of 448px container */
             margin-left: -224px; /* Half of container width (224px) to align left edge */
-            background: #f9fafb;
+            background: #f9fafb !important; /* Force consistent background */
             border-right: 1px solid #e5e7eb;
             overflow-y: auto;
-            z-index: 10;
+            overflow-x: hidden;
+            z-index: 100; /* Higher z-index to ensure proper layering */
+            /* Remove transform to avoid rendering issues */
         }
         
-        /* Products main area with proper spacing */
+        /* Products main area with proper spacing and background */
         .products-main {
             margin-left: 89.6px; /* Match sidebar width exactly */
             width: calc(100% - 89.6px);
+            background: white !important; /* Ensure consistent white background */
+            min-height: 100vh; /* Full height coverage */
+            position: relative;
+            z-index: 1; /* Below sidebar but above background */
         }
         
         /* Mobile responsive adjustments */
         @media (max-width: 448px) {
             .category-sidebar {
                 left: 0;
-                transform: none;
                 margin-left: 0;
                 width: 20vw;
+                background: #f9fafb !important;
             }
             
             .products-main {
                 margin-left: 20vw;
                 width: calc(100% - 20vw);
+                background: white !important;
             }
         }
         
@@ -181,8 +187,8 @@
 
     <!-- Main Content Area -->
     <div class="store-content pt-20">
-        <!-- Fixed Left Sidebar - Categories (20%) -->
-        <aside class="category-sidebar bg-gray-50 border-r border-gray-200">
+        <!-- Fixed Left Sidebar - Categories -->
+        <aside class="category-sidebar">
             <div class="p-1.5 pt-3">
                 <h2 class="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide text-center" style="font-size: 0.65rem !important;">Categories</h2>
                 <div class="space-y-1.5">
