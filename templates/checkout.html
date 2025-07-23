@@ -56,7 +56,7 @@
     </header>
 
     <!-- Scrollable Main Content -->
-    <div class="flex-1 overflow-y-auto" style="height: calc(100vh - 140px);">
+    <div class="flex-1 overflow-y-auto">
         <div class="max-w-md mx-auto">
         <!-- Page Header with Go Back -->
         <div class="bg-white shadow-sm mb-4">
@@ -230,19 +230,19 @@
     </div>
 
     <!-- Mobile Navigation Bar -->
-    <nav class="flex-shrink-0 bg-white border-t-2 border-gray-300 md:hidden shadow-lg" style="height: 80px; padding-bottom: 20px; padding-bottom: env(safe-area-inset-bottom, 20px);">
-        <div class="max-w-md mx-auto h-full">
-            <div class="flex items-center justify-around" style="height: 60px; padding-top: 10px; background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);">
+    <nav class="flex-shrink-0 bg-white border-t border-gray-200 md:hidden">
+        <div class="max-w-md mx-auto">
+            <div class="flex items-center justify-around py-2">
                 <!-- Home -->
-                <a href="/" class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full text-gray-500 hover:text-primary transition-colors">
-                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
+                <a href="/" class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 text-gray-500 hover:text-primary transition-colors">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span class="font-medium text-xs">Home</span>
+                    <span class="text-xs font-medium">Home</span>
                 </a>
                 <!-- Store -->
-                <a href="/store" class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full text-gray-500 hover:text-primary transition-colors">
-                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
+                <a href="/store" class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 text-gray-500 hover:text-primary transition-colors">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
                     <span class="text-xs font-medium">Store</span>

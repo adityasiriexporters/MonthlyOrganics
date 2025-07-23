@@ -102,16 +102,16 @@
         {% endif %}
         
         <!-- Scrollable Main Content -->
-        <div class="flex-1 overflow-y-auto" style="height: calc(100vh - 140px);">
+        <div class="flex-1 overflow-y-auto" style="min-height: calc(100vh - 140px); max-height: calc(100vh - 120px);">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="flex-shrink-0 bg-white border-t-2 border-gray-300 md:hidden shadow-lg" style="height: 80px; padding-bottom: 20px; padding-bottom: env(safe-area-inset-bottom, 20px);">
+        <nav class="flex-shrink-0 bg-white border-t border-gray-200 md:hidden" style="min-height: 60px; height: 60px; max-height: 80px;">
         <div class="max-w-md mx-auto h-full">
-            <div class="flex items-center justify-around" style="height: 60px; padding-top: 10px; background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);">
+            <div class="flex items-center justify-around h-full">
                 <!-- Home -->
                 <a href="{{ url_for('index') }}" 
                    class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full
