@@ -933,9 +933,26 @@ def delivery_fee_calculation():
             subtotal += item_total
             cart_count += item['quantity']
         
-        # Calculate delivery fee (simple logic for now)
-        # Free delivery for orders above ₹500, otherwise ₹50
-        delivery_fee = Decimal('0.00') if subtotal >= Decimal('500.00') else Decimal('50.00')
+        # Get shipping options based on address coordinates and delivery zones
+        from services.delivery_zone_service import DeliveryZoneService
+        
+        latitude = selected_address.get('latitude', 17.3850)  # Default to Hyderabad
+        longitude = selected_address.get('longitude', 78.4867)
+        
+        shipping_options = DeliveryZoneService.get_shipping_options(
+            latitude, longitude, float(subtotal)
+        )
+        
+        # Get default shipping option for initial calculations
+        default_option = next((opt for opt in shipping_options if opt['is_default']), shipping_options[0] if shipping_options else None)
+        
+        if default_option:
+            delivery_fee = Decimal(str(default_option['price']))
+            # Apply free delivery for orders above ₹500 (only for non-free options)
+            if not default_option['is_free'] and subtotal >= Decimal('500.00'):
+                delivery_fee = Decimal('0.00')
+        else:
+            delivery_fee = Decimal('50.00')  # Fallback
         
         # Calculate total
         total = subtotal + delivery_fee
@@ -948,12 +965,72 @@ def delivery_fee_calculation():
                              subtotal=float(subtotal),
                              delivery_fee=float(delivery_fee),
                              total=float(total),
+                             shipping_options=shipping_options,
+                             default_option=default_option,
                              google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
         
     except Exception as e:
         logger.error(f"Error loading delivery fee calculation: {e}")
         flash('An error occurred. Please try again.', 'error')
         return redirect(url_for('pre_checkout'))
+
+@app.route('/update-shipping-option', methods=['POST'])
+@login_required
+def update_shipping_option():
+    """Update shipping option selection and recalculate totals."""
+    try:
+        user_id = session['user_id']
+        data = request.get_json()
+        
+        shipping_option_id = data.get('shipping_option_id')
+        address_id = data.get('address_id', type=int)
+        
+        if not shipping_option_id or not address_id:
+            return jsonify({'error': 'Missing required parameters'}), 400
+        
+        # Get address coordinates
+        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        selected_address = None
+        
+        for addr in user_addresses:
+            if addr['id'] == address_id:
+                selected_address = addr
+                break
+        
+        if not selected_address:
+            return jsonify({'error': 'Address not found'}), 404
+        
+        # Get cart totals
+        cart_items = CartService.get_cart_items(user_id)
+        from decimal import Decimal
+        subtotal = Decimal('0.00')
+        
+        for item in cart_items:
+            item_total = Decimal(str(item['total_price']))
+            subtotal += item_total
+        
+        # Calculate delivery fee with new shipping option
+        from services.delivery_zone_service import DeliveryZoneService
+        
+        latitude = selected_address.get('latitude', 17.3850)
+        longitude = selected_address.get('longitude', 78.4867)
+        
+        delivery_fee, selected_option = DeliveryZoneService.calculate_delivery_fee(
+            shipping_option_id, latitude, longitude, float(subtotal)
+        )
+        
+        total = float(subtotal) + delivery_fee
+        
+        return jsonify({
+            'success': True,
+            'delivery_fee': delivery_fee,
+            'total': total,
+            'selected_option': selected_option
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating shipping option: {e}")
+        return jsonify({'error': 'Failed to update shipping option'}), 500
 
 @app.route('/add-new-address-for-delivery')
 @login_required

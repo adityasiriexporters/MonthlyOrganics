@@ -105,12 +105,57 @@
                     <div class="p-4">
                         <h2 class="font-medium text-gray-900 mb-3">Shipping Options</h2>
                         
-                        <div class="bg-gray-50 rounded-lg p-4 text-center">
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <p class="text-sm text-gray-500">Shipping options will be available soon</p>
-                        </div>
+                        {% if shipping_options %}
+                            <div class="space-y-3">
+                                {% for option in shipping_options %}
+                                    <div class="border border-gray-200 rounded-lg p-3 hover:border-primary transition-colors">
+                                        <label class="flex items-center space-x-3 cursor-pointer">
+                                            <input type="radio" 
+                                                   name="shipping_option" 
+                                                   value="{{ option.id }}"
+                                                   class="text-primary focus:ring-primary"
+                                                   {% if option.is_default %}checked{% endif %}
+                                                   onchange="updateShippingOption('{{ option.id }}')">
+                                            
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <div class="flex items-center space-x-2">
+                                                            <h3 class="font-medium text-gray-900">{{ option.name }}</h3>
+                                                            {% if option.is_free %}
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                                    FREE
+                                                                </span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <p class="text-sm text-gray-600">{{ option.description }}</p>
+                                                        <p class="text-xs text-gray-500 mt-1">
+                                                            Delivered by {{ option.delivery_date.strftime('%B %d') }}
+                                                            ({{ option.estimated_days }} day{% if option.estimated_days != 1 %}s{% endif %})
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    <div class="text-right">
+                                                        {% if option.is_free %}
+                                                            <span class="text-lg font-bold text-green-600">FREE</span>
+                                                        {% else %}
+                                                            <span class="text-lg font-bold text-gray-900">₹{{ "%.2f"|format(option.price) }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">No shipping options available</p>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -128,7 +173,7 @@
                         <!-- Delivery Fee -->
                         <div class="flex justify-between items-center py-2">
                             <span class="text-gray-600">Delivery Fee</span>
-                            <span class="font-medium text-green-600">₹{{ "%.2f"|format(delivery_fee) }}</span>
+                            <span class="font-medium text-green-600" data-delivery-fee>₹{{ "%.2f"|format(delivery_fee) }}</span>
                         </div>
 
                         <!-- Divider -->
@@ -137,7 +182,7 @@
                         <!-- Total -->
                         <div class="flex justify-between items-center py-2">
                             <span class="text-lg font-semibold text-gray-900">Total</span>
-                            <span class="text-lg font-bold text-green-600">₹{{ "%.2f"|format(total) }}</span>
+                            <span class="text-lg font-bold text-green-600" data-total>₹{{ "%.2f"|format(total) }}</span>
                         </div>
 
                         <!-- Fee Breakdown Note -->
@@ -158,6 +203,7 @@
                 <!-- Review and Pay Button -->
                 <div class="p-4">
                     <button onclick="proceedToCheckout()" 
+                            data-checkout-button
                             class="w-full bg-primary text-white py-4 rounded-lg font-medium text-lg hover:bg-primary/90 transition-colors">
                         Review Products & Pay - ₹{{ "%.2f"|format(total) }}
                     </button>
@@ -206,8 +252,64 @@
     </div>
 
     <script>
+    function updateShippingOption(optionId) {
+        // Show loading state
+        const deliveryFeeSpan = document.querySelector('[data-delivery-fee]');
+        const totalSpan = document.querySelector('[data-total]');
+        const checkoutButton = document.querySelector('[data-checkout-button]');
+        
+        if (deliveryFeeSpan) deliveryFeeSpan.textContent = 'Calculating...';
+        if (totalSpan) totalSpan.textContent = 'Calculating...';
+        if (checkoutButton) checkoutButton.disabled = true;
+        
+        // Make API call to update shipping option
+        fetch('/update-shipping-option', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                shipping_option_id: optionId,
+                address_id: {{ selected_address.id }}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update delivery fee and total
+                if (deliveryFeeSpan) {
+                    deliveryFeeSpan.textContent = `₹${data.delivery_fee.toFixed(2)}`;
+                }
+                if (totalSpan) {
+                    totalSpan.textContent = `₹${data.total.toFixed(2)}`;
+                }
+                if (checkoutButton) {
+                    checkoutButton.textContent = `Review Products & Pay - ₹${data.total.toFixed(2)}`;
+                    checkoutButton.disabled = false;
+                }
+            } else {
+                console.error('Error updating shipping option:', data.error);
+                if (deliveryFeeSpan) deliveryFeeSpan.textContent = 'Error';
+                if (totalSpan) totalSpan.textContent = 'Error';
+                if (checkoutButton) checkoutButton.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+            if (deliveryFeeSpan) deliveryFeeSpan.textContent = 'Error';
+            if (totalSpan) totalSpan.textContent = 'Error';
+            if (checkoutButton) checkoutButton.disabled = false;
+        });
+    }
+    
     function proceedToCheckout() {
-        window.location.href = `/checkout?address_id={{ selected_address.id }}`;
+        const selectedOption = document.querySelector('input[name="shipping_option"]:checked');
+        if (selectedOption) {
+            // Store selected shipping option in session or pass as parameter
+            window.location.href = `/checkout?address_id={{ selected_address.id }}&shipping_option=${selectedOption.value}`;
+        } else {
+            window.location.href = `/checkout?address_id={{ selected_address.id }}`;
+        }
     }
     </script>
 
