@@ -496,7 +496,9 @@ def admin_export_database():
     try:
         from utils.database_export import DatabaseExporter
         from flask import make_response
+        from datetime import datetime
         import io
+        import json
         
         if request.method == 'POST':
             # Get export type from form
