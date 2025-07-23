@@ -85,7 +85,6 @@ class DeliveryZoneService:
                 shipping_options.append({
                     'id': 'free_delivery',
                     'name': 'Free Delivery',
-                    'description': f"Monthly Organics - {zone_info['zone_name']}",
                     'price': 0.00,
                     'delivery_date': next_free_date,
                     'is_default': True,
@@ -101,7 +100,6 @@ class DeliveryZoneService:
                 {
                     'id': 'blue_dart',
                     'name': 'Blue Dart Express',
-                    'description': 'Fast and reliable delivery',
                     'price': 90.00,
                     'delivery_date': today + timedelta(days=1),
                     'estimated_days': 1
@@ -109,7 +107,6 @@ class DeliveryZoneService:
                 {
                     'id': 'delhivery',
                     'name': 'Delhivery Standard',
-                    'description': 'Standard delivery service',
                     'price': 120.00,
                     'delivery_date': today + timedelta(days=5),
                     'estimated_days': 5
@@ -117,7 +114,6 @@ class DeliveryZoneService:
                 {
                     'id': 'dhl',
                     'name': 'DHL Economy',
-                    'description': 'Economical delivery option',  
                     'price': 50.00,
                     'delivery_date': today + timedelta(days=8),
                     'estimated_days': 8
@@ -144,7 +140,6 @@ class DeliveryZoneService:
                 {
                     'id': 'standard',
                     'name': 'Standard Delivery',
-                    'description': 'Standard delivery service',
                     'price': 60.00,
                     'delivery_date': date.today() + timedelta(days=3),
                     'is_default': True,
