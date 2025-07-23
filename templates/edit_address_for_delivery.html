@@ -14,119 +14,33 @@
         content: " *";
         color: #ef4444;
     }
-    /* Prevent body scroll and zoom when modal is open */
+    /* Prevent body scroll when modal is open */
     body.modal-open {
         overflow: hidden;
-        touch-action: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
     }
-    
-    /* Map modal specific styles - prevent page zoom */
+    /* Map modal specific styles */
     #mapModal {
-        touch-action: pan-x pan-y pinch-zoom;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
+        touch-action: auto;
     }
-    
     #mapModal #map {
         padding-top: 80px; /* Account for header */
         padding-bottom: 200px; /* Account for controls + mobile nav */
-        touch-action: pan-x pan-y pinch-zoom;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
+        touch-action: auto;
     }
-    
-    /* Ensure Google Maps container allows proper touch gestures */
+    /* Ensure map div allows all gestures */
     .gm-style {
-        touch-action: pan-x pan-y pinch-zoom !important;
-        -webkit-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-        user-select: none !important;
+        touch-action: auto !important;
     }
-    
-    /* Prevent viewport scaling on double tap */
-    #mapModal, #mapModal * {
-        -webkit-touch-callout: none;
-        -webkit-tap-highlight-color: transparent;
-    }
-    /* Dynamic viewport height handling */
-    :root {
-        --app-height: 100vh;
-        --app-height-dvh: 100dvh;
-    }
-    
-    /* Map modal with stable viewport handling */
-    #mapModal {
-        height: var(--app-height);
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        /* Prevent layout shifts during browser UI transitions */
-        contain: layout style paint;
-        overflow: hidden;
-    }
-    
-    /* Map container with proper height calculation */
-    #mapModal #map {
-        height: calc(var(--app-height) - 60px); /* Only header height, controls are fixed */
-        margin-top: 60px; /* Header height */
-        margin-bottom: 80px; /* Controls height for content spacing */
-        /* Smooth transitions during viewport changes */
-        transition: height 0.2s ease-out;
-        will-change: height;
-    }
-    
-    /* Map controls positioning - completely stable */
+    /* Map controls positioning */
     .map-controls {
-        position: fixed;
-        bottom: env(safe-area-inset-bottom, 0px);
-        left: 0;
-        right: 0;
-        height: 80px;
-        background: white;
-        border-top: 1px solid #e5e7eb;
-        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 99999;
-        /* Hardware acceleration for stable positioning */
-        transform: translate3d(0, 0, 0);
-        backface-visibility: hidden;
-        will-change: auto;
-        /* Prevent displacement during transitions */
-        contain: layout style paint;
+        bottom: 80px; /* Above mobile navigation bar */
     }
-    
-    /* Header positioning - stable during transitions */
-    #mapModal .absolute.top-0 {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 60px;
-        z-index: 20;
-        /* Prevent movement during browser UI transitions */
-        transform: translateZ(0);
-        backface-visibility: hidden;
-        will-change: transform;
-    }
-    
     @media (min-width: 768px) {
-        /* Desktop adjustments */
-        #mapModal #map {
-            height: calc(var(--app-height) - 60px);
-            margin-bottom: 60px; /* Smaller controls on desktop */
-        }
         .map-controls {
-            height: 60px;
+            bottom: 20px; /* Normal position on desktop */
+        }
+        #mapModal #map {
+            padding-bottom: 160px; /* Less padding on desktop */
         }
     }
 </style>
@@ -431,78 +345,8 @@ let miniMap;
 let selectedLocation;
 let geocoder;
 
-// Dynamic viewport height handler for mobile browser UI
-function setViewportHeight() {
-    // Use visual viewport for most accurate height during browser UI transitions
-    const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-height', `${height}px`);
-    
-    // Update controls positioning if map modal is open
-    if (document.getElementById('mapModal') && !document.getElementById('mapModal').classList.contains('hidden')) {
-        const controls = document.querySelector('.map-controls');
-        if (controls) {
-            // Ensure controls stay at the bottom during transitions
-            controls.style.bottom = `${window.visualViewport ? 0 : 0}px`;
-        }
-        
-        // Trigger map resize after viewport change
-        const mapElement = document.getElementById('map');
-        if (mapElement && window.google && window.google.maps && map) {
-            setTimeout(() => {
-                google.maps.event.trigger(map, 'resize');
-            }, 50); // Faster response
-        }
-    }
-}
-
-// Initialize viewport height and add listeners
-function initializeViewportHandler() {
-    setViewportHeight();
-    
-    // Debounced viewport update to prevent excessive calls
-    let resizeTimer;
-    let isTransitioning = false;
-    
-    function debouncedViewportUpdate() {
-        if (isTransitioning) return;
-        isTransitioning = true;
-        
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => {
-            setViewportHeight();
-            isTransitioning = false;
-        }, 50); // Faster response for smoother transitions
-    }
-    
-    // Handle window resize events
-    window.addEventListener('resize', debouncedViewportUpdate, { passive: true });
-    
-    // Handle orientation changes with longer delay
-    window.addEventListener('orientationchange', () => {
-        setTimeout(() => {
-            setViewportHeight();
-        }, 300);
-    }, { passive: true });
-    
-    // Handle visual viewport changes (mobile browser UI) - most important for our case
-    if ('visualViewport' in window) {
-        window.visualViewport.addEventListener('resize', debouncedViewportUpdate, { passive: true });
-        window.visualViewport.addEventListener('scroll', debouncedViewportUpdate, { passive: true });
-    }
-    
-    // Handle scroll events that might trigger browser UI changes
-    let scrollTimer;
-    window.addEventListener('scroll', () => {
-        clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(setViewportHeight, 100);
-    }, { passive: true });
-}
-
 function initializeMap() {
     geocoder = new google.maps.Geocoder();
-    
-    // Initialize viewport handler first
-    initializeViewportHandler();
     
     const existingLocation = { 
         lat: {{ address.latitude }}, 
