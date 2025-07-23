@@ -179,13 +179,6 @@ class DeliveryZoneService:
             
             delivery_fee = selected_option['price']
             
-            # Apply free delivery for orders above ₹500 (only for paid options)
-            if not selected_option['is_free'] and order_total >= 500:
-                delivery_fee = 0.00
-                selected_option['price'] = 0.00
-                selected_option['original_price'] = selected_option['price']
-                selected_option['discount_applied'] = True
-            
             return delivery_fee, selected_option
             
         except Exception as e:
