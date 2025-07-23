@@ -54,10 +54,24 @@
                 -webkit-backface-visibility: hidden !important;
                 backface-visibility: hidden !important;
             }
-            
-            body, .h-screen.bg-gray-50.flex.flex-col {
-                padding-bottom: 100px !important;
-            }
+        }
+        
+        /* Contained scrolling layout */
+        .checkout-container {
+            height: 100vh !important;
+            height: calc(var(--vh, 1vh) * 100) !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        .checkout-content {
+            flex: 1 !important;
+            height: calc(100vh - 160px) !important; /* Header + Navigation */
+            height: calc(calc(var(--vh, 1vh) * 100) - 160px) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            margin-top: 80px !important;
+            margin-bottom: 80px !important;
         }
         
         .primary { --tw-text-opacity: 1; color: rgb(34 197 94 / var(--tw-text-opacity)); }
@@ -105,10 +119,10 @@
         });
     </script>
 </head>
-<body class="bg-background text-gray-800 antialiased h-screen overflow-hidden">
-    <div class="h-screen bg-gray-50 flex flex-col">
-        <!-- Header - Same as Store Page -->
-        <header class="flex-shrink-0 bg-white shadow-sm border-b border-gray-200">
+<body class="bg-background text-gray-800 antialiased overflow-hidden">
+    <div class="checkout-container bg-gray-50">
+        <!-- Header - Fixed Position -->
+        <header class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-[1001]">
             <div class="max-w-md mx-auto flex items-center justify-between p-4">
                 <!-- Logo Only (Left) -->
                 <div class="flex items-center flex-shrink-0">
@@ -127,7 +141,7 @@
         </header>
 
         <!-- Scrollable Main Content -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="checkout-content">
             <div class="max-w-md mx-auto">
                 <!-- Page Header with Go Back -->
                 <div class="bg-white shadow-sm mb-4">
