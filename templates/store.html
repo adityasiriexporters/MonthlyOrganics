@@ -117,352 +117,65 @@
 </div>
 
 <script>
-// Global variables to store elements
-let categoryItems = [];
-let categorySections = [];
-let mainContainer = null;
-
-// Load all products when page loads
+// Simple store page functionality
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Store page loading...');
-    
     // Load all products initially
     htmx.ajax('GET', '/all-products', {
         target: '#product-display',
         indicator: '#loading'
     }).then(function() {
-        console.log('Products loaded, initializing features...');
-        
-        // Wait a bit for DOM to update, then initialize
-        setTimeout(() => {
-            initializeStoreFeatures();
-        }, 200);
+        // Initialize scroll functionality after products load
+        setTimeout(initializeScrolling, 300);
     });
 });
 
-// Initialize all store features
-function initializeStoreFeatures() {
-    // Get references to DOM elements
-    categoryItems = document.querySelectorAll('.category-item');
-    categorySections = document.querySelectorAll('.category-section');
+// Initialize simple scroll functionality
+function initializeScrolling() {
+    const categoryItems = document.querySelectorAll('.category-item');
+    const firstCategory = categoryItems[0];
     
-    // Try multiple selectors for the main container
-    mainContainer = document.querySelector('main.overflow-y-auto') || 
-                   document.querySelector('main') || 
-                   document.querySelector('.overflow-y-auto') ||
-                   document.querySelector('#product-display').parentElement;
-    
-    console.log('Main container found:', mainContainer);
-    console.log('Main container classes:', mainContainer ? mainContainer.className : 'Not found');
-    
-    console.log(`Found ${categoryItems.length} category items and ${categorySections.length} category sections`);
-    
-    if (categoryItems.length > 0 && categorySections.length > 0) {
-        // Initialize intersection observer for scroll-based highlighting
-        initializeScrollSpy();
-        
-        // Select first category by default
-        selectFirstCategory();
-        
-        console.log('Store features initialized successfully');
-    } else {
-        console.warn('Could not find category items or sections');
+    if (firstCategory) {
+        // Highlight first category by default
+        highlightCategory(firstCategory.dataset.categoryId);
     }
 }
 
-// Select the first category by default
-function selectFirstCategory() {
-    if (categoryItems.length > 0 && categorySections.length > 0) {
-        // Get the first category's ID
-        const firstCategoryId = categoryItems[0].dataset.categoryId;
-        console.log(`Selecting first category: ${firstCategoryId}`);
-        
-        // Highlight the first category
-        highlightCategory(firstCategoryId);
-        
-        // Scroll to the first category's products
-        setTimeout(() => {
-            scrollToCategory(firstCategoryId);
-        }, 100);
-    }
-}
-
-// Highlight a specific category
+// Simple category highlighting
 function highlightCategory(categoryId) {
-    console.log(`Highlighting category: ${categoryId}`);
-    
-    // Remove active class from all category items
-    categoryItems.forEach(item => {
-        item.classList.remove('active', 'bg-primary', 'text-white');
-        item.classList.add('bg-gray-50');
-        const span = item.querySelector('span');
-        const svg = item.querySelector('svg');
-        if (span) span.classList.remove('text-white');
-        if (svg) svg.classList.remove('text-white');
+    // Remove active class from all categories
+    document.querySelectorAll('.category-item').forEach(item => {
+        item.classList.remove('active');
     });
     
-    // Add active class to specified category
-    const activeItem = document.querySelector(`.category-item[data-category-id="${categoryId}"]`);
+    // Add active class to selected category
+    const activeItem = document.querySelector(`[data-category-id="${categoryId}"]`);
     if (activeItem) {
         activeItem.classList.add('active');
-        activeItem.classList.remove('bg-gray-50');
-        console.log(`Category ${categoryId} highlighted successfully with active class`);
     }
 }
 
-// Auto-advancing category highlight using Intersection Observer
-function initializeScrollSpy() {
-    if (!mainContainer || categorySections.length === 0) {
-        console.warn('Cannot initialize scroll spy - missing container or sections');
-        return;
-    }
+// Simple scroll to category function
+function scrollToCategory(categoryId) {
+    // Find the target section
+    const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
+    const mainContainer = document.querySelector('main');
     
-    console.log('Initializing scroll spy...');
-    
-    // Create intersection observer for scroll-based highlighting
-    const observer = new IntersectionObserver((entries) => {
-        let visibleSections = [];
-        
-        entries.forEach(entry => {
-            if (entry.isIntersecting && entry.intersectionRatio > 0) {
-                const rect = entry.target.getBoundingClientRect();
-                const containerRect = mainContainer.getBoundingClientRect();
-                const relativeTop = rect.top - containerRect.top;
-                
-                visibleSections.push({
-                    categoryId: entry.target.dataset.categoryId,
-                    relativeTop: relativeTop,
-                    intersectionRatio: entry.intersectionRatio
-                });
-            }
+    if (targetSection && mainContainer) {
+        // Simple scroll to section with smooth behavior
+        targetSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
         });
         
-        // Sort by position (closest to top) and pick the best one
-        if (visibleSections.length > 0) {
-            visibleSections.sort((a, b) => {
-                // Prioritize sections closer to top
-                if (Math.abs(a.relativeTop) < Math.abs(b.relativeTop)) return -1;
-                if (Math.abs(a.relativeTop) > Math.abs(b.relativeTop)) return 1;
-                // If similar distance, prefer higher visibility
-                return b.intersectionRatio - a.intersectionRatio;
-            });
-            
-            const currentCategory = visibleSections[0].categoryId;
-            highlightCategory(currentCategory);
-        }
-    }, {
-        root: mainContainer,
-        rootMargin: '0px 0px -60% 0px', // Trigger when section reaches top 40%
-        threshold: [0, 0.1, 0.3, 0.5, 0.7, 1.0]
-    });
-    
-    // Observe all category sections
-    categorySections.forEach(section => {
-        observer.observe(section);
-        console.log(`Observing category section: ${section.dataset.categoryId}`);
-    });
-    
-    // Additional scroll listener for manual scroll detection
-    let scrollTimeout;
-    mainContainer.addEventListener('scroll', function() {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            console.log('Manual scroll detected');
-        }, 150);
-    });
-}
-
-// Smooth scroll to category when clicked
-function scrollToCategory(categoryId) {
-    console.log(`Scrolling to category: ${categoryId}`);
-    
-    const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
-    if (targetSection && mainContainer) {
-        // Find the category heading within the section - try multiple selectors
-        let categoryHeading = targetSection.querySelector('h2');
-        if (!categoryHeading) {
-            categoryHeading = targetSection.querySelector('.sticky h2');
-        }
-        if (!categoryHeading) {
-            categoryHeading = targetSection.querySelector('div h2');
-        }
-        
-        // If we found a heading, use it; otherwise fall back to section
-        const targetElement = categoryHeading || targetSection;
-        
-        console.log(`Found target element: ${targetElement.tagName}${targetElement.className ? '.' + targetElement.className : ''}`);
-        console.log(`Category heading found: ${categoryHeading ? 'YES' : 'NO'}`);
-        
-        // Calculate the scroll position manually for better control
-        const sectionTop = targetSection.offsetTop;
-        
-        // For sticky headings, we want to scroll to the section start so the heading becomes visible
-        // The sticky div should automatically position itself at the top
-        let targetScrollPosition;
-        if (categoryHeading) {
-            // Scroll to show the sticky header properly - just before the section starts
-            targetScrollPosition = sectionTop - 10; // Small margin above section
-        } else {
-            // Fallback to section top
-            targetScrollPosition = sectionTop - 20;
-        }
-        
-        console.log(`Section top: ${sectionTop}, Target position: ${targetScrollPosition}`);
-        
-        // Debug current state
-        console.log(`Current scroll position: ${mainContainer.scrollTop}`);
-        console.log(`Main container height: ${mainContainer.scrollHeight}`);
-        console.log(`Main container client height: ${mainContainer.clientHeight}`);
-        console.log(`Main container is scrollable: ${mainContainer.scrollHeight > mainContainer.clientHeight}`);
-        
-        // Method 1: Direct scroll assignment (most reliable for our case)
-        console.log(`Setting scrollTop to: ${targetScrollPosition}`);
-        
-        // Force scroll using multiple methods
-        try {
-            // Try direct assignment
-            mainContainer.scrollTop = targetScrollPosition;
-            console.log(`Scroll position after direct assignment: ${mainContainer.scrollTop}`);
-            
-            // If that didn't work, try using scrollTo
-            if (mainContainer.scrollTop === 0 && targetScrollPosition > 0) {
-                console.log('Direct assignment failed, trying scrollTo');
-                mainContainer.scrollTo({
-                    top: targetScrollPosition,
-                    behavior: 'smooth'
-                });
-                console.log(`Scroll position after scrollTo: ${mainContainer.scrollTop}`);
-            }
-        } catch (error) {
-            console.error('Error during scroll:', error);
-        }
-        
-        // Method 2: Use scrollIntoView as backup
-        setTimeout(() => {
-            console.log(`Scroll position after 50ms: ${mainContainer.scrollTop}`);
-            if (Math.abs(mainContainer.scrollTop - targetScrollPosition) > 10) {
-                console.log('Direct scroll may have failed, trying scrollIntoView');
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                    inline: 'nearest'
-                });
-            }
-            
-            console.log(`Final scroll position: ${mainContainer.scrollTop}`);
-        }, 50);
-        
-        // Additional verification
-        setTimeout(() => {
-            console.log(`Scroll position after 200ms: ${mainContainer.scrollTop}`);
-        }, 200);
-        
-        // Verify scroll after animation
-        setTimeout(() => {
-            const actualScrollTop = mainContainer.scrollTop;
-            const elementRect = targetElement.getBoundingClientRect();
-            const containerRect = mainContainer.getBoundingClientRect();
-            const relativeTop = elementRect.top - containerRect.top;
-            
-            console.log(`Scroll verification - Position: ${actualScrollTop}, Element relative top: ${relativeTop}`);
-            
-            if (relativeTop > 50) {
-                console.log('Element not at top, applying final adjustment');
-                const finalPosition = actualScrollTop + relativeTop - 20; // Space above heading
-                mainContainer.scrollTop = finalPosition;
-            }
-        }, 300);
-        
-        // Immediately highlight the clicked category
+        // Highlight the clicked category
         highlightCategory(categoryId);
-        console.log(`Initiated scroll to category ${categoryId} heading`);
-    } else {
-        console.error(`Could not find section for category: ${categoryId}`);
     }
 }
 
-// Make scrollToCategory globally accessible for onclick handlers
+// Make function available globally
 window.scrollToCategory = scrollToCategory;
 
-// Address selection function (same as homepage)
-function selectAddress(addressId) {
-    fetch('/set-default-address/' + addressId, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Reload the page to update the address display
-            location.reload();
-        } else {
-            alert('Error setting default address');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error setting default address');
-    });
-}
-
-// Additional event delegation for better browser compatibility
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for content to load, then add delegation
-    setTimeout(() => {
-        const sidebar = document.querySelector('aside');
-        if (sidebar) {
-            sidebar.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const categoryItem = e.target.closest('.category-item');
-                if (categoryItem) {
-                    const categoryId = categoryItem.dataset.categoryId;
-                    console.log(`Delegation click on category: ${categoryId}`);
-                    scrollToCategory(categoryId);
-                }
-            });
-        }
-    }, 1000);
-});
-
-// Click handlers for category items (backup to onclick)
-document.addEventListener('click', function(e) {
-    console.log('Click event detected on:', e.target.tagName, e.target.className);
-    
-    // Check if click is within the sidebar area
-    const sidebar = e.target.closest('aside');
-    if (sidebar) {
-        console.log('Click is within sidebar');
-        
-        // Look for category item starting from the clicked element
-        const categoryItem = e.target.closest('.category-item');
-        if (categoryItem) {
-            const categoryId = categoryItem.dataset.categoryId;
-            console.log(`Category item found, ID: ${categoryId}`);
-            scrollToCategory(categoryId);
-            return;
-        }
-        
-        // If not found, check if the clicked element or its parent has category data
-        let element = e.target;
-        while (element && element !== sidebar) {
-            if (element.dataset && element.dataset.categoryId) {
-                const categoryId = element.dataset.categoryId;
-                console.log(`Category ID found on element: ${categoryId}`);
-                scrollToCategory(categoryId);
-                return;
-            }
-            element = element.parentElement;
-        }
-        
-        console.log('Click in sidebar but not on category item');
-    } else {
-        console.log('Click was not in sidebar');
-    }
-});
+// Clean and simple - no additional functions needed
 </script>
 
 <!-- Mobile Navigation Bar (Fixed Bottom) -->

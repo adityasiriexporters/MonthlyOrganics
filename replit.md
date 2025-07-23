@@ -152,6 +152,7 @@ Changelog:
 - July 23, 2025. Complete Delivery Address Page Redesign: Completely replaced delivery address page templates to match regular address pages exactly in orientation, style, layout, fonts, and flow, implemented full-screen map modal with Google Maps integration, added proper card sections and form validation, configured specialized buttons ("Save & Use", "Update & Use", "Discard Changes & Use") for checkout workflow
 - July 23, 2025. Enhanced Map Touch Navigation: Fixed single-finger touch navigation in full-screen map modals by implementing gestureHandling 'greedy' mode, touch-action auto CSS properties, and Google Maps style overrides to eliminate "use two fingers" requirement
 - July 23, 2025. Hyderabad Map Centering Complete: Updated default map location from Delhi to Hyderabad (17.3850, 78.4867) for both delivery address pages, added console logging for debugging, enhanced map initialization with version control and proper conditional logic for new vs existing addresses
+- July 23, 2025. Store Page Code Refactoring: Completely refactored and simplified store page JavaScript by removing complex intersection observers, scroll spy functionality, event delegation systems, and debugging code. Implemented clean, simple scrollToCategory function using native scrollIntoView with proper main container height constraints (calc(100vh-10rem)) to enable scrollable content and fix category click-to-scroll functionality
 ```
 
 ## User Preferences
