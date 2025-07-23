@@ -87,11 +87,15 @@
             }
         }
         
-        /* Store content scrolling area */
+        /* Store content scrolling area - full height minus header and nav */
         .store-content {
-            height: calc(100vh - 160px); /* Account for header + nav */
-            height: calc(100dvh - 160px);
-            overflow-y: auto;
+            height: calc(100vh - var(--nav-height) - 80px); /* Account for header (80px) + nav */
+            height: calc(100dvh - var(--nav-height) - 80px);
+        }
+        
+        /* Main product area within store content */
+        .store-content main {
+            height: 100%;
         }
         
         /* Fallback for browsers that don't support dvh */
@@ -100,7 +104,7 @@
                 height: 100vh;
             }
             .store-content {
-                height: calc(100vh - 160px);
+                height: calc(100vh - var(--nav-height) - 80px);
             }
         }
         
@@ -170,7 +174,7 @@
         </aside>
 
         <!-- Right Content Area - Products (80%) -->
-        <main class="w-4/5 overflow-y-auto bg-white">
+        <main class="w-4/5 overflow-y-auto bg-white h-full">
             <!-- Loading indicator -->
             <div id="loading" class="htmx-indicator fixed top-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-90 rounded-lg shadow-lg px-4 py-2 z-40">
                 <div class="flex items-center space-x-2">
