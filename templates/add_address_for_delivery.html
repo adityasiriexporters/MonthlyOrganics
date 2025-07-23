@@ -14,22 +14,48 @@
         content: " *";
         color: #ef4444;
     }
-    /* Prevent body scroll when modal is open */
+    /* Prevent body scroll and zoom when modal is open */
     body.modal-open {
         overflow: hidden;
+        touch-action: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
     }
-    /* Map modal specific styles */
+    
+    /* Map modal specific styles - prevent page zoom */
     #mapModal {
-        touch-action: auto;
+        touch-action: pan-x pan-y pinch-zoom;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
     }
+    
     #mapModal #map {
         padding-top: 80px; /* Account for header */
         padding-bottom: 200px; /* Account for controls + mobile nav */
-        touch-action: auto;
+        touch-action: pan-x pan-y pinch-zoom;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
     }
-    /* Ensure map div allows all gestures */
+    
+    /* Ensure Google Maps container allows proper touch gestures */
     .gm-style {
-        touch-action: auto !important;
+        touch-action: pan-x pan-y pinch-zoom !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    /* Prevent viewport scaling on double tap */
+    #mapModal, #mapModal * {
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
     }
     /* Map controls positioning */
     .map-controls {
@@ -358,6 +384,9 @@ function openMapModal() {
     document.getElementById('mapModal').classList.remove('hidden');
     document.body.classList.add('modal-open');
     
+    // Prevent page zoom during map interaction
+    preventPageZoom();
+    
     // Resize map and set gesture handling
     setTimeout(() => {
         google.maps.event.trigger(map, 'resize');
@@ -385,9 +414,63 @@ function openMapModal() {
     }, 100);
 }
 
+function preventPageZoom() {
+    // Disable double-tap zoom on the map modal
+    const mapModal = document.getElementById('mapModal');
+    const mapContainer = document.getElementById('map');
+    
+    // Prevent double-tap zoom
+    let lastTouchEnd = 0;
+    mapModal.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+    
+    // Prevent pinch-to-zoom on page level
+    mapModal.addEventListener('touchstart', function(event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+    }, { passive: false });
+    
+    mapModal.addEventListener('touchmove', function(event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Override default gesture handling on Google Maps elements
+    setTimeout(() => {
+        const gmStyle = document.querySelector('.gm-style');
+        if (gmStyle) {
+            gmStyle.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+            
+            gmStyle.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+    }, 200);
+}
+
 function closeMapModal() {
     document.getElementById('mapModal').classList.add('hidden');
     document.body.classList.remove('modal-open');
+    
+    // Restore normal page behavior
+    restorePageZoom();
+}
+
+function restorePageZoom() {
+    // Remove any touch event listeners that were preventing page zoom
+    const mapModal = document.getElementById('mapModal');
+    // Clone and replace the element to remove all event listeners
+    const newMapModal = mapModal.cloneNode(true);
+    mapModal.parentNode.replaceChild(newMapModal, mapModal);
 }
 
 function setMarkerPosition(latLng) {
