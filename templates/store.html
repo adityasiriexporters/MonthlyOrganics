@@ -97,13 +97,14 @@
             position: relative;
         }
         
-        /* Category sidebar with contained scrolling */
+        /* Category sidebar with proper header/footer constraints */
         .category-sidebar {
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: fixed;
+            top: 80px; /* Below header */
+            bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom)); /* Above footer */
+            left: 50%;
             width: 89.6px; /* 20% of 448px container */
-            height: 100%;
+            margin-left: -224px; /* Center within container */
             background: #f9fafb !important;
             border-right: 1px solid #e5e7eb;
             overflow-y: auto;
@@ -111,7 +112,7 @@
             z-index: 10;
         }
         
-        /* Products main area with contained scrolling */
+        /* Products main area with independent scrolling */
         .products-main {
             position: absolute;
             top: 0;
@@ -122,11 +123,14 @@
             overflow-y: auto;
             overflow-x: hidden;
             z-index: 5;
+            /* Ensure products scroll independently from sidebar */
         }
         
         /* Mobile responsive adjustments */
         @media (max-width: 448px) {
             .category-sidebar {
+                left: 0;
+                margin-left: 0;
                 width: 20vw;
                 background: #f9fafb !important;
                 z-index: 10;
@@ -146,6 +150,9 @@
             }
             .store-content {
                 height: calc(100vh - 160px);
+            }
+            .category-sidebar {
+                bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
             }
         }
         
