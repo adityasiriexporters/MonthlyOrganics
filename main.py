@@ -125,18 +125,11 @@ def cart():
         delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')  # ₹50 delivery fee
         total = subtotal + delivery_fee
         
-        response = make_response(render_template('cart.html', 
-                                                 cart_items=cart_items,
-                                                 subtotal=subtotal,
-                                                 delivery_fee=delivery_fee,
-                                                 total=total))
-        
-        # Add cache control headers to prevent browser caching
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        
-        return response
+        return render_template('cart.html', 
+                             cart_items=cart_items,
+                             subtotal=subtotal,
+                             delivery_fee=delivery_fee,
+                             total=total)
         
     except Exception as e:
         logger.error(f"Error loading cart: {e}")
