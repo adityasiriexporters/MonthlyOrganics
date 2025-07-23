@@ -19,10 +19,11 @@ class DeliveryZoneService:
         """
         try:
             # Spatial query to find zones containing the point
+            # Use ST_SetSRID to ensure both geometries use the same coordinate system (4326 = WGS84)
             spatial_query = """
                 SELECT dz.id, dz.name, dz.geojson
                 FROM delivery_zones dz
-                WHERE ST_Contains(dz.geometry, ST_Point(%s, %s))
+                WHERE ST_Contains(dz.geometry, ST_SetSRID(ST_Point(%s, %s), 4326))
                 LIMIT 1
             """
             
