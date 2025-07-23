@@ -52,35 +52,33 @@
             height: 100%;
         }
         
-        /* Main container with consistent viewport handling */
+        /* Main container adjustments */
         .main-container {
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for modern browsers */
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
             max-width: 448px;
             margin: 0 auto;
             background: white;
-            display: flex;
-            flex-direction: column;
         }
         
-        /* Scrollable content area */
-        .content-area {
-            flex: 1;
-            overflow-y: auto;
+        /* Content padding for mobile navigation clearance */
+        .content-container {
             padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px);
         }
         
-        /* Content containers use consistent padding */
-        .content-container {
-            min-height: calc(100vh - var(--nav-height) - var(--safe-area-inset-bottom));
-            padding-bottom: 20px;
+        /* Fallback for browsers that don't support dvh */
+        @supports not (height: 100dvh) {
+            .main-container {
+                height: 100vh;
+            }
         }
         
-        /* Page-specific content spacing */
+        /* Ensure proper spacing on all page types */
         .bg-gray-50,
         .bg-background,
         .min-h-screen {
-            min-height: calc(100vh - var(--nav-height) - var(--safe-area-inset-bottom)) !important;
-            padding-bottom: 20px !important;
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px) !important;
         }
     </style>
 
@@ -138,7 +136,7 @@
         {% endif %}
         
         <!-- Scrollable Main Content -->
-        <div class="content-area {% if request.path not in ['/', '/profile'] %}pt-20{% endif %}">
+        <div class="flex-1 overflow-y-auto {% if request.path not in ['/', '/profile'] %}pt-20{% endif %}">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
