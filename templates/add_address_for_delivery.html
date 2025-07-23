@@ -14,43 +14,22 @@
         content: " *";
         color: #ef4444;
     }
-    /* Map modal specific styles */
-    #mapModal {
-        touch-action: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-    }
-    #mapModal .map-header {
-        flex-shrink: 0;
-        height: 80px;
-        background: white;
-        z-index: 10;
-        position: relative;
-    }
-    #mapModal #map {
-        flex: 1;
-        padding-bottom: 200px; /* Account for controls + mobile nav */
-        touch-action: pan-x pan-y pinch-zoom;
-        width: 100%;
-        height: auto;
-    }
-    /* Ensure map div allows only map gestures */
-    .gm-style {
-        touch-action: pan-x pan-y pinch-zoom !important;
-    }
     /* Prevent body scroll when modal is open */
     body.modal-open {
         overflow: hidden;
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        touch-action: none;
+    }
+    /* Map modal specific styles */
+    #mapModal {
+        touch-action: auto;
+    }
+    #mapModal #map {
+        padding-top: 80px; /* Account for header */
+        padding-bottom: 200px; /* Account for controls + mobile nav */
+        touch-action: auto;
+    }
+    /* Ensure map div allows all gestures */
+    .gm-style {
+        touch-action: auto !important;
     }
     /* Map controls positioning */
     .map-controls {
@@ -84,7 +63,7 @@
                         {{ message }}
                     </div>
                 {% endfor %}
-
+                
                 <!-- Auto-hide flash messages after 3 seconds -->
                 <script>
                     document.addEventListener('DOMContentLoaded', function() {
@@ -111,7 +90,7 @@
                     Change
                 </button>
             </div>
-
+            
             <!-- Location Status Display -->
             <div id="locationDisplay" class="mb-4 hidden">
                 <div class="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -125,7 +104,7 @@
                     </div>
                 </div>
             </div>
-
+            
             <!-- Open Map Button -->
             <button id="openMapBtn" 
                     class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-2">
@@ -154,15 +133,15 @@
         <!-- Address Form -->
         <form id="addressForm" method="POST" action="{{ url_for('save_address_for_delivery') }}" 
               class="space-y-6" style="display: none;">
-
+            
             <!-- Hidden Map Data -->
             <input type="hidden" id="latitude" name="latitude" value="0">
             <input type="hidden" id="longitude" name="longitude" value="0">
-
+            
             <!-- Address Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Details</h3>
-
+                
                 <div class="space-y-4">
                     <!-- House Number (Required) -->
                     <div>
@@ -172,7 +151,7 @@
                         <input type="text" id="house_number" name="house_number" required
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-
+                    
                     <!-- Block Name (Optional) -->
                     <div>
                         <label for="block_name" class="block text-sm font-medium text-gray-700">
@@ -181,7 +160,7 @@
                         <input type="text" id="block_name" name="block_name"
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-
+                    
                     <!-- Floor/Door (Required) -->
                     <div>
                         <label for="floor_door" class="block text-sm font-medium text-gray-700 required-field">
@@ -190,7 +169,7 @@
                         <input type="text" id="floor_door" name="floor_door" required
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-
+                    
                     <!-- Locality (Required, Auto-filled) -->
                     <div>
                         <label for="locality" class="block text-sm font-medium text-gray-700 required-field">
@@ -200,7 +179,7 @@
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                         <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
                     </div>
-
+                    
                     <!-- City (Auto-filled, Non-editable) -->
                     <div>
                         <label for="city" class="block text-sm font-medium text-gray-700">
@@ -210,7 +189,7 @@
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
                         <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
                     </div>
-
+                    
                     <!-- Pincode (Auto-filled, Non-editable) -->
                     <div>
                         <label for="pincode" class="block text-sm font-medium text-gray-700">
@@ -220,7 +199,7 @@
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-primary focus:border-primary">
                         <p class="text-xs text-gray-500 mt-1">Auto-filled from map location</p>
                     </div>
-
+                    
                     <!-- Nearby Landmark (Optional) -->
                     <div>
                         <label for="nearby_landmark" class="block text-sm font-medium text-gray-700">
@@ -235,7 +214,7 @@
             <!-- Address Label Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
-
+                
                 <div class="space-y-4">
                     <!-- Manual Label Input -->
                     <div>
@@ -246,7 +225,7 @@
                                placeholder="e.g., Home, Office, Friend's Place, etc."
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-
+                    
                     <!-- Hidden nickname field that gets populated -->
                     <input type="hidden" id="nickname" name="nickname" value="">
                 </div>
@@ -255,7 +234,7 @@
             <!-- Receiver Details Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Receiver Details</h3>
-
+                
                 <div class="space-y-4">
                     <!-- Receiver Name (Required) -->
                     <div>
@@ -273,7 +252,7 @@
                             </button>
                         </div>
                     </div>
-
+                    
                     <!-- Receiver Phone (Required) -->
                     <div>
                         <label for="contact_number" class="block text-sm font-medium text-gray-700 required-field">
@@ -282,7 +261,7 @@
                         <input type="tel" id="contact_number" name="contact_number" pattern="[0-9]{10}" required
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-
+                    
                     <!-- Address Notes -->
                     <div>
                         <label for="address_notes" class="block text-sm font-medium text-gray-700">
@@ -309,8 +288,8 @@
 <!-- Full Screen Map Modal -->
 <div id="mapModal" class="fixed inset-0 bg-white z-50 hidden overflow-hidden">
     <!-- Map Header -->
-    <div class="map-header bg-white shadow-sm border-b border-gray-200">
-        <div class="flex items-center justify-between p-4 h-full">
+    <div class="absolute top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-10">
+        <div class="flex items-center justify-between p-4">
             <h3 class="text-lg font-semibold text-gray-900">Select Location</h3>
             <button id="closeMapBtn" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,17 +298,17 @@
             </button>
         </div>
     </div>
-
+    
     <!-- Full Screen Map -->
     <div id="map" class="w-full h-full"></div>
-
+    
     <!-- Map Controls - Fixed at bottom -->
     <div class="absolute left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-10 map-controls">
         <!-- Location Status -->
         <div id="locationStatus" class="text-sm text-gray-600 mb-4 text-center">
             Tap on the map to select your location or use current location
         </div>
-
+        
         <!-- Control Buttons -->
         <div class="flex space-x-2">
             <button id="getCurrentLocation" 
@@ -358,7 +337,7 @@ let geocoder;
 
 function initializeMap() {
     geocoder = new google.maps.Geocoder();
-
+    
     // Initialize main map (hidden initially)
     map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: 17.3850, lng: 78.4867 }, // Default to Hyderabad
@@ -378,7 +357,7 @@ function initializeMap() {
 function openMapModal() {
     document.getElementById('mapModal').classList.remove('hidden');
     document.body.classList.add('modal-open');
-
+    
     // Resize map and set gesture handling
     setTimeout(() => {
         google.maps.event.trigger(map, 'resize');
@@ -415,17 +394,17 @@ function setMarkerPosition(latLng) {
     if (marker) {
         marker.setMap(null);
     }
-
+    
     marker = new google.maps.Marker({
         position: latLng,
         map: map,
         draggable: true
     });
-
+    
     marker.addListener('dragend', function() {
         updateSelectedLocation(marker.getPosition());
     });
-
+    
     updateSelectedLocation(latLng);
     document.getElementById('confirmLocation').style.display = 'block';
 }
@@ -434,11 +413,11 @@ function updateSelectedLocation(latLng) {
     selectedLocation = latLng;
     document.getElementById('latitude').value = latLng.lat();
     document.getElementById('longitude').value = latLng.lng();
-
+    
     // Update status
     document.getElementById('locationStatus').textContent = 
         `Selected: ${latLng.lat().toFixed(6)}, ${latLng.lng().toFixed(6)}`;
-
+    
     // Reverse geocode to get address
     geocoder.geocode({ location: latLng }, function(results, status) {
         if (status === 'OK' && results[0]) {
@@ -452,7 +431,7 @@ function parseAddressComponents(result) {
     let locality = '';
     let city = '';
     let pincode = '';
-
+    
     components.forEach(component => {
         const types = component.types;
         if (types.includes('sublocality_level_1') || types.includes('neighborhood')) {
@@ -463,12 +442,12 @@ function parseAddressComponents(result) {
             pincode = component.long_name;
         }
     });
-
+    
     // Update form fields
     document.getElementById('locality').value = locality;
     document.getElementById('city').value = city;
     document.getElementById('pincode').value = pincode;
-
+    
     // Update display
     document.getElementById('selectedLocationDisplay').textContent = 
         `${locality}, ${city} - ${pincode}`;
@@ -476,19 +455,19 @@ function parseAddressComponents(result) {
 
 function confirmLocationSelection() {
     if (!selectedLocation) return;
-
+    
     closeMapModal();
-
+    
     // Show location display
     document.getElementById('locationDisplay').classList.remove('hidden');
     document.getElementById('changeLocationBtn').classList.remove('hidden');
-
+    
     // Hide open map button
     document.getElementById('openMapBtn').style.display = 'none';
-
+    
     // Show mini map
     document.getElementById('selectedLocationMap').classList.remove('hidden');
-
+    
     // Initialize mini map
     setTimeout(() => {
         miniMap = new google.maps.Map(document.getElementById('miniMap'), {
@@ -500,13 +479,13 @@ function confirmLocationSelection() {
             zoomControl: false,
             gestureHandling: 'none'
         });
-
+        
         new google.maps.Marker({
             position: selectedLocation,
             map: miniMap
         });
     }, 100);
-
+    
     // Show address form
     document.getElementById('addressForm').style.display = 'block';
 }
@@ -514,14 +493,14 @@ function confirmLocationSelection() {
 function getCurrentLocation() {
     if (navigator.geolocation) {
         document.getElementById('locationStatus').textContent = 'Getting your location...';
-
+        
         navigator.geolocation.getCurrentPosition(
             function(position) {
                 const userLocation = new google.maps.LatLng(
                     position.coords.latitude,
                     position.coords.longitude
                 );
-
+                
                 map.setCenter(userLocation);
                 map.setZoom(16);
                 setMarkerPosition(userLocation);
@@ -540,18 +519,18 @@ function getCurrentLocation() {
 // Event listeners
 document.addEventListener('DOMContentLoaded', function() {
     initializeMap();
-
+    
     // Map modal controls
     document.getElementById('openMapBtn').addEventListener('click', openMapModal);
     document.getElementById('closeMapBtn').addEventListener('click', closeMapModal);
     document.getElementById('getCurrentLocation').addEventListener('click', getCurrentLocation);
     document.getElementById('confirmLocation').addEventListener('click', confirmLocationSelection);
-
+    
     // Form validation
     document.getElementById('custom_label').addEventListener('input', function() {
         document.getElementById('nickname').value = this.value;
     });
-
+    
     // Form submission validation
     document.getElementById('addressForm').addEventListener('submit', function(e) {
         if (!selectedLocation) {
