@@ -35,20 +35,22 @@
 <body class="bg-background text-gray-800 antialiased h-screen overflow-hidden">
 <div class="h-screen bg-gray-50 flex flex-col">
     <!-- Header - Same as Store Page -->
-    <header class="flex-shrink-0 bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-md mx-auto flex items-center justify-between p-4">
+    <header class="flex-shrink-0 bg-white shadow-sm border-b border-gray-200" style="min-height: 8vh; max-height: 10vh;">
+        <div class="max-w-md mx-auto flex items-center justify-between" style="height: 8vh; padding: 0 1rem;">
             <!-- Logo Only (Left) -->
             <div class="flex items-center flex-shrink-0">
                 <img src="{{ url_for('static', filename='img/icononly_transparent_nobuffer.png') }}" 
                      alt="Monthly Organics Logo" 
-                     class="h-10 w-auto">
+                     class="w-auto"
+                     style="height: 5vh; min-height: 32px; max-height: 48px;">
             </div>
             
             <!-- Brand Name with Font Style (Right) -->
             <div class="flex items-center flex-1 justify-end">
                 <img src="{{ url_for('static', filename='img/brand_name_with_font.png') }}" 
                      alt="Monthly Organics" 
-                     class="h-8 w-auto max-w-full">
+                     class="w-auto max-w-full"
+                     style="height: 4vh; min-height: 24px; max-height: 36px;">
             </div>
         </div>
     </header>
