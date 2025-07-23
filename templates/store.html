@@ -270,10 +270,16 @@ function scrollToCategory(categoryId) {
     
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     if (targetSection && mainContainer) {
+        // Find the category heading within the section
+        const categoryHeading = targetSection.querySelector('h2');
+        const targetElement = categoryHeading || targetSection;
+        
+        console.log(`Found target element: ${targetElement.tagName}${targetElement.className ? '.' + targetElement.className : ''}`);
+        
         // Multiple scrolling approaches for better compatibility
         
-        // Method 1: Use scrollIntoView (most reliable)
-        targetSection.scrollIntoView({
+        // Method 1: Use scrollIntoView (most reliable) - scroll to heading, not section
+        targetElement.scrollIntoView({
             behavior: 'smooth',
             block: 'start',
             inline: 'nearest'
@@ -281,8 +287,8 @@ function scrollToCategory(categoryId) {
         
         // Method 2: Manual scrollTop assignment as fallback
         setTimeout(() => {
-            const sectionTop = targetSection.offsetTop;
-            const targetScrollPosition = sectionTop - 10;
+            const elementTop = targetElement.offsetTop;
+            const targetScrollPosition = elementTop - 20; // Extra space above heading
             
             if (mainContainer.scrollTop === 0) {
                 console.log('ScrollIntoView may have failed, trying manual scroll');
@@ -295,22 +301,22 @@ function scrollToCategory(categoryId) {
         // Verify scroll after animation
         setTimeout(() => {
             const actualScrollTop = mainContainer.scrollTop;
-            const sectionRect = targetSection.getBoundingClientRect();
+            const elementRect = targetElement.getBoundingClientRect();
             const containerRect = mainContainer.getBoundingClientRect();
-            const relativeTop = sectionRect.top - containerRect.top;
+            const relativeTop = elementRect.top - containerRect.top;
             
-            console.log(`Scroll verification - Position: ${actualScrollTop}, Section relative top: ${relativeTop}`);
+            console.log(`Scroll verification - Position: ${actualScrollTop}, Element relative top: ${relativeTop}`);
             
             if (relativeTop > 50) {
-                console.log('Section not at top, applying final adjustment');
-                const finalPosition = actualScrollTop + relativeTop - 10;
+                console.log('Element not at top, applying final adjustment');
+                const finalPosition = actualScrollTop + relativeTop - 20; // Space above heading
                 mainContainer.scrollTop = finalPosition;
             }
         }, 300);
         
         // Immediately highlight the clicked category
         highlightCategory(categoryId);
-        console.log(`Initiated scroll to category ${categoryId}`);
+        console.log(`Initiated scroll to category ${categoryId} heading`);
     } else {
         console.error(`Could not find section for category: ${categoryId}`);
     }
