@@ -4,9 +4,7 @@ Separate authentication mechanism for administrative access
 """
 
 from functools import wraps
-from flask import session, redirect, url_for, request, flash
-import hashlib
-import hmac
+from flask import session, redirect, url_for, flash
 
 class AdminAuth:
     """Admin authentication handler"""

@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from decimal import Decimal
 
 # Import services and utilities
-from models import db, init_db
+from models import db
 from services.database import CartService
 from services.security import SecureUserService, SecureAddressService, SecurityAuditLogger
 from utils.decorators import login_required
@@ -17,7 +17,7 @@ from validators.forms import FormValidator
 from utils.encryption import DataEncryption
 from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
-    render_add_to_cart_button, render_cart_totals, render_cart_totals_without_delivery
+    render_add_to_cart_button, render_cart_totals_without_delivery
 )
 from admin_auth import AdminAuth, admin_required
 
