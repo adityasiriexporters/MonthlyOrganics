@@ -72,9 +72,9 @@
     </header>
 
     <!-- Main Content Area (Flexbox) -->
-    <div class="flex-1 flex" style="padding-top: 60px; padding-bottom: 60px;">
+    <div class="flex-1 flex" style="padding-top: 60px; padding-bottom: 80px;">
         <!-- Fixed Left Sidebar - Categories (20%) -->
-        <aside class="w-1/5 bg-gray-50 border-r border-gray-200 fixed left-0 overflow-y-auto z-50" style="top: 60px; bottom: 60px;">
+        <aside class="w-1/5 bg-gray-50 border-r border-gray-200 fixed left-0 overflow-y-auto z-50" style="top: 60px; bottom: 80px;">
             <div class="p-1.5 pt-3">
                 <h2 class="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide text-center" style="font-size: 0.65rem !important;">Categories</h2>
                 <div class="space-y-1.5">
@@ -97,7 +97,7 @@
         </aside>
 
         <!-- Right Content Area - Products (80%) -->
-        <main class="w-4/5 ml-[20%] overflow-y-auto bg-white" style="height: calc(100vh - 120px);">
+        <main class="w-4/5 ml-[20%] overflow-y-auto bg-white" style="height: calc(100vh - 140px);">
             <!-- Loading indicator -->
             <div id="loading" class="htmx-indicator fixed top-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-90 rounded-lg shadow-lg px-4 py-2 z-40">
                 <div class="flex items-center space-x-2">
@@ -186,9 +186,9 @@ window.scrollToCategory = scrollToCategory;
 </script>
 
 <!-- Mobile Navigation Bar (Fixed Bottom) -->
-<nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50" style="min-height: 60px; height: 60px; max-height: 80px;">
+<nav class="fixed left-0 right-0 bg-white border-t-2 border-gray-300 md:hidden z-50 shadow-lg" style="bottom: 0px; height: 80px; padding-bottom: 20px; padding-bottom: env(safe-area-inset-bottom, 20px);">
     <div class="max-w-md mx-auto h-full">
-        <div class="flex items-center justify-around h-full">
+        <div class="flex items-center justify-around" style="height: 60px; padding-top: 10px; background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);">
             <!-- Home -->
             <a href="/" class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full text-gray-500 hover:text-primary transition-colors">
                 <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
