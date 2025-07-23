@@ -102,62 +102,58 @@
         {% endif %}
         
         <!-- Scrollable Main Content -->
-        <div class="flex-1 overflow-y-auto" style="height: calc(100vh - 140px);">
+        <div class="flex-1 overflow-y-auto" style="height: calc(100vh - 150px);">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="flex-shrink-0 bg-white border-t-2 border-gray-300 md:hidden shadow-lg" style="height: 80px; padding-bottom: 20px; padding-bottom: env(safe-area-inset-bottom, 20px);">
+        <nav class="flex-shrink-0 md:hidden shadow-2xl" style="height: 90px; background: #2C7A3C; border-top: 4px solid #1e5631; padding-bottom: 25px;">
         <div class="max-w-md mx-auto h-full">
-            <div class="flex items-center justify-around" style="height: 60px; padding-top: 10px; background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);">
+            <div class="flex items-center justify-around" style="height: 65px; padding-top: 15px;">
                 <!-- Home -->
                 <a href="{{ url_for('index') }}" 
-                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full
-                          {% if request.path == '/' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
-                          transition-colors">
-                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full transition-colors
+                          {% if request.path == '/' %}text-white{% else %}text-green-100 hover:text-white{% endif %}">
+                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 28px; height: 28px; stroke-width: 2.5;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span class="font-medium text-xs">Home</span>
+                    <span class="font-bold text-xs">Home</span>
                 </a>
 
                 <!-- Store -->
                 <a href="/store" 
-                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full
-                          {% if request.path == '/store' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
-                          transition-colors">
-                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full transition-colors
+                          {% if request.path == '/store' %}text-white{% else %}text-green-100 hover:text-white{% endif %}">
+                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 28px; height: 28px; stroke-width: 2.5;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
-                    <span class="font-medium text-xs">Store</span>
+                    <span class="font-bold text-xs">Store</span>
                 </a>
 
                 <!-- Cart -->
                 <a href="/cart" 
-                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full
-                          {% if request.path == '/cart' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
-                          transition-colors relative">
-                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5L17 18H7"></path>
+                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full transition-colors relative
+                          {% if request.path == '/cart' %}text-white{% else %}text-green-100 hover:text-white{% endif %}">
+                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 28px; height: 28px; stroke-width: 2.5;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5L17 18H7"></path>
                     </svg>
                     <!-- Cart count badge (hidden when 0) -->
                     <div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold hidden">
                         0
                     </div>
-                    <span class="font-medium text-xs">Cart</span>
+                    <span class="font-bold text-xs">Cart</span>
                 </a>
 
                 <!-- Profile -->
                 <a href="/profile" 
-                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full
-                          {% if request.path == '/profile' %}text-primary{% else %}text-gray-500 hover:text-primary{% endif %} 
-                          transition-colors">
-                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                   class="flex flex-col items-center justify-center text-center min-w-0 flex-1 h-full transition-colors
+                          {% if request.path == '/profile' %}text-white{% else %}text-green-100 hover:text-white{% endif %}">
+                    <svg class="mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 28px; height: 28px; stroke-width: 2.5;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                     </svg>
-                    <span class="font-medium text-xs">Profile</span>
+                    <span class="font-bold text-xs">Profile</span>
                 </a>
             </div>
         </div>
