@@ -4,8 +4,8 @@
 
 {% block content %}
 <!-- Home Page Header (Single Row) -->
-<header class="bg-white shadow-sm border-b border-gray-200">
-    <div class="max-w-md mx-auto px-4 py-3">
+<header class="bg-white shadow-sm border-b border-gray-200 w-full">
+    <div class="px-4 py-3">
         <div class="flex items-center space-x-3">
             <!-- Logo -->
             <a href="{{ url_for('index') }}" class="flex-shrink-0">
@@ -29,10 +29,10 @@
     </div>
 </header>
 
-<div class="bg-gray-50 pb-24">
+<div class="bg-gray-50 pb-24 w-full">
     <!-- Sliding Banners -->
-    <section class="bg-white shadow-sm">
-        <div class="max-w-md mx-auto" x-data="{ currentSlide: 0, slides: 3 }" x-init="setInterval(() => { currentSlide = (currentSlide + 1) % slides }, 5000)">
+    <section class="bg-white shadow-sm w-full">
+        <div class="w-full" x-data="{ currentSlide: 0, slides: 3 }" x-init="setInterval(() => { currentSlide = (currentSlide + 1) % slides }, 5000)">
             <div class="relative aspect-[16/9] overflow-hidden">
                 <!-- Slide 1 -->
                 <div class="absolute inset-0 transition-transform duration-500 ease-in-out" 

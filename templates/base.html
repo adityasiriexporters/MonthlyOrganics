@@ -201,7 +201,7 @@
         Skip to main content
     </a>
     
-    <div class="h-screen bg-gray-50 flex flex-col">
+    <div class="h-screen flex flex-col max-w-md mx-auto bg-white">
         <!-- Dynamic Header - Mobile First -->
         {% if request.path not in ['/', '/profile'] %}
             <!-- Other Pages Header (Simple) - Fixed -->
@@ -227,8 +227,8 @@
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="mobile-nav-bar flex-shrink-0 bg-white border-t border-gray-200 md:hidden">
-        <div class="max-w-md mx-auto">
+        <nav class="mobile-nav-bar flex-shrink-0 bg-white border-t border-gray-200 md:hidden w-full">
+        <div class="w-full">
             <div class="flex items-center justify-around py-2">
                 <!-- Home -->
                 <a href="{{ url_for('index') }}" 
