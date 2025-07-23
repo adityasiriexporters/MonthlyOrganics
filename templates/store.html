@@ -47,7 +47,7 @@
             right: 0;
             width: 100%;
             height: var(--nav-height);
-            z-index: 1000;
+            z-index: 1000; /* Highest z-index for navigation */
             background: white;
             border-top: 1px solid #e5e7eb;
             padding-bottom: var(--safe-area-inset-bottom);
@@ -105,8 +105,7 @@
             border-right: 1px solid #e5e7eb;
             overflow-y: auto;
             overflow-x: hidden;
-            z-index: 100; /* Higher z-index to ensure proper layering */
-            /* Remove transform to avoid rendering issues */
+            z-index: 10; /* Below navigation but above products */
         }
         
         /* Products main area with proper spacing and background */
@@ -116,7 +115,7 @@
             background: white !important; /* Ensure consistent white background */
             min-height: 100vh; /* Full height coverage */
             position: relative;
-            z-index: 1; /* Below sidebar but above background */
+            z-index: 5; /* Below sidebar, proper layering */
         }
         
         /* Mobile responsive adjustments */
@@ -126,12 +125,14 @@
                 margin-left: 0;
                 width: 20vw;
                 background: #f9fafb !important;
+                z-index: 10; /* Consistent z-index on mobile */
             }
             
             .products-main {
                 margin-left: 20vw;
                 width: calc(100% - 20vw);
                 background: white !important;
+                z-index: 5; /* Consistent z-index on mobile */
             }
         }
         
