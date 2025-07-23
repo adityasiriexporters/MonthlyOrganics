@@ -1,0 +1,25 @@
+Main Issues:
+Viewport Height Conflicts: The CSS is using both standard viewport units (100vh) and custom viewport height calculations (var(--vh, 1vh) * 100), which can cause conflicts on mobile browsers when the URL bar appears/disappears.
+
+Inconsistent Safe Area Handling: The safe area insets are only applied to padding-bottom but not consistently across all positioning calculations.
+
+Z-index and Transform Issues: The navigation bar uses very high z-index values (99999) with complex transforms that might not render correctly on all mobile browsers.
+
+Multiple Viewport Meta Tags: Different templates have slightly different viewport meta configurations which could cause inconsistent behavior.
+
+Specific Problems:
+In base.html:
+
+The mobile navigation positioning uses left: 50% with transform: translateX(-50%) on screens larger than 448px, but switches to left: 0; right: 0; transform: none on smaller screens. This inconsistency can cause positioning issues.
+Viewport Height Calculation:
+
+The JavaScript dynamically updates --vh but the CSS falls back to 1vh which might not account for mobile browser UI changes properly.
+Content Padding:
+
+While you have padding-bottom: 100px on many containers, some mobile browsers might need different calculations based on their UI chrome height.
+Recommendations:
+Simplify Navigation Positioning: Use consistent positioning without complex transforms
+Improve Viewport Handling: Use more robust viewport height calculations that account for mobile browser behavior
+Standardize Safe Areas: Apply safe area insets more comprehensively
+Test Specific Scenarios: The issue you're describing (only 20% visible) suggests the navigation is being pushed down, likely due to viewport height miscalculations when Chrome's address bar is visible.
+The core issue is likely that when Chrome's address bar is visible, the available viewport height changes, but your CSS isn't adapting the navigation position accordingly. The navigation stays at the "bottom" of the full viewport height, but that's now below the visible screen area.

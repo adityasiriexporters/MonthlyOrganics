@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, height=device-height">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Monthly Organics - Your monthly dose of organic goodness">
     <meta name="keywords" content="organic, produce, monthly, delivery, fresh, vegetables, fruits">
     <meta name="author" content="Monthly Organics">
@@ -24,102 +24,61 @@
     <!-- htmx CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     
-    <!-- Mobile Viewport Fix CSS -->
+    <!-- Simplified Mobile CSS -->
     <style>
         :root {
-            --vh: 1vh;
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+            --nav-height: 80px;
         }
         
-        /* Mobile navigation bar positioning fixes */
+        /* Simplified mobile navigation positioning */
         .mobile-nav-bar {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            width: 100% !important;
-            max-width: 448px !important; /* max-w-md = 28rem = 448px */
-            z-index: 99999 !important;
-            padding-bottom: var(--safe-area-inset-bottom) !important;
-            background: white !important;
-            border-top: 1px solid #e5e7eb !important;
-            pointer-events: auto !important;
-            touch-action: manipulation !important;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: var(--nav-height);
+            z-index: 1000;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding-bottom: var(--safe-area-inset-bottom);
         }
         
-        /* Ensure navigation links are clickable */
-        .mobile-nav-bar a {
-            pointer-events: auto !important;
-            touch-action: manipulation !important;
-            position: relative !important;
-            z-index: 999999 !important;
+        /* Center navigation content within max-width container */
+        .mobile-nav-bar > div {
+            max-width: 448px; /* max-w-md */
+            margin: 0 auto;
+            height: 100%;
         }
         
-        /* Container height fixes for mobile */
-        .mobile-container {
-            height: calc(100vh - var(--safe-area-inset-bottom));
-            height: calc(var(--vh, 1vh) * 100 - var(--safe-area-inset-bottom));
-            padding-bottom: 100px; /* Account for mobile nav height + safe area */
+        /* Main container adjustments */
+        .main-container {
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for modern browsers */
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
+            max-width: 448px;
+            margin: 0 auto;
+            background: white;
         }
         
-        /* Ensure all content containers have proper bottom padding */
-        .content-container,
-        .min-h-screen,
-        .h-screen > div,
-        main {
-            padding-bottom: 100px !important;
+        /* Content padding for mobile navigation clearance */
+        .content-container {
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px);
         }
         
-        /* Fix homepage and profile page layout issues */
-        .bg-gray-50 > div,
-        .bg-background {
-            padding-bottom: 100px !important;
+        /* Fallback for browsers that don't support dvh */
+        @supports not (height: 100dvh) {
+            .main-container {
+                height: 100vh;
+            }
         }
         
-        /* iOS Safari specific fixes */
-        @media screen and (max-width: 768px) {
-            .mobile-nav-bar {
-                transform: translateX(-50%) translateZ(0) !important;
-                -webkit-transform: translateX(-50%) translateZ(0) !important;
-                will-change: transform !important;
-                -webkit-backface-visibility: hidden !important;
-                backface-visibility: hidden !important;
-            }
-            
-            /* Ensure navigation bar doesn't exceed screen width on small screens */
-            @media screen and (max-width: 448px) {
-                .mobile-nav-bar {
-                    left: 0 !important;
-                    right: 0 !important;
-                    transform: none !important;
-                    -webkit-transform: none !important;
-                    width: 100vw !important;
-                    max-width: none !important;
-                }
-            }
-        }
-            
-            /* Ensure body and all containers have proper bottom padding */  
-            body.mobile-device,
-            body.mobile-body,
-            body {
-                padding-bottom: 0px !important; /* Remove body padding to avoid double padding */
-            }
-            
-            /* Specific container padding fixes */
-            .bg-background,
-            .bg-gray-50,
-            .flex.flex-col,
-            section:last-child,
-            .max-w-md.mx-auto:last-child,
-            .min-h-screen.bg-background {
-                padding-bottom: 100px !important;
-            }
-            
-            /* Homepage specific fixes */
-            .bg-gray-50 > section:last-child {
-                margin-bottom: 100px !important;
-            }
+        /* Ensure proper spacing on all page types */
+        .bg-gray-50,
+        .bg-background,
+        .min-h-screen {
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px) !important;
         }
     </style>
 
@@ -141,65 +100,7 @@
         }
     </script>
     
-    <!-- Mobile Viewport Handler JavaScript -->
-    <script>
-        // Dynamic viewport height calculation for mobile browsers
-        function setViewportHeight() {
-            const vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', vh + 'px');
-        }
-        
-        // Set viewport height on page load
-        setViewportHeight();
-        
-        // Update viewport height on resize and orientation change
-        window.addEventListener('resize', setViewportHeight);
-        window.addEventListener('orientationchange', function() {
-            setTimeout(setViewportHeight, 100);
-        });
-        
-        // Additional mobile browser detection and fixes
-        document.addEventListener('DOMContentLoaded', function() {
-            // Detect mobile browsers
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isChrome = /Chrome/.test(navigator.userAgent);
-            const isSafari = /Safari/.test(navigator.userAgent) && !isChrome;
-            
-            if (isMobile) {
-                document.body.classList.add('mobile-device');
-                
-                // Ensure navigation is always clickable
-                const mobileNavs = document.querySelectorAll('.mobile-nav-bar');
-                mobileNavs.forEach(nav => {
-                    nav.style.pointerEvents = 'auto';
-                    nav.style.touchAction = 'manipulation';
-                    
-                    // Make all navigation links clickable
-                    const navLinks = nav.querySelectorAll('a');
-                    navLinks.forEach(link => {
-                        link.style.pointerEvents = 'auto';
-                        link.style.touchAction = 'manipulation';
-                        link.style.position = 'relative';
-                        link.style.zIndex = '999999';
-                    });
-                });
-            }
-            
-            // iOS specific fixes
-            if (isIOS) {
-                document.body.classList.add('ios-device');
-                
-                // Handle iOS viewport changes
-                window.addEventListener('scroll', function() {
-                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                    if (scrollTop === 0) {
-                        setViewportHeight();
-                    }
-                });
-            }
-        });
-    </script>
+
     
     <!-- Additional meta tags for SEO -->
     <meta property="og:title" content="Monthly Organics - Your Monthly Dose of Organic Goodness">
@@ -210,13 +111,13 @@
     
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-background text-gray-800 antialiased h-screen overflow-hidden mobile-body">
+<body class="bg-background text-gray-800 antialiased">
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50">
         Skip to main content
     </a>
     
-    <div class="h-screen flex flex-col max-w-md mx-auto bg-white relative">
+    <div class="main-container flex flex-col relative">
         <!-- Dynamic Header - Mobile First -->
         {% if request.path not in ['/', '/profile'] %}
             <!-- Other Pages Header (Simple) - Fixed -->
@@ -242,8 +143,8 @@
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="mobile-nav-bar flex-shrink-0 bg-white border-t border-gray-200 md:hidden">
-        <div class="w-full max-w-md mx-auto">
+        <nav class="mobile-nav-bar md:hidden">
+        <div class="w-full">
             <div class="flex items-center justify-around py-2">
                 <!-- Home -->
                 <a href="{{ url_for('index') }}" 
