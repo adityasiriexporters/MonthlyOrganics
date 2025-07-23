@@ -377,7 +377,7 @@ def update_address(address_id):
             return redirect(url_for('edit_address', address_id=address_id))
         
         # Generate incremental label if nickname already exists (only for editing existing address)
-        requested_nickname = form_data.get('nickname')
+        requested_nickname = form_data.get('nickname', '')
         
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
@@ -385,7 +385,7 @@ def update_address(address_id):
         existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
         
         final_nickname = requested_nickname
-        if requested_nickname.lower() in existing_nicknames:
+        if requested_nickname and requested_nickname.lower() in existing_nicknames:
             final_nickname = generate_incremental_label(user_id, requested_nickname)
         
         # Prepare address data
@@ -673,14 +673,14 @@ def verify_otp():
         
         if is_existing_user:
             # Existing user login - user should already exist
-            user = SecureUserService.find_user_by_phone(mobile_number)
+            user = SecureUserService.find_user_by_phone(mobile_number or '')
             if not user:
                 flash('User account not found. Please sign up first.', 'error')
                 return redirect(url_for('signup'))
             
             user_id = user['id']
             SecurityAuditLogger.log_authentication_event(
-                DataEncryption.hash_for_search(mobile_number)[:8], 
+                DataEncryption.hash_for_search(mobile_number or '')[:8], 
                 "LOGIN_EXISTING_USER"
             )
             logger.info(f"Existing user logged in")
@@ -691,17 +691,17 @@ def verify_otp():
                 return redirect(url_for('signup'))
             
             # Check if user was already created during this session to prevent duplicates
-            existing_user = SecureUserService.find_user_by_phone(mobile_number)
+            existing_user = SecureUserService.find_user_by_phone(mobile_number or '')
             if existing_user:
                 # User was already created, use existing user
                 user_id = existing_user['id']
                 logger.info(f"User already exists, using existing account: {user_id}")
             else:
                 # Create new user
-                user = SecureUserService.create_user_with_details(mobile_number, first_name, last_name)
+                user = SecureUserService.create_user_with_details(mobile_number or '', first_name, last_name)
                 if not user:
                     SecurityAuditLogger.log_authentication_event(
-                        DataEncryption.hash_for_search(mobile_number)[:8], 
+                        DataEncryption.hash_for_search(mobile_number or '')[:8], 
                         "USER_CREATION_FAILED", 
                         False
                     )
@@ -710,7 +710,7 @@ def verify_otp():
                 
                 user_id = user['id']
                 SecurityAuditLogger.log_authentication_event(
-                    DataEncryption.hash_for_search(mobile_number)[:8], 
+                    DataEncryption.hash_for_search(mobile_number or '')[:8], 
                     "NEW_USER_CREATED"
                 )
                 logger.info(f"New user created")
@@ -1251,14 +1251,14 @@ def admin_delivery_zones():
             # Ensure geojson is properly handled
             if zone_dict.get('geojson'):
                 try:
-                    import json
+                    import json as json_module
                     # If geojson is already a dict, convert to string for template
                     if isinstance(zone_dict['geojson'], dict):
-                        zone_dict['geojson'] = json.dumps(zone_dict['geojson'])
+                        zone_dict['geojson'] = json_module.dumps(zone_dict['geojson'])
                     elif isinstance(zone_dict['geojson'], str):
                         # Validate it's valid JSON
-                        json.loads(zone_dict['geojson'])  # This will raise an error if invalid
-                except (json.JSONDecodeError, TypeError) as e:
+                        json_module.loads(zone_dict['geojson'])  # This will raise an error if invalid
+                except Exception as e:
                     logger.warning(f"Invalid GeoJSON for zone {zone_dict['id']}: {e}, setting to None")
                     zone_dict['geojson'] = None
             zones.append(zone_dict)
@@ -2075,6 +2075,7 @@ def setup_scheduled_tasks():
         """Run daily tasks at 11 AM"""
         while True:
             try:
+                from datetime import datetime
                 current_time = datetime.now()
                 
                 # Check if it's 11 AM (or close to it)
