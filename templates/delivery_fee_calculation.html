@@ -75,36 +75,37 @@
                 <!-- Delivery Address Section -->
                 <div class="bg-white shadow-sm mb-4">
                     <div class="p-4">
-                        <h2 class="font-medium text-gray-900 mb-3">Delivery Address</h2>
+                        <h2 class="font-medium text-gray-900 mb-4">Delivery Address</h2>
                         
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="flex justify-between items-start mb-3">
+                        <!-- Address Details -->
+                        <div id="address-details" class="space-y-2 mb-4">
+                            <div class="flex justify-between items-start">
                                 <div class="flex-1">
                                     <h3 class="font-medium text-gray-900">{{ selected_address.label }}</h3>
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        {{ selected_address.flat_number }}{% if selected_address.flat_number %}, {% endif %}{{ selected_address.building_name }}{% if selected_address.building_name %},<br>{% endif %}
-                                        {{ selected_address.street_address }},<br>
-                                        {{ selected_address.area }}, {{ selected_address.city }}<br>
-                                        {{ selected_address.state }} - {{ selected_address.pincode }}
-                                    </p>
+                                    <div class="text-sm text-gray-600 mt-1 space-y-1">
+                                        <p>{{ selected_address.flat_number }}{% if selected_address.flat_number %}, {% endif %}{{ selected_address.building_name }}</p>
+                                        <p>{{ selected_address.street_address }}</p>
+                                        <p>{{ selected_address.area }}, {{ selected_address.city }}</p>
+                                        <p>{{ selected_address.state }} - {{ selected_address.pincode }}</p>
+                                        {% if selected_address.nearby_landmark %}
+                                        <p class="text-gray-500">Near {{ selected_address.nearby_landmark }}</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 <button onclick="editAddress()" class="text-primary text-sm font-medium hover:text-primary/80 transition-colors">
                                     Edit
                                 </button>
                             </div>
-
+                            
                             <!-- Receiver Details -->
-                            <div class="border-t border-gray-200 pt-3">
-                                <p class="text-sm text-gray-600">
-                                    <span class="font-medium">Receiver:</span> {{ selected_address.receiver_name }}<br>
-                                    <span class="font-medium">Phone:</span> {{ selected_address.receiver_phone }}
-                                </p>
-                            </div>
-
-                            <!-- Mini Map -->
+                            {% if selected_address.receiver_name %}
                             <div class="border-t border-gray-200 pt-3 mt-3">
-                                <div id="delivery-mini-map" class="w-full h-32 bg-gray-200 rounded-lg"></div>
+                                <div class="text-sm text-gray-600 space-y-1">
+                                    <p><span class="font-medium">Receiver:</span> {{ selected_address.receiver_name }}</p>
+                                    <p><span class="font-medium">Phone:</span> {{ selected_address.contact_number or selected_address.receiver_phone }}</p>
+                                </div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -214,45 +215,13 @@
         </nav>
     </div>
 
-    <!-- Include Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
-
     <script>
-    let deliveryMap = null;
-
-    // Initialize map when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        initDeliveryMap();
-    });
-
-    function initDeliveryMap() {
-        const mapElement = document.getElementById('delivery-mini-map');
-        
-        const lat = parseFloat('{{ selected_address.latitude }}');
-        const lng = parseFloat('{{ selected_address.longitude }}');
-        
-        deliveryMap = new google.maps.Map(mapElement, {
-            center: { lat: lat, lng: lng },
-            zoom: 16,
-            disableDefaultUI: true,
-            zoomControl: false,
-            gestureHandling: 'none' // Disable interaction
-        });
-        
-        // Add marker
-        new google.maps.Marker({
-            position: { lat: lat, lng: lng },
-            map: deliveryMap,
-            title: 'Delivery Location'
-        });
-    }
-
     function editAddress() {
-        window.location.href = `/edit-address-for-delivery/{{ selected_address.id }}`;
+        window.location.href = "{{ url_for('edit_address_for_delivery', address_id=selected_address.id) }}";
     }
 
     function proceedToCheckout() {
-        window.location.href = `/checkout?address_id={{ selected_address.id }}`;
+        window.location.href = "{{ url_for('checkout', address_id=selected_address.id) }}";
     }
     </script>
 
