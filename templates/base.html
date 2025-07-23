@@ -91,11 +91,10 @@
             }
         }
         
-        /* Ensure proper spacing on all page types */
-        .bg-gray-50,
-        .bg-background,
-        .min-h-screen {
-            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px) !important;
+        /* Profile page specific adjustments */
+        .profile-content {
+            min-height: calc(100vh - var(--nav-height) - var(--safe-area-inset-bottom) - 80px);
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px);
         }
     </style>
 
@@ -136,7 +135,7 @@
     
     <div class="main-container flex flex-col relative">
         <!-- Dynamic Header - Mobile First -->
-        {% if request.path not in ['/', '/profile'] %}
+        {% if request.path != '/' %}
             <!-- Other Pages Header (Simple) - Fixed -->
             <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
                 <div class="max-w-md mx-auto px-4 py-4">
@@ -153,7 +152,7 @@
         {% endif %}
         
         <!-- Scrollable Main Content -->
-        <div class="flex-1 overflow-y-auto {% if request.path not in ['/', '/profile'] %}pt-20{% endif %}">
+        <div class="flex-1 {% if request.path != '/' %}pt-20{% endif %}">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
