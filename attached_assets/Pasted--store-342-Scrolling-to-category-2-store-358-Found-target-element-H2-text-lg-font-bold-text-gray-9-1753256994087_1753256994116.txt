@@ -1,0 +1,43 @@
+
+store:342 Scrolling to category: 2
+store:358 Found target element: H2.text-lg font-bold text-gray-900
+store:359 Category heading found: YES
+store:375 Section top: 917, Target position: 907
+store:378 Current scroll position: 0
+store:379 Main container height: 5392
+store:380 Main container client height: 5392
+store:381 Main container is scrollable: false
+store:384 Setting scrollTop to: 907
+store:390 Scroll position after direct assignment: 0
+store:394 Direct assignment failed, trying scrollTo
+store:399 Scroll position after scrollTo: 0
+store:257 Highlighting category: 2
+store:274 Category 2 highlighted successfully with active class
+store:443 Initiated scroll to category 2 heading
+store:488 Delegation click on category: 2
+store:342 Scrolling to category: 2
+store:358 Found target element: H2.text-lg font-bold text-gray-900
+store:359 Category heading found: YES
+store:375 Section top: 917, Target position: 907
+store:378 Current scroll position: 0
+store:379 Main container height: 5392
+store:380 Main container client height: 5392
+store:381 Main container is scrollable: false
+store:384 Setting scrollTop to: 907
+store:390 Scroll position after direct assignment: 0
+store:394 Direct assignment failed, trying scrollTo
+store:399 Scroll position after scrollTo: 0
+store:257 Highlighting category: 2
+store:274 Category 2 highlighted successfully with active class
+store:443 Initiated scroll to category 2 heading
+store:407 Scroll position after 50ms: 0
+store:409 Direct scroll may have failed, trying scrollIntoView
+store:417 Final scroll position: 0
+store:407 Scroll position after 50ms: 0
+store:409 Direct scroll may have failed, trying scrollIntoView
+store:417 Final scroll position: 0
+2store:422 Scroll position after 200ms: 0
+store:432 Scroll verification - Position: 0, Element relative top: 849.2000732421875
+store:435 Element not at top, applying final adjustment
+store:432 Scroll verification - Position: 0, Element relative top: 849.2000732421875
+store:435 Element not at top, applying final adjustment
