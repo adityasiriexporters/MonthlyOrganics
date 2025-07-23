@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&v=3.55"></script>
 <style>
     #map {
         height: 100%;
@@ -345,7 +345,7 @@ function openMapModal() {
     // Resize map and set gesture handling
     setTimeout(() => {
         google.maps.event.trigger(map, 'resize');
-        // Force enable single-finger gestures
+        // Force enable single-finger gestures and set to Hyderabad
         map.setOptions({ 
             gestureHandling: 'greedy',
             disableDefaultUI: false,
@@ -355,9 +355,16 @@ function openMapModal() {
             rotateControl: false,
             fullscreenControl: false
         });
+        // Always center on Hyderabad when opening modal for new address
         if (selectedLocation) {
             map.setCenter(selectedLocation);
             map.setZoom(16);
+        } else {
+            // Force center to Hyderabad
+            const hyderabadCenter = new google.maps.LatLng(17.3850, 78.4867);
+            map.setCenter(hyderabadCenter);
+            map.setZoom(13);
+            console.log('Map centered on Hyderabad:', hyderabadCenter.toString());
         }
     }, 100);
 }
