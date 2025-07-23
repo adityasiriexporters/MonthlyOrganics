@@ -20,11 +20,16 @@
     }
     /* Map modal specific styles */
     #mapModal {
-        touch-action: pan-x pan-y;
+        touch-action: auto;
     }
     #mapModal #map {
         padding-top: 80px; /* Account for header */
         padding-bottom: 200px; /* Account for controls + mobile nav */
+        touch-action: auto;
+    }
+    /* Ensure map div allows all gestures */
+    .gm-style {
+        touch-action: auto !important;
     }
     /* Map controls positioning */
     .map-controls {
@@ -378,6 +383,16 @@ function openMapModal() {
     // Resize map and set existing marker
     setTimeout(() => {
         google.maps.event.trigger(map, 'resize');
+        // Force enable single-finger gestures
+        map.setOptions({ 
+            gestureHandling: 'greedy',
+            disableDefaultUI: false,
+            zoomControl: true,
+            scaleControl: false,
+            streetViewControl: false,
+            rotateControl: false,
+            fullscreenControl: false
+        });
         map.setCenter(selectedLocation);
         map.setZoom(16);
         
