@@ -270,29 +270,49 @@ function scrollToCategory(categoryId) {
     
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     if (targetSection && mainContainer) {
-        // Find the category heading within the section
-        const categoryHeading = targetSection.querySelector('h2');
+        // Find the category heading within the section - try multiple selectors
+        let categoryHeading = targetSection.querySelector('h2');
+        if (!categoryHeading) {
+            categoryHeading = targetSection.querySelector('.sticky h2');
+        }
+        if (!categoryHeading) {
+            categoryHeading = targetSection.querySelector('div h2');
+        }
+        
+        // If we found a heading, use it; otherwise fall back to section
         const targetElement = categoryHeading || targetSection;
         
         console.log(`Found target element: ${targetElement.tagName}${targetElement.className ? '.' + targetElement.className : ''}`);
+        console.log(`Category heading found: ${categoryHeading ? 'YES' : 'NO'}`);
         
-        // Multiple scrolling approaches for better compatibility
+        // Calculate the scroll position manually for better control
+        const sectionTop = targetSection.offsetTop;
         
-        // Method 1: Use scrollIntoView (most reliable) - scroll to heading, not section
-        targetElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-            inline: 'nearest'
-        });
+        // For sticky headings, we want to scroll to the section start so the heading becomes visible
+        // The sticky div should automatically position itself at the top
+        let targetScrollPosition;
+        if (categoryHeading) {
+            // Scroll to show the sticky header properly - just before the section starts
+            targetScrollPosition = sectionTop - 10; // Small margin above section
+        } else {
+            // Fallback to section top
+            targetScrollPosition = sectionTop - 20;
+        }
         
-        // Method 2: Manual scrollTop assignment as fallback
+        console.log(`Section top: ${sectionTop}, Target position: ${targetScrollPosition}`);
+        
+        // Method 1: Direct scroll assignment (most reliable for our case)
+        mainContainer.scrollTop = targetScrollPosition;
+        
+        // Method 2: Use scrollIntoView as backup
         setTimeout(() => {
-            const elementTop = targetElement.offsetTop;
-            const targetScrollPosition = elementTop - 20; // Extra space above heading
-            
-            if (mainContainer.scrollTop === 0) {
-                console.log('ScrollIntoView may have failed, trying manual scroll');
-                mainContainer.scrollTop = targetScrollPosition;
+            if (Math.abs(mainContainer.scrollTop - targetScrollPosition) > 10) {
+                console.log('Direct scroll may have failed, trying scrollIntoView');
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
             }
             
             console.log(`Final scroll position: ${mainContainer.scrollTop}`);
