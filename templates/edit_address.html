@@ -57,16 +57,81 @@
         -webkit-touch-callout: none;
         -webkit-tap-highlight-color: transparent;
     }
-    /* Map controls positioning */
-    .map-controls {
-        bottom: 80px; /* Above mobile navigation bar */
+    /* Dynamic viewport height handling */
+    :root {
+        --app-height: 100vh;
+        --app-height-dvh: 100dvh;
     }
+    
+    /* Map modal with stable viewport handling */
+    #mapModal {
+        height: var(--app-height);
+        height: var(--app-height-dvh);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+    
+    /* Map container with proper height calculation */
+    #mapModal #map {
+        height: calc(var(--app-height) - 140px); /* Header (60px) + Controls (80px) */
+        height: calc(var(--app-height-dvh) - 140px);
+        margin-top: 60px; /* Header height */
+    }
+    
+    /* Map controls positioning - always at bottom */
+    .map-controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 20;
+    }
+    
+    /* Header positioning */
+    #mapModal .absolute.top-0 {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        z-index: 20;
+    }
+    
     @media (min-width: 768px) {
+        /* Desktop adjustments */
+        #mapModal #map {
+            height: calc(var(--app-height) - 120px);
+            height: calc(var(--app-height-dvh) - 120px);
+        }
         .map-controls {
-            bottom: 20px; /* Normal position on desktop */
+            height: 60px;
+        }
+    }
+    
+    /* Prevent layout shifts during browser UI transitions */
+    @supports (height: 100dvh) {
+        #mapModal {
+            height: 100dvh;
         }
         #mapModal #map {
-            padding-bottom: 160px; /* Less padding on desktop */
+            height: calc(100dvh - 140px);
+        }
+    }
+    
+    /* Fallback for older browsers */
+    @supports not (height: 100dvh) {
+        #mapModal {
+            height: 100vh;
+        }
+        #mapModal #map {
+            height: calc(100vh - 140px);
         }
     }
 </style>
