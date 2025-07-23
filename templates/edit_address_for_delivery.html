@@ -20,7 +20,7 @@
     }
     /* Map modal specific styles */
     #mapModal {
-        touch-action: none;
+        touch-action: pan-x pan-y;
     }
     #mapModal #map {
         padding-top: 80px; /* Account for header */
@@ -339,7 +339,8 @@ function initializeMap() {
         zoom: 16,
         mapTypeControl: false,
         streetViewControl: false,
-        fullscreenControl: false
+        fullscreenControl: false,
+        gestureHandling: 'greedy'
     });
 
     // Add click listener to map
