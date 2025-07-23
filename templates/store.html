@@ -54,12 +54,19 @@
 <div class="h-screen flex flex-col bg-gray-50">
     <!-- Fixed Header -->
     <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 border-b border-gray-200">
-        <div class="max-w-md mx-auto flex items-center justify-center p-4">
-            <!-- Brand Logo (Centered) -->
-            <div class="flex items-center">
-                <img src="{{ url_for('static', filename='images/fulllogo_transparent.png') }}" 
-                     alt="Monthly Organics" 
+        <div class="max-w-md mx-auto flex items-center justify-between p-4">
+            <!-- Logo Only (Left) -->
+            <div class="flex items-center flex-shrink-0">
+                <img src="{{ url_for('static', filename='img/icononly_transparent_nobuffer.png') }}" 
+                     alt="Monthly Organics Logo" 
                      class="h-10 w-auto">
+            </div>
+            
+            <!-- Brand Name with Font Style (Right) -->
+            <div class="flex items-center flex-1 justify-end">
+                <img src="{{ url_for('static', filename='img/brand_name_with_font.png') }}" 
+                     alt="Monthly Organics" 
+                     class="h-8 w-auto max-w-full">
             </div>
         </div>
     </header>

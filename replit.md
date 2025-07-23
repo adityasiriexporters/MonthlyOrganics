@@ -154,6 +154,7 @@ Changelog:
 - July 23, 2025. Hyderabad Map Centering Complete: Updated default map location from Delhi to Hyderabad (17.3850, 78.4867) for both delivery address pages, added console logging for debugging, enhanced map initialization with version control and proper conditional logic for new vs existing addresses
 - July 23, 2025. Store Page Code Refactoring: Completely refactored and simplified store page JavaScript by removing complex intersection observers, scroll spy functionality, event delegation systems, and debugging code. Implemented clean, simple scrollToCategory function using native scrollIntoView with proper main container height constraints (calc(100vh-10rem)) to enable scrollable content and fix category click-to-scroll functionality
 - July 23, 2025. Fixed Homepage Header Scroll Disappearing: Changed homepage and other page headers from relative to fixed positioning (fixed top-0 left-0 right-0 z-50) to prevent header from disappearing on scroll, added proper top padding (pt-20) to homepage content to account for fixed header positioning, ensuring consistent header visibility across all pages
+- July 23, 2025. Store Page Header Logo Update: Updated store page header with new logo assets - replaced single centered logo with split layout featuring icon-only logo on left and brand name with custom font style on right, using icononly_transparent_nobuffer.png and brand_name_with_font.png assets
 ```
 
 ## User Preferences
