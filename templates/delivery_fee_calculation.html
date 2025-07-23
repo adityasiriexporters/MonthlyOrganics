@@ -205,43 +205,7 @@
         </nav>
     </div>
 
-    <!-- Include Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
-
     <script>
-    let deliveryMap = null;
-
-    // Initialize map when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        initDeliveryMap();
-    });
-
-    function initDeliveryMap() {
-        const mapElement = document.getElementById('delivery-mini-map');
-        
-        const lat = parseFloat('{{ selected_address.latitude }}');
-        const lng = parseFloat('{{ selected_address.longitude }}');
-        
-        deliveryMap = new google.maps.Map(mapElement, {
-            center: { lat: lat, lng: lng },
-            zoom: 16,
-            disableDefaultUI: true,
-            zoomControl: false,
-            gestureHandling: 'none' // Disable interaction
-        });
-        
-        // Add marker
-        new google.maps.Marker({
-            position: { lat: lat, lng: lng },
-            map: deliveryMap,
-            title: 'Delivery Location'
-        });
-    }
-
-    function editAddress() {
-        window.location.href = `/edit-address-for-delivery/{{ selected_address.id }}`;
-    }
-
     function proceedToCheckout() {
         window.location.href = `/checkout?address_id={{ selected_address.id }}`;
     }
