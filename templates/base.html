@@ -35,8 +35,10 @@
         .mobile-nav-bar {
             position: fixed !important;
             bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 100% !important;
+            max-width: 448px !important; /* max-w-md = 28rem = 448px */
             z-index: 99999 !important;
             padding-bottom: var(--safe-area-inset-bottom) !important;
             background: white !important;
@@ -77,12 +79,25 @@
         /* iOS Safari specific fixes */
         @media screen and (max-width: 768px) {
             .mobile-nav-bar {
-                transform: translateZ(0) !important;
-                -webkit-transform: translateZ(0) !important;
+                transform: translateX(-50%) translateZ(0) !important;
+                -webkit-transform: translateX(-50%) translateZ(0) !important;
                 will-change: transform !important;
                 -webkit-backface-visibility: hidden !important;
                 backface-visibility: hidden !important;
             }
+            
+            /* Ensure navigation bar doesn't exceed screen width on small screens */
+            @media screen and (max-width: 448px) {
+                .mobile-nav-bar {
+                    left: 0 !important;
+                    right: 0 !important;
+                    transform: none !important;
+                    -webkit-transform: none !important;
+                    width: 100vw !important;
+                    max-width: none !important;
+                }
+            }
+        }
             
             /* Ensure body and all containers have proper bottom padding */  
             body.mobile-device,
@@ -201,7 +216,7 @@
         Skip to main content
     </a>
     
-    <div class="h-screen flex flex-col max-w-md mx-auto bg-white">
+    <div class="h-screen flex flex-col max-w-md mx-auto bg-white relative">
         <!-- Dynamic Header - Mobile First -->
         {% if request.path not in ['/', '/profile'] %}
             <!-- Other Pages Header (Simple) - Fixed -->
@@ -227,8 +242,8 @@
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="mobile-nav-bar flex-shrink-0 bg-white border-t border-gray-200 md:hidden w-full">
-        <div class="w-full">
+        <nav class="mobile-nav-bar flex-shrink-0 bg-white border-t border-gray-200 md:hidden">
+        <div class="w-full max-w-md mx-auto">
             <div class="flex items-center justify-around py-2">
                 <!-- Home -->
                 <a href="{{ url_for('index') }}" 
