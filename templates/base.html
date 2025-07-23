@@ -140,13 +140,22 @@
         {% if request.path != '/' %}
             <!-- Other Pages Header (Simple) - Fixed -->
             <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
-                <div class="max-w-md mx-auto px-4 py-4">
-                    <div class="flex items-center space-x-3">
-                        <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
-                            <img src="{{ url_for('static', filename='img/fulllogo_transparent.png') }}" 
-                                 alt="Monthly Organics Logo" 
+                <div class="max-w-md mx-auto flex items-center justify-between p-4">
+                    <!-- Logo Only (Left) -->
+                    <div class="flex items-center flex-shrink-0">
+                        <a href="{{ url_for('index') }}">
+                            <img src="{{ url_for('static', filename='img/icononly_transparent_nobuffer.png') }}" 
+                                 alt="Monthly Organics" 
                                  class="h-10 w-auto">
-                            <span class="text-xl font-bold text-primary">Monthly Organics</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Brand Name with Font (Right) -->
+                    <div class="flex items-center flex-shrink-0">
+                        <a href="{{ url_for('index') }}">
+                            <img src="{{ url_for('static', filename='img/Brand name with brand font style.png') }}" 
+                                 alt="Monthly Organics Brand" 
+                                 class="h-8 w-auto">
                         </a>
                     </div>
                 </div>
