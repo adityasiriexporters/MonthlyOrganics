@@ -68,6 +68,12 @@
             padding-bottom: 100px !important;
         }
         
+        /* Fix homepage and profile page layout issues */
+        .bg-gray-50 > div,
+        .bg-background {
+            padding-bottom: 100px !important;
+        }
+        
         /* iOS Safari specific fixes */
         @media screen and (max-width: 768px) {
             .mobile-nav-bar {
@@ -82,7 +88,7 @@
             body.mobile-device,
             body.mobile-body,
             body {
-                padding-bottom: 100px !important;
+                padding-bottom: 0px !important; /* Remove body padding to avoid double padding */
             }
             
             /* Specific container padding fixes */
@@ -90,8 +96,14 @@
             .bg-gray-50,
             .flex.flex-col,
             section:last-child,
-            .max-w-md.mx-auto:last-child {
+            .max-w-md.mx-auto:last-child,
+            .min-h-screen.bg-background {
                 padding-bottom: 100px !important;
+            }
+            
+            /* Homepage specific fixes */
+            .bg-gray-50 > section:last-child {
+                margin-bottom: 100px !important;
             }
         }
     </style>
@@ -192,8 +204,8 @@
     <div class="h-screen bg-gray-50 flex flex-col">
         <!-- Dynamic Header - Mobile First -->
         {% if request.path == '/' %}
-            <!-- Home Page Header (Single Row) - Flex Shrink -->
-            <header class="flex-shrink-0 bg-white shadow-sm border-b border-gray-200">
+            <!-- Home Page Header (Single Row) - Fixed -->
+            <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
             <div class="max-w-md mx-auto px-4 py-3">
                 <div class="flex items-center space-x-3">
                     <!-- Logo -->
@@ -218,8 +230,8 @@
             </div>
         </header>
         {% else %}
-            <!-- Other Pages Header (Simple) - Flex Shrink -->
-            <header class="flex-shrink-0 bg-white shadow-sm border-b border-gray-200">
+            <!-- Other Pages Header (Simple) - Fixed -->
+            <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
                 <div class="max-w-md mx-auto px-4 py-4">
                     <div class="flex items-center space-x-3">
                         <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
@@ -233,8 +245,8 @@
             </header>
         {% endif %}
         
-        <!-- Scrollable Main Content -->
-        <div class="flex-1 overflow-y-auto">
+        <!-- Scrollable Main Content with proper top padding -->
+        <div class="flex-1 overflow-y-auto pt-20">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
