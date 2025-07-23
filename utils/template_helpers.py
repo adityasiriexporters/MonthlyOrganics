@@ -110,3 +110,28 @@ def render_cart_totals(subtotal: float, delivery_fee: float, total: float) -> st
     </div>
     '''
     return render_template_string(template, subtotal=subtotal, delivery_fee=delivery_fee, total=total)
+
+def render_cart_totals_without_delivery(subtotal: float) -> str:
+    """Render cart totals section without delivery fee (for cart page)"""
+    template = '''
+    <div class="space-y-2" id="order-totals">
+        <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Subtotal</span>
+            <span class="text-gray-900">₹{{ "%.2f"|format(subtotal) }}</span>
+        </div>
+        
+        <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Delivery Fee</span>
+            <span class="text-gray-600 text-xs italic">To be calculated at checkout</span>
+        </div>
+        
+        <div class="border-t border-gray-200 pt-2 mt-2">
+            <div class="flex justify-between font-medium">
+                <span class="text-gray-900">Total</span>
+                <span class="text-green-600 text-lg font-bold">₹{{ "%.2f"|format(subtotal) }}</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 text-right">*Final total will include delivery fee</p>
+        </div>
+    </div>
+    '''
+    return render_template_string(template, subtotal=subtotal)

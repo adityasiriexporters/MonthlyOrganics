@@ -17,7 +17,7 @@ from validators.forms import FormValidator
 from utils.encryption import DataEncryption
 from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
-    render_add_to_cart_button, render_cart_totals
+    render_add_to_cart_button, render_cart_totals, render_cart_totals_without_delivery
 )
 from admin_auth import AdminAuth, admin_required
 
@@ -830,13 +830,11 @@ def cart_totals():
             subtotal += item_total
             logger.debug(f"Item: {item['variation_name']}, total: {item_total}")
         
-        delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
-        total = subtotal + delivery_fee
+        # Don't calculate delivery fee for cart page - it will be calculated at checkout
+        logger.info(f"Calculated totals - Subtotal: {subtotal}")
         
-        logger.info(f"Calculated totals - Subtotal: {subtotal}, Delivery: {delivery_fee}, Total: {total}")
-        
-        # Return cart totals HTML using template helper
-        return render_cart_totals(float(subtotal), float(delivery_fee), float(total))
+        # Return cart totals HTML using template helper (without delivery fee)
+        return render_cart_totals_without_delivery(float(subtotal))
         
     except Exception as e:
         logger.error(f"Error calculating cart totals: {e}", exc_info=True)
