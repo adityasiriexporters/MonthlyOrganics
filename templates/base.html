@@ -69,19 +69,24 @@
             }
         }
         
-        /* Main container adjustments */
+        /* Main container with proper flex layout */
         .main-container {
             height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for modern browsers */
-            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
+            height: 100dvh;
             max-width: 448px;
             margin: 0 auto;
             background: white;
+            display: flex;
+            flex-direction: column;
         }
         
-        /* Content padding for mobile navigation clearance */
-        .content-container {
-            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px);
+        /* Content area with contained scrolling */
+        .page-content {
+            flex: 1;
+            height: calc(100vh - var(--nav-height));
+            height: calc(100dvh - var(--nav-height));
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
         /* Fallback for browsers that don't support dvh */
@@ -89,12 +94,9 @@
             .main-container {
                 height: 100vh;
             }
-        }
-        
-        /* Profile page specific adjustments */
-        .profile-content {
-            min-height: calc(100vh - var(--nav-height) - var(--safe-area-inset-bottom) - 80px);
-            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom) + 20px);
+            .page-content {
+                height: calc(100vh - var(--nav-height));
+            }
         }
     </style>
 
@@ -152,14 +154,14 @@
         {% endif %}
         
         <!-- Scrollable Main Content -->
-        <div class="flex-1 {% if request.path != '/' %}pt-20{% endif %}">
+        <div class="page-content {% if request.path != '/' %}pt-20{% endif %}">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
         </div>
         
         <!-- Mobile Navigation Bar -->
-        <nav class="mobile-nav-bar md:hidden">
+        <nav class="mobile-nav-bar md:hidden flex-shrink-0">
         <div class="w-full">
             <div class="flex items-center justify-around py-2">
                 <!-- Home -->
