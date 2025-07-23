@@ -301,11 +301,20 @@ function scrollToCategory(categoryId) {
         
         console.log(`Section top: ${sectionTop}, Target position: ${targetScrollPosition}`);
         
+        // Debug current state
+        console.log(`Current scroll position: ${mainContainer.scrollTop}`);
+        console.log(`Main container height: ${mainContainer.scrollHeight}`);
+        console.log(`Main container client height: ${mainContainer.clientHeight}`);
+        
         // Method 1: Direct scroll assignment (most reliable for our case)
+        console.log(`Setting scrollTop to: ${targetScrollPosition}`);
         mainContainer.scrollTop = targetScrollPosition;
+        
+        console.log(`Scroll position after direct assignment: ${mainContainer.scrollTop}`);
         
         // Method 2: Use scrollIntoView as backup
         setTimeout(() => {
+            console.log(`Scroll position after 50ms: ${mainContainer.scrollTop}`);
             if (Math.abs(mainContainer.scrollTop - targetScrollPosition) > 10) {
                 console.log('Direct scroll may have failed, trying scrollIntoView');
                 targetElement.scrollIntoView({
@@ -317,6 +326,11 @@ function scrollToCategory(categoryId) {
             
             console.log(`Final scroll position: ${mainContainer.scrollTop}`);
         }, 50);
+        
+        // Additional verification
+        setTimeout(() => {
+            console.log(`Scroll position after 200ms: ${mainContainer.scrollTop}`);
+        }, 200);
         
         // Verify scroll after animation
         setTimeout(() => {
