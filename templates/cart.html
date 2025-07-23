@@ -33,25 +33,43 @@
     </script>
 </head>
 <body class="bg-background text-gray-800 antialiased">
-<div class="min-h-screen bg-gray-50 pt-16 pb-20">
-    <!-- Header with back button -->
-    <div class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
-        <div class="max-w-md mx-auto px-4 py-3">
-            <div class="flex items-center space-x-3">
-                <a href="{{ url_for('index') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </a>
-                <h1 class="text-lg font-semibold text-gray-900">Your Cart</h1>
-                {% if cart_items %}
-                    <span class="ml-auto text-sm text-gray-500">({{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %})</span>
-                {% endif %}
+<div class="min-h-screen bg-gray-50 pt-20 pb-20">
+    <!-- Header - Same as Store Page -->
+    <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 border-b border-gray-200">
+        <div class="max-w-md mx-auto flex items-center justify-between p-4">
+            <!-- Logo Only (Left) -->
+            <div class="flex items-center flex-shrink-0">
+                <img src="{{ url_for('static', filename='img/icononly_transparent_nobuffer.png') }}" 
+                     alt="Monthly Organics Logo" 
+                     class="h-10 w-auto">
+            </div>
+            
+            <!-- Brand Name with Font Style (Right) -->
+            <div class="flex items-center flex-1 justify-end">
+                <img src="{{ url_for('static', filename='img/brand_name_with_font.png') }}" 
+                     alt="Monthly Organics" 
+                     class="h-8 w-auto max-w-full">
             </div>
         </div>
-    </div>
+    </header>
 
     <div class="max-w-md mx-auto">
+        <!-- Page Header with Go Back -->
+        <div class="bg-white shadow-sm mb-4">
+            <div class="p-4">
+                <div class="flex items-center space-x-3">
+                    <a href="{{ url_for('store') }}" class="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </a>
+                    <h1 class="text-lg font-semibold text-gray-900">Your Cart</h1>
+                    {% if cart_items %}
+                        <span class="ml-auto text-sm text-gray-500">({{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %})</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
         {% if cart_items %}
             <!-- Cart Items -->
             <div class="bg-white shadow-sm">
