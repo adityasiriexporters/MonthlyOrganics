@@ -145,7 +145,15 @@ function initializeStoreFeatures() {
     // Get references to DOM elements
     categoryItems = document.querySelectorAll('.category-item');
     categorySections = document.querySelectorAll('.category-section');
-    mainContainer = document.querySelector('main');
+    
+    // Try multiple selectors for the main container
+    mainContainer = document.querySelector('main.overflow-y-auto') || 
+                   document.querySelector('main') || 
+                   document.querySelector('.overflow-y-auto') ||
+                   document.querySelector('#product-display').parentElement;
+    
+    console.log('Main container found:', mainContainer);
+    console.log('Main container classes:', mainContainer ? mainContainer.className : 'Not found');
     
     console.log(`Found ${categoryItems.length} category items and ${categorySections.length} category sections`);
     
@@ -305,12 +313,29 @@ function scrollToCategory(categoryId) {
         console.log(`Current scroll position: ${mainContainer.scrollTop}`);
         console.log(`Main container height: ${mainContainer.scrollHeight}`);
         console.log(`Main container client height: ${mainContainer.clientHeight}`);
+        console.log(`Main container is scrollable: ${mainContainer.scrollHeight > mainContainer.clientHeight}`);
         
         // Method 1: Direct scroll assignment (most reliable for our case)
         console.log(`Setting scrollTop to: ${targetScrollPosition}`);
-        mainContainer.scrollTop = targetScrollPosition;
         
-        console.log(`Scroll position after direct assignment: ${mainContainer.scrollTop}`);
+        // Force scroll using multiple methods
+        try {
+            // Try direct assignment
+            mainContainer.scrollTop = targetScrollPosition;
+            console.log(`Scroll position after direct assignment: ${mainContainer.scrollTop}`);
+            
+            // If that didn't work, try using scrollTo
+            if (mainContainer.scrollTop === 0 && targetScrollPosition > 0) {
+                console.log('Direct assignment failed, trying scrollTo');
+                mainContainer.scrollTo({
+                    top: targetScrollPosition,
+                    behavior: 'smooth'
+                });
+                console.log(`Scroll position after scrollTo: ${mainContainer.scrollTop}`);
+            }
+        } catch (error) {
+            console.error('Error during scroll:', error);
+        }
         
         // Method 2: Use scrollIntoView as backup
         setTimeout(() => {
