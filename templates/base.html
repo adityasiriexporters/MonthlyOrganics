@@ -52,6 +52,23 @@
             height: 100%;
         }
         
+        /* Fixed header positioning for homepage */
+        header[class*="fixed"] {
+            max-width: 448px;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        @media (max-width: 448px) {
+            header[class*="fixed"] {
+                left: 0;
+                right: 0;
+                transform: none;
+                max-width: none;
+            }
+        }
+        
         /* Main container adjustments */
         .main-container {
             height: 100vh;
