@@ -66,24 +66,28 @@
     /* Map modal with stable viewport handling */
     #mapModal {
         height: var(--app-height);
-        height: var(--app-height-dvh);
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
+        /* Prevent layout shifts during browser UI transitions */
+        contain: layout style paint;
+        overflow: hidden;
     }
     
     /* Map container with proper height calculation */
     #mapModal #map {
         height: calc(var(--app-height) - 140px); /* Header (60px) + Controls (80px) */
-        height: calc(var(--app-height-dvh) - 140px);
         margin-top: 60px; /* Header height */
+        /* Smooth transitions during viewport changes */
+        transition: height 0.2s ease-out;
+        will-change: height;
     }
     
-    /* Map controls positioning - always at bottom */
+    /* Map controls positioning - stable during transitions */
     .map-controls {
-        position: fixed;
+        position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
@@ -92,16 +96,24 @@
         border-top: 1px solid #e5e7eb;
         box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
         z-index: 20;
+        /* Prevent movement during browser UI transitions */
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        will-change: transform;
     }
     
-    /* Header positioning */
+    /* Header positioning - stable during transitions */
     #mapModal .absolute.top-0 {
-        position: fixed;
+        position: absolute;
         top: 0;
         left: 0;
         right: 0;
         height: 60px;
         z-index: 20;
+        /* Prevent movement during browser UI transitions */
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        will-change: transform;
     }
     
     @media (min-width: 768px) {
