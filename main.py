@@ -891,6 +891,70 @@ def pre_checkout():
         flash('An error occurred. Please try again.', 'error')
         return redirect(url_for('cart'))
 
+@app.route('/delivery-fee-calculation')
+@login_required
+def delivery_fee_calculation():
+    """Delivery fee calculation page between pre-checkout and final checkout."""
+    try:
+        user_id = session['user_id']
+        
+        # Get selected address ID from query params
+        address_id = request.args.get('address_id', type=int)
+        if not address_id:
+            flash('Please select a delivery address first.', 'error')
+            return redirect(url_for('pre_checkout'))
+        
+        # Check if cart has items
+        cart_items = CartService.get_cart_items(user_id)
+        if not cart_items:
+            flash('Your cart is empty. Please add items before checkout.', 'error')
+            return redirect(url_for('cart'))
+        
+        # Get the selected address
+        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        selected_address = None
+        
+        for addr in user_addresses:
+            if addr['id'] == address_id:
+                selected_address = addr
+                break
+        
+        if not selected_address:
+            flash('Selected address not found.', 'error')
+            return redirect(url_for('pre_checkout'))
+        
+        # Calculate cart totals
+        from decimal import Decimal
+        subtotal = Decimal('0.00')
+        cart_count = 0
+        
+        for item in cart_items:
+            item_total = Decimal(str(item['total_price']))
+            subtotal += item_total
+            cart_count += item['quantity']
+        
+        # Calculate delivery fee (simple logic for now)
+        # Free delivery for orders above ₹500, otherwise ₹50
+        delivery_fee = Decimal('0.00') if subtotal >= Decimal('500.00') else Decimal('50.00')
+        
+        # Calculate total
+        total = subtotal + delivery_fee
+        
+        SecurityAuditLogger.log_data_access(user_id, "VIEW", "delivery_fee_calculation")
+        
+        return render_template('delivery_fee_calculation.html',
+                             selected_address=selected_address,
+                             cart_count=cart_count,
+                             subtotal=float(subtotal),
+                             delivery_fee=float(delivery_fee),
+                             total=float(total),
+                             google_maps_api_key=os.environ.get('GOOGLE_MAPS_API_KEY'))
+        
+    except Exception as e:
+        logger.error(f"Error loading delivery fee calculation: {e}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('pre_checkout'))
+
 @app.route('/add-new-address-for-delivery')
 @login_required
 def add_new_address_for_delivery():
@@ -945,8 +1009,8 @@ def save_address_for_delivery():
         
         if address_id:
             flash('Address saved successfully!', 'success')
-            # Redirect to pre-checkout with new address selected
-            return redirect(url_for('pre_checkout', selected_address=address_id))
+            # Redirect to delivery fee calculation with new address selected
+            return redirect(url_for('delivery_fee_calculation', address_id=address_id))
         else:
             flash('Error saving address. Please try again.', 'error')
             return redirect(url_for('add_new_address_for_delivery'))
@@ -1049,7 +1113,7 @@ def update_address_for_delivery(address_id):
             if SecureAddressService.update_address(address_id, user_id, address_data):
                 SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_delivery")
                 flash('Address updated successfully!', 'success')
-                return redirect(url_for('pre_checkout', selected_address=address_id))
+                return redirect(url_for('delivery_fee_calculation', address_id=address_id))
             else:
                 flash('Error updating address.', 'error')
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))

@@ -538,8 +538,8 @@ function getCurrentLocation() {
 }
 
 function discardChangesAndUse() {
-    // Redirect back to pre-checkout with the original address selected
-    window.location.href = "{{ url_for('pre_checkout') }}?selected_address={{ address.id }}";
+    // Redirect back to delivery fee calculation with the original address selected
+    window.location.href = "{{ url_for('delivery_fee_calculation') }}?address_id={{ address.id }}";
 }
 
 // Event listeners

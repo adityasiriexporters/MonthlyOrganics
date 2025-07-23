@@ -158,6 +158,8 @@ Changelog:
 - July 23, 2025. Unified Header Design: Applied consistent header layout to cart and checkout pages matching store page design with icon-only logo on left and brand name on right, moved page headings to content area with "Go Back" buttons for improved navigation flow
 - July 23, 2025. Cart Delivery Fee Update: Changed cart page delivery fee display from specific amount to "To be calculated at checkout" message, updated cart totals to show subtotal only with note that final total will include delivery fee, created render_cart_totals_without_delivery template helper function
 - July 23, 2025. Header Z-Index Fix: Fixed scrollbar appearing above header by updating z-index from z-50 to z-[9999] across all pages (store, cart, pre-checkout, checkout, and base template headers) to ensure headers always stay above scrollbars and other content
+- July 23, 2025. Complete Scrollable Container Implementation: Restructured all page templates to use flex layout with contained scrollbars - headers are now flex-shrink-0, main content is flex-1 overflow-y-auto, and navigation bars are flex-shrink-0, eliminating full-viewport scrollbars and ensuring scrolling only occurs within the main content area
+- July 23, 2025. Delivery Fee Calculation Page Implementation: Added intermediate page between pre-checkout and final checkout featuring three sections - delivery address display matching final checkout format, empty shipping options placeholder, and complete order summary with subtotal/delivery fee/total calculations including free delivery logic for orders above ₹500, all with proper navigation flow from address confirmation
 ```
 
 ## User Preferences

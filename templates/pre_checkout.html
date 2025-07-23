@@ -316,8 +316,8 @@ function toggleConfirmButton() {
 
 function confirmAddress() {
     if (selectedAddressId && document.getElementById('address-confirm-checkbox').checked) {
-        // Proceed to checkout with selected address
-        window.location.href = `/checkout?address_id=${selectedAddressId}`;
+        // Proceed to delivery fee calculation with selected address
+        window.location.href = `/delivery-fee-calculation?address_id=${selectedAddressId}`;
     }
 }
 </script>
