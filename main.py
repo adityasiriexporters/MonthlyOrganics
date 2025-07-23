@@ -534,7 +534,9 @@ def admin_export_database():
         # Get available tables for selection
         table_names = DatabaseExporter.get_all_table_names()
         
-        return render_template('admin/admin_export.html', tables=table_names)
+        return render_template('admin/admin_export.html', 
+                             tables=table_names,
+                             admin_user=AdminAuth.get_admin_user())
         
     except Exception as e:
         logger.error(f"Error in database export: {str(e)}")
