@@ -32,38 +32,51 @@
         }
         
         /* Mobile navigation bar positioning fixes */
-        .mobile-nav-fixed {
+        .mobile-nav-bar {
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
             right: 0 !important;
-            z-index: 9999 !important;
+            z-index: 99999 !important;
             padding-bottom: var(--safe-area-inset-bottom) !important;
             background: white !important;
             border-top: 1px solid #e5e7eb !important;
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
         }
         
-        /* WebKit-specific mobile browser fixes */
-        @supports (-webkit-touch-callout: none) {
-            .mobile-nav-fixed {
-                position: -webkit-sticky !important;
-                position: sticky !important;
-                bottom: var(--safe-area-inset-bottom) !important;
-            }
+        /* Ensure navigation links are clickable */
+        .mobile-nav-bar a {
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
+            position: relative !important;
+            z-index: 999999 !important;
         }
         
         /* Container height fixes for mobile */
         .mobile-container {
             height: calc(100vh - var(--safe-area-inset-bottom));
             height: calc(var(--vh, 1vh) * 100 - var(--safe-area-inset-bottom));
+            padding-bottom: 80px; /* Account for mobile nav height */
         }
         
         /* iOS Safari specific fixes */
         @media screen and (max-width: 768px) {
-            .mobile-nav-fixed {
-                transform: translateZ(0);
-                -webkit-transform: translateZ(0);
-                will-change: transform;
+            .mobile-nav-bar {
+                transform: translateZ(0) !important;
+                -webkit-transform: translateZ(0) !important;
+                will-change: transform !important;
+                -webkit-backface-visibility: hidden !important;
+                backface-visibility: hidden !important;
+            }
+            
+            /* Ensure body doesn't interfere with navigation */  
+            body.mobile-device {
+                padding-bottom: 80px !important;
+            }
+            
+            body.mobile-body {
+                padding-bottom: 80px !important;
             }
         }
     </style>
@@ -114,18 +127,21 @@
             if (isMobile) {
                 document.body.classList.add('mobile-device');
                 
-                // Force navigation bar positioning on mobile
-                const mobileNav = document.querySelector('.mobile-nav-bar');
-                if (mobileNav) {
-                    mobileNav.classList.add('mobile-nav-fixed');
-                }
-                
-                // Prevent body scroll when navigation is focused
-                document.addEventListener('touchstart', function(e) {
-                    if (e.target.closest('.mobile-nav-fixed')) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
+                // Ensure navigation is always clickable
+                const mobileNavs = document.querySelectorAll('.mobile-nav-bar');
+                mobileNavs.forEach(nav => {
+                    nav.style.pointerEvents = 'auto';
+                    nav.style.touchAction = 'manipulation';
+                    
+                    // Make all navigation links clickable
+                    const navLinks = nav.querySelectorAll('a');
+                    navLinks.forEach(link => {
+                        link.style.pointerEvents = 'auto';
+                        link.style.touchAction = 'manipulation';
+                        link.style.position = 'relative';
+                        link.style.zIndex = '999999';
+                    });
+                });
             }
             
             // iOS specific fixes
@@ -152,7 +168,7 @@
     
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-background text-gray-800 antialiased h-screen overflow-hidden">
+<body class="bg-background text-gray-800 antialiased h-screen overflow-hidden mobile-body">
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50">
         Skip to main content
