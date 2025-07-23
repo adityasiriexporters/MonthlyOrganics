@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, height=device-height">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Store - Monthly Organics</title>
     
     <!-- Tailwind CSS CDN -->
@@ -32,33 +32,76 @@
         }
     </script>
     
-    <!-- Mobile Navigation Fix CSS -->
+    <!-- Simplified Store Page CSS -->
     <style>
         :root {
-            --vh: 1vh;
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+            --nav-height: 80px;
         }
         
-        /* Mobile navigation bar positioning fixes */
+        /* Simplified mobile navigation positioning */
         .mobile-nav-bar {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            z-index: 99999 !important;
-            padding-bottom: var(--safe-area-inset-bottom) !important;
-            background: white !important;
-            border-top: 1px solid #e5e7eb !important;
-            pointer-events: auto !important;
-            touch-action: manipulation !important;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: var(--nav-height);
+            z-index: 1000;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding-bottom: var(--safe-area-inset-bottom);
         }
         
-        /* Ensure navigation links are clickable */
-        .mobile-nav-bar a {
-            pointer-events: auto !important;
-            touch-action: manipulation !important;
-            position: relative !important;
-            z-index: 999999 !important;
+        /* Center navigation content within max-width container */
+        .mobile-nav-bar > div {
+            max-width: 448px; /* max-w-md */
+            margin: 0 auto;
+            height: 100%;
+        }
+        
+        /* Store page main container */
+        .store-container {
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for modern browsers */
+            padding-bottom: calc(var(--nav-height) + var(--safe-area-inset-bottom));
+            max-width: 448px;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        /* Fixed header positioning */
+        .store-header {
+            max-width: 448px;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        @media (max-width: 448px) {
+            .store-header {
+                left: 0;
+                right: 0;
+                transform: none;
+                max-width: none;
+            }
+        }
+        
+        /* Store content scrolling area */
+        .store-content {
+            height: calc(100vh - 160px); /* Account for header + nav */
+            height: calc(100dvh - 160px);
+            overflow-y: auto;
+        }
+        
+        /* Fallback for browsers that don't support dvh */
+        @supports not (height: 100dvh) {
+            .store-container {
+                height: 100vh;
+            }
+            .store-content {
+                height: calc(100vh - 160px);
+            }
         }
         
         /* Custom CSS for category highlighting */
@@ -75,77 +118,16 @@
         .category-item.active .bg-green-100 {
             background-color: rgba(255, 255, 255, 0.2) !important;
         }
-        
-        /* Mobile specific fixes */
-        @media screen and (max-width: 768px) {
-            .mobile-nav-bar {
-                transform: translateZ(0) !important;
-                -webkit-transform: translateZ(0) !important;
-                will-change: transform !important;
-                -webkit-backface-visibility: hidden !important;
-                backface-visibility: hidden !important;
-            }
-            
-            body {
-                padding-bottom: 100px !important;
-            }
-            
-            /* Specific padding for store layout */
-            .h-screen.flex.flex-col.bg-gray-50 {
-                padding-bottom: 100px !important;
-            }
-        }
     </style>
     
-    <!-- Mobile Viewport Handler JavaScript -->
-    <script>
-        // Dynamic viewport height calculation for mobile browsers
-        function setViewportHeight() {
-            const vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', vh + 'px');
-        }
-        
-        // Set viewport height on page load
-        setViewportHeight();
-        
-        // Update viewport height on resize and orientation change
-        window.addEventListener('resize', setViewportHeight);
-        window.addEventListener('orientationchange', function() {
-            setTimeout(setViewportHeight, 100);
-        });
-        
-        // Mobile navigation fixes
-        document.addEventListener('DOMContentLoaded', function() {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            if (isMobile) {
-                document.body.classList.add('mobile-device');
-                
-                // Ensure navigation is always clickable
-                const mobileNavs = document.querySelectorAll('.mobile-nav-bar');
-                mobileNavs.forEach(nav => {
-                    nav.style.pointerEvents = 'auto';
-                    nav.style.touchAction = 'manipulation';
-                    
-                    // Make all navigation links clickable
-                    const navLinks = nav.querySelectorAll('a');
-                    navLinks.forEach(link => {
-                        link.style.pointerEvents = 'auto';
-                        link.style.touchAction = 'manipulation';
-                        link.style.position = 'relative';
-                        link.style.zIndex = '999999';
-                    });
-                });
-            }
-        });
-    </script>
+
 </head>
-<body class="bg-background text-gray-800 antialiased mobile-body">
-<!-- Fixed Layout Container -->
-<div class="h-screen flex flex-col bg-gray-50">
+<body class="bg-background text-gray-800 antialiased">
+<!-- Store Main Container -->
+<div class="store-container flex flex-col bg-gray-50">
     <!-- Fixed Header -->
-    <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-[9999] border-b border-gray-200">
-        <div class="max-w-md mx-auto flex items-center justify-between p-4">
+    <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-[1001] border-b border-gray-200 store-header">
+        <div class="flex items-center justify-between p-4">
             <!-- Logo Only (Left) -->
             <div class="flex items-center flex-shrink-0">
                 <img src="{{ url_for('static', filename='img/icononly_transparent_nobuffer.png') }}" 
@@ -163,9 +145,9 @@
     </header>
 
     <!-- Main Content Area (Flexbox) -->
-    <div class="flex-1 flex pt-20 pb-20">
+    <div class="store-content flex pt-20">
         <!-- Fixed Left Sidebar - Categories (20%) -->
-        <aside class="w-1/5 bg-gray-50 border-r border-gray-200 fixed left-0 top-20 bottom-20 overflow-y-auto z-50">
+        <aside class="w-1/5 bg-gray-50 border-r border-gray-200 overflow-y-auto">
             <div class="p-1.5 pt-3">
                 <h2 class="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide text-center" style="font-size: 0.65rem !important;">Categories</h2>
                 <div class="space-y-1.5">
@@ -188,7 +170,7 @@
         </aside>
 
         <!-- Right Content Area - Products (80%) -->
-        <main class="w-4/5 ml-[20%] h-[calc(100vh-10rem)] overflow-y-auto bg-white">
+        <main class="w-4/5 overflow-y-auto bg-white">
             <!-- Loading indicator -->
             <div id="loading" class="htmx-indicator fixed top-4 left-1/2 transform -translate-x-1/2 bg-white bg-opacity-90 rounded-lg shadow-lg px-4 py-2 z-40">
                 <div class="flex items-center space-x-2">
