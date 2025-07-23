@@ -982,8 +982,12 @@ def update_shipping_option():
         user_id = session['user_id']
         data = request.get_json()
         
+        logger.debug(f"Update shipping option request data: {data}")
+        
         shipping_option_id = data.get('shipping_option_id')
-        address_id = data.get('address_id', type=int)
+        address_id = data.get('address_id')
+        
+        logger.debug(f"Shipping option ID: {shipping_option_id}, Address ID: {address_id}")
         
         if not shipping_option_id or not address_id:
             return jsonify({'error': 'Missing required parameters'}), 400
@@ -993,12 +997,15 @@ def update_shipping_option():
         selected_address = None
         
         for addr in user_addresses:
-            if addr['id'] == address_id:
+            if addr['id'] == int(address_id):
                 selected_address = addr
                 break
         
         if not selected_address:
+            logger.error(f"Address {address_id} not found for user {user_id}")
             return jsonify({'error': 'Address not found'}), 404
+        
+        logger.debug(f"Selected address: {selected_address}")
         
         # Get cart totals
         cart_items = CartService.get_cart_items(user_id)
@@ -1012,8 +1019,10 @@ def update_shipping_option():
         # Calculate delivery fee with new shipping option
         from services.delivery_zone_service import DeliveryZoneService
         
-        latitude = selected_address.get('latitude', 17.3850)
-        longitude = selected_address.get('longitude', 78.4867)
+        latitude = selected_address.get('latitude') or 17.3850
+        longitude = selected_address.get('longitude') or 78.4867
+        
+        logger.debug(f"Using coordinates: {latitude}, {longitude}")
         
         delivery_fee, selected_option = DeliveryZoneService.calculate_delivery_fee(
             shipping_option_id, latitude, longitude, float(subtotal)
@@ -1030,6 +1039,8 @@ def update_shipping_option():
         
     except Exception as e:
         logger.error(f"Error updating shipping option: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': 'Failed to update shipping option'}), 500
 
 @app.route('/add-new-address-for-delivery')

@@ -22,7 +22,7 @@ class DeliveryZoneService:
             spatial_query = """
                 SELECT dz.id, dz.name, dz.geojson
                 FROM delivery_zones dz
-                WHERE ST_Contains(ST_GeomFromText(dz.geometry, 4326), ST_Point(%s, %s))
+                WHERE ST_Contains(dz.geometry, ST_Point(%s, %s))
                 LIMIT 1
             """
             
