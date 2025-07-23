@@ -20,11 +20,16 @@
     }
     /* Map modal specific styles */
     #mapModal {
-        touch-action: none;
+        touch-action: auto;
     }
     #mapModal #map {
         padding-top: 80px; /* Account for header */
         padding-bottom: 200px; /* Account for controls + mobile nav */
+        touch-action: auto;
+    }
+    /* Ensure map div allows all gestures */
+    .gm-style {
+        touch-action: auto !important;
     }
     /* Map controls positioning */
     .map-controls {
@@ -42,8 +47,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="bg-gray-50">
-    <div class="max-w-md mx-auto px-4 py-6">
+<div class="page-content bg-gray-50 overflow-y-auto">
+    <div class="max-w-md mx-auto px-4 py-6 pb-24">
         <!-- Header -->
         <div class="mb-6">
             <h1 class="text-2xl font-bold text-gray-900">Add Delivery Address</h1>
@@ -315,8 +320,8 @@
                 <span>Current Location</span>
             </button>
             <button id="confirmLocation" 
-                    class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium opacity-50 cursor-not-allowed" 
-                    disabled>
+                    class="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium" 
+                    style="display: none;">
                 Confirm Location
             </button>
         </div>

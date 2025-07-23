@@ -489,6 +489,60 @@ def health_check():
     """Health check endpoint for monitoring."""
     return {"status": "healthy", "message": "Monthly Organics is running"}
 
+@app.route('/admin/export-database', methods=['GET', 'POST'])
+@admin_required
+def admin_export_database():
+    """Export database data to JSON file"""
+    try:
+        from utils.database_export import DatabaseExporter
+        from flask import make_response
+        from datetime import datetime
+        import io
+        import json
+        
+        if request.method == 'POST':
+            # Get export type from form
+            export_type = request.form.get('export_type', 'full')
+            
+            if export_type == 'full':
+                # Export entire database
+                export_data = DatabaseExporter.export_full_database()
+            else:
+                # Export specific tables (if implemented in form)
+                selected_tables = request.form.getlist('tables')
+                if not selected_tables:
+                    flash('Please select at least one table to export.', 'error')
+                    return redirect(url_for('admin_export_database'))
+                export_data = DatabaseExporter.export_specific_tables(selected_tables)
+            
+            if not export_data:
+                flash('Error exporting database data.', 'error')
+                return redirect(url_for('admin_export_database'))
+            
+            # Create JSON response
+            json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
+            
+            # Create file response
+            response = make_response(json_str)
+            response.headers['Content-Type'] = 'application/json'
+            response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+            
+            logger.info("Database export file generated successfully")
+            return response
+        
+        # GET request - show export form
+        # Get available tables for selection
+        table_names = DatabaseExporter.get_all_table_names()
+        
+        return render_template('admin/admin_export.html', 
+                             tables=table_names,
+                             admin_user=AdminAuth.get_admin_user())
+        
+    except Exception as e:
+        logger.error(f"Error in database export: {str(e)}")
+        flash('Error exporting database.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/migrate-data', methods=['POST'])
 def migrate_data():
     """Manual endpoint to migrate existing data to encrypted format"""
