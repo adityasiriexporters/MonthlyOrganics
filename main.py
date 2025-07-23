@@ -948,9 +948,6 @@ def delivery_fee_calculation():
         
         if default_option:
             delivery_fee = Decimal(str(default_option['price']))
-            # Apply free delivery for orders above ₹500 (only for non-free options)
-            if not default_option['is_free'] and subtotal >= Decimal('500.00'):
-                delivery_fee = Decimal('0.00')
         else:
             delivery_fee = Decimal('50.00')  # Fallback
         
