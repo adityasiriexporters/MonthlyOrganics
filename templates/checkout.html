@@ -330,7 +330,7 @@ function placeOrder() {
     {% if messages %}
         <div class="fixed bottom-4 left-4 right-4 z-50">
             {% for category, message in messages %}
-                <div class="bg-white rounded-lg shadow-lg border p-4 mb-2 max-w-md mx-auto
+                <div class="flash-message bg-white rounded-lg shadow-lg border p-4 mb-2 max-w-md mx-auto
                     {% if category == 'error' %}border-red-200{% else %}border-green-200{% endif %}">
                     <div class="flex items-center space-x-2">
                         {% if category == 'error' %}
@@ -347,6 +347,22 @@ function placeOrder() {
                 </div>
             {% endfor %}
         </div>
+        
+        <!-- Auto-hide flash messages after 3 seconds -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const flashMessages = document.querySelectorAll('.flash-message');
+                flashMessages.forEach(function(message) {
+                    setTimeout(function() {
+                        message.style.transition = 'opacity 0.5s ease-out';
+                        message.style.opacity = '0';
+                        setTimeout(function() {
+                            message.remove();
+                        }, 500);
+                    }, 3000);
+                });
+            });
+        </script>
     {% endif %}
 {% endwith %}
 
