@@ -203,33 +203,7 @@
     
     <div class="h-screen bg-gray-50 flex flex-col">
         <!-- Dynamic Header - Mobile First -->
-        {% if request.path == '/' %}
-            <!-- Home Page Header (Single Row) - Fixed -->
-            <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-md mx-auto px-4 py-3">
-                <div class="flex items-center space-x-3">
-                    <!-- Logo -->
-                    <a href="{{ url_for('index') }}" class="flex-shrink-0">
-                        <img src="{{ url_for('static', filename='img/fulllogo_transparent.png') }}" 
-                             alt="Monthly Organics Logo" 
-                             class="h-10 w-auto">
-                    </a>
-                    
-                    <!-- Search Bar -->
-                    <div class="flex-1">
-                        <div class="relative">
-                            <input type="text" 
-                                   placeholder="Search organic products..." 
-                                   class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm">
-                            <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-        {% else %}
+        {% if request.path not in ['/', '/profile'] %}
             <!-- Other Pages Header (Simple) - Fixed -->
             <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
                 <div class="max-w-md mx-auto px-4 py-4">
@@ -245,8 +219,8 @@
             </header>
         {% endif %}
         
-        <!-- Scrollable Main Content with proper top padding -->
-        <div class="flex-1 overflow-y-auto pt-20">
+        <!-- Scrollable Main Content -->
+        <div class="flex-1 overflow-y-auto {% if request.path not in ['/', '/profile'] %}pt-20{% endif %}">
             <main id="main-content">
                 {% block content %}{% endblock %}
             </main>
