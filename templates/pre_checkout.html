@@ -304,6 +304,8 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.value = defaultAddress.id;
         selectedAddressId = defaultAddress.id;
         showAddressConfirmation(defaultAddress);
+        // Show edit address option for default address
+        document.getElementById('edit-address-section').classList.remove('hidden');
     }
 });
 
