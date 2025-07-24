@@ -214,8 +214,7 @@ def save_address():
         logger.info(f"Received form data: {dict(request.form)}")
         
         # Generate incremental label if nickname already exists
-        # Try custom_label first (user input), fallback to nickname (hidden field)
-        requested_nickname = FormValidator.sanitize_string(request.form.get('custom_label', '') or request.form.get('nickname', ''))
+        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
         final_nickname = generate_incremental_label(user_id, requested_nickname)
         
         # Get form data with more robust handling
@@ -378,8 +377,7 @@ def update_address(address_id):
             return redirect(url_for('edit_address', address_id=address_id))
         
         # Generate incremental label if nickname already exists (only for editing existing address)
-        # Try custom_label first (user input), fallback to nickname (hidden field)
-        requested_nickname = form_data.get('custom_label', '') or form_data.get('nickname', '')
+        requested_nickname = form_data.get('nickname', '')
         
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
@@ -1116,8 +1114,7 @@ def save_address_for_delivery():
         user_id = session['user_id']
         
         # Generate incremental label if nickname already exists
-        # Try custom_label first (user input), fallback to nickname (hidden field)
-        requested_nickname = FormValidator.sanitize_string(request.form.get('custom_label', '') or request.form.get('nickname', ''))
+        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
         final_nickname = generate_incremental_label(user_id, requested_nickname)
         
         # Get form data
@@ -1214,8 +1211,7 @@ def update_address_for_delivery(address_id):
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
             
             # Generate incremental label if nickname conflicts
-            # Try custom_label first (user input), fallback to nickname (hidden field)
-            requested_nickname = form_data.get('custom_label', '') or form_data.get('nickname', '')
+            requested_nickname = form_data.get('nickname', '')
             if not requested_nickname:
                 flash('Nickname is required.', 'error')
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))

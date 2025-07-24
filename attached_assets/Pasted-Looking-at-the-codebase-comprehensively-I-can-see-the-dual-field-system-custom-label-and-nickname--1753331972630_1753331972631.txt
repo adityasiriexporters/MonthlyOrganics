@@ -1,0 +1,63 @@
+Looking at the codebase comprehensively, I can see the dual field system (custom_label and nickname) is causing unnecessary complexity. Here's my analysis:
+
+Issues to be Fixed
+1. Dual Field Complexity
+Every address form has both custom_label (visible) and nickname (hidden) fields
+JavaScript synchronization required between these fields
+Forms break if synchronization fails
+Confusing code maintenance
+2. Inconsistent Field Usage
+Backend functions read from nickname field
+Users interact with custom_label field
+Database stores nickname but forms show custom_label
+Template confusion about which field to use
+3. JavaScript Synchronization Dependencies
+All 4 address pages need identical synchronization code
+Easy to miss when adding new address forms
+Creates fragile dependencies
+4. Backend Processing Inconsistencies
+Some functions expect custom_label, others expect nickname
+Form validation uses different field names
+Database queries search for nickname but forms might send custom_label
+Root Causes
+1. Historical Legacy
+The dual field system was created to handle form display vs. database storage, but it created more problems than it solved.
+
+2. Form Framework Mismatch
+The HTML forms were designed with separate display/storage fields, but the backend wasn't consistently updated to handle this pattern.
+
+3. Incremental Feature Addition
+The custom_label field was added later without fully replacing the nickname field, creating a hybrid system.
+
+Precautions Before Proceeding
+1. Data Integrity
+Critical: Ensure existing address data isn't lost during migration
+Backup the addresses table before making changes
+Test incremental label generation works with single field
+2. Backend Compatibility
+All functions that reference nickname must be updated
+Form validation in validators/forms.py needs updating
+Database queries need field name changes
+3. Frontend Dependencies
+All 4 address templates need consistent updates
+JavaScript validation code needs updating
+Ensure no broken form submissions
+4. Incremental Label Logic
+The generate_incremental_label() function must work with unified field
+Test edge cases: duplicate labels, special characters, empty values
+Ensure incremental numbering doesn't break
+Recommended Solution
+Unify on nickname field since:
+
+It's already the database column
+Backend functions already use it
+Incremental label generation works with it
+Less code changes required
+Implementation Steps Needed
+Remove custom_label fields from all 4 address templates
+Make nickname field visible with proper styling
+Remove JavaScript synchronization code
+Update form validation to use nickname
+Update backend functions to consistently use nickname
+Test incremental label generation thoroughly
+This will eliminate the dual field complexity while maintaining all existing functionality including incremental label generation and backend compatibility.

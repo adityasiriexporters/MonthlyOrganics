@@ -211,18 +211,15 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 required-field">Address Label</h3>
 
                 <div class="space-y-4">
-                    <!-- Manual Label Input -->
+                    <!-- Address Label Input -->
                     <div>
-                        <label for="custom_label" class="block text-sm font-medium text-gray-700 required-field">
+                        <label for="nickname" class="block text-sm font-medium text-gray-700 required-field">
                             Enter Address Label
                         </label>
-                        <input type="text" id="custom_label" name="custom_label" required
+                        <input type="text" id="nickname" name="nickname" required
                                placeholder="e.g., Home, Office, Friend's Place, etc."
                                class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
                     </div>
-
-                    <!-- Hidden nickname field that gets populated -->
-                    <input type="hidden" id="nickname" name="nickname" value="">
                 </div>
             </div>
 
@@ -636,37 +633,17 @@ function setupEventListeners() {
     });
 }
 
-// Update nickname when custom label changes
-function updateNickname() {
-    const customLabelInput = document.getElementById('custom_label');
-    const nicknameInput = document.getElementById('nickname');
-    
-    if (customLabelInput && nicknameInput) {
-        nicknameInput.value = customLabelInput.value;
-    }
-}
-
-// Update nickname when custom label changes
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('custom_label')) {
-        document.getElementById('custom_label').addEventListener('input', updateNickname);
-    }
-});
-
 // Form submission validation
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('addressForm')) {
         document.getElementById('addressForm').addEventListener('submit', function(e) {
-            const customLabel = document.getElementById('custom_label').value.trim();
+            const nickname = document.getElementById('nickname').value.trim();
             
-            if (!customLabel) {
+            if (!nickname) {
                 e.preventDefault();
                 alert('Please enter an address label.');
                 return;
             }
-            
-            // Update nickname field with the custom label value
-            document.getElementById('nickname').value = customLabel;
         });
     }
 });
