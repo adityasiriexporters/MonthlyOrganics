@@ -411,6 +411,17 @@ function setupEventListeners() {
     document.getElementById('mapModal').addEventListener('click', function(e) {
         e.stopPropagation();
     });
+    
+    // Custom label input listener for address label synchronization
+    const customLabelInput = document.getElementById('custom_label');
+    if (customLabelInput) {
+        customLabelInput.addEventListener('input', function() {
+            const nicknameInput = document.getElementById('nickname');
+            if (nicknameInput) {
+                nicknameInput.value = customLabelInput.value;
+            }
+        });
+    }
 }
 
 function initMap() {

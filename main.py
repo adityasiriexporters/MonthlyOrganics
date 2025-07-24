@@ -377,7 +377,8 @@ def update_address(address_id):
             return redirect(url_for('edit_address', address_id=address_id))
         
         # Generate incremental label if nickname already exists (only for editing existing address)
-        requested_nickname = form_data.get('nickname', '')
+        # Try custom_label first (user input), fallback to nickname (hidden field)
+        requested_nickname = form_data.get('custom_label', '') or form_data.get('nickname', '')
         
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
@@ -1211,7 +1212,8 @@ def update_address_for_delivery(address_id):
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
             
             # Generate incremental label if nickname conflicts
-            requested_nickname = form_data.get('nickname', '')
+            # Try custom_label first (user input), fallback to nickname (hidden field)
+            requested_nickname = form_data.get('custom_label', '') or form_data.get('nickname', '')
             if not requested_nickname:
                 flash('Nickname is required.', 'error')
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))

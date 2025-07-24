@@ -393,6 +393,17 @@ function setupEventListeners() {
         document.getElementById('locationConfirmModal').classList.add('hidden');
     });
     
+    // Custom label input listener for address label synchronization
+    const customLabelInput = document.getElementById('custom_label');
+    if (customLabelInput) {
+        customLabelInput.addEventListener('input', function() {
+            const nicknameInput = document.getElementById('nickname');
+            if (nicknameInput) {
+                nicknameInput.value = customLabelInput.value;
+            }
+        });
+    }
+    
     document.getElementById('confirmLocationFinal').addEventListener('click', function() {
         // Hide modals
         document.getElementById('locationConfirmModal').classList.add('hidden');
