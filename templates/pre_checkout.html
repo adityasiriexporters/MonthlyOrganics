@@ -165,14 +165,30 @@
                     <select id="address-dropdown" 
                             class="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary bg-white"
                             onchange="handleAddressSelection()">
-                        <option value="add_new">+ Add New Address</option>
-                        {% for address in addresses %}
-                            <option value="{{ address.id }}" 
-                                    data-address="{{ address.id }}"
-                                    {% if address.is_default %}selected{% endif %}>
-                                {{ address.nickname }} - {{ address.locality }}, {{ address.city }}
-                            </option>
-                        {% endfor %}
+                        {% if addresses %}
+                            {% set default_found = namespace(value=false) %}
+                            {% for address in addresses %}
+                                {% if address.is_default %}
+                                    {% set default_found.value = true %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if not default_found.value %}
+                                <option value="add_new" selected>+ Add New Address</option>
+                            {% else %}
+                                <option value="add_new">+ Add New Address</option>
+                            {% endif %}
+                            
+                            {% for address in addresses %}
+                                <option value="{{ address.id }}" 
+                                        data-address="{{ address.id }}"
+                                        {% if address.is_default %}selected{% endif %}>
+                                    {{ address.nickname }} - {{ address.locality }}, {{ address.city }}
+                                </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="add_new" selected>+ Add New Address</option>
+                        {% endif %}
                     </select>
                 </div>
 
@@ -295,17 +311,21 @@ const addressesData = {{ addresses_json|safe }};
 let confirmationMap = null;
 let selectedAddressId = null;
 
-// Initialize with default address if available
+// Initialize with default address if available, otherwise redirect to add address
 document.addEventListener('DOMContentLoaded', function() {
     const dropdown = document.getElementById('address-dropdown');
     const defaultAddress = addressesData.find(addr => addr.is_default);
     
     if (defaultAddress) {
+        // Select the default address
         dropdown.value = defaultAddress.id;
         selectedAddressId = defaultAddress.id;
         showAddressConfirmation(defaultAddress);
         // Show edit address option for default address
         document.getElementById('edit-address-section').classList.remove('hidden');
+    } else if (addressesData.length === 0 || dropdown.value === 'add_new') {
+        // No addresses or dropdown is on "Add New Address" - redirect automatically
+        window.location.href = "{{ url_for('add_new_address_for_delivery') }}";
     }
 });
 
