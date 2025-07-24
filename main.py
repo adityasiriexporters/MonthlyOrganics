@@ -214,7 +214,8 @@ def save_address():
         logger.info(f"Received form data: {dict(request.form)}")
         
         # Generate incremental label if nickname already exists
-        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
+        # Try custom_label first (user input), fallback to nickname (hidden field)
+        requested_nickname = FormValidator.sanitize_string(request.form.get('custom_label', '') or request.form.get('nickname', ''))
         final_nickname = generate_incremental_label(user_id, requested_nickname)
         
         # Get form data with more robust handling
@@ -1115,7 +1116,8 @@ def save_address_for_delivery():
         user_id = session['user_id']
         
         # Generate incremental label if nickname already exists
-        requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
+        # Try custom_label first (user input), fallback to nickname (hidden field)
+        requested_nickname = FormValidator.sanitize_string(request.form.get('custom_label', '') or request.form.get('nickname', ''))
         final_nickname = generate_incremental_label(user_id, requested_nickname)
         
         # Get form data
