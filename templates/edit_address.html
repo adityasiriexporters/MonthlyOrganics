@@ -110,7 +110,8 @@
         </div>
 
         <!-- Address Form -->
-        <form id="addressForm" method="POST" action="{{ url_for('update_address', address_id=address.id) }}" class="space-y-6">
+        <form id="addressForm" method="POST" action="{{ url_for('update_address', address_id=address.id) }}" class="space-y-6"
+              style="display: block;">
             
             <!-- Hidden Map Data -->
             <input type="hidden" id="latitude" name="latitude" value="{{ address.latitude }}">
@@ -373,6 +374,289 @@ function setupEventListeners() {
     document.getElementById('cancelLocationConfirm').addEventListener('click', function() {
         document.getElementById('locationConfirmModal').classList.add('hidden');
     });
+    
+    document.getElementById('confirmLocationFinal').addEventListener('click', function() {
+        // Hide modals
+        document.getElementById('locationConfirmModal').classList.add('hidden');
+        closeMapModal();
+        
+        // Show location display
+        document.getElementById('locationDisplay').classList.remove('hidden');
+        document.getElementById('selectedLocationDisplay').textContent = window.pendingLocationData?.formattedAddress || 'Selected location';
+        
+        // Populate form fields
+        if (window.pendingLocationData) {
+            document.getElementById('locality').value = window.pendingLocationData.locality;
+            document.getElementById('city').value = window.pendingLocationData.city;
+            document.getElementById('pincode').value = window.pendingLocationData.pincode;
+        }
+        
+        // Show mini map 
+        showMiniMap();
+    });
+    
+    // Change location button
+    document.getElementById('changeLocationBtn').addEventListener('click', function() {
+        openMapModal();
+    });
+    
+    // Contacts button (placeholder for now)
+    if (document.getElementById('contactsBtn')) {
+        document.getElementById('contactsBtn').addEventListener('click', function() {
+            alert('Contact selection feature will be available soon!');
+        });
+    }
+    
+    // Prevent modal close on map interaction
+    document.getElementById('mapModal').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+}
+
+function initMap() {
+    // Use existing address coordinates or default to Hyderabad
+    const defaultCoords = selectedLocation ? 
+        { lat: selectedLocation.lat, lng: selectedLocation.lng } : 
+        { lat: 17.385044, lng: 78.486671 };
+    
+    // Create map
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: defaultCoords,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        gestureHandling: 'greedy', // Allow scrolling/zooming without modifier keys
+        disableDefaultUI: true,
+        zoomControl: true,
+        zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_CENTER
+        }
+    });
+    
+    // Initialize geocoder
+    geocoder = new google.maps.Geocoder();
+    
+    // Add click listener for map
+    map.addListener('click', function(e) {
+        setMarker(e.latLng);
+    });
+    
+    // Set existing marker if we have location
+    if (selectedLocation) {
+        const latLng = new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng);
+        setMarker(latLng);
+    }
+    
+    // Trigger resize after map is initialized
+    setTimeout(() => {
+        google.maps.event.trigger(map, 'resize');
+    }, 100);
+}
+
+function setMarker(location) {
+    // Remove existing marker
+    if (marker) {
+        marker.setMap(null);
+    }
+    
+    // Create new marker
+    marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        draggable: true,
+        animation: google.maps.Animation.DROP
+    });
+    
+    // Add drag listener
+    marker.addListener('dragend', function(e) {
+        setMarker(e.latLng);
+    });
+    
+    // Update location data
+    selectedLocation = { lat: location.lat(), lng: location.lng() };
+    document.getElementById('latitude').value = location.lat();
+    document.getElementById('longitude').value = location.lng();
+    
+    // Enable confirm button
+    const confirmBtn = document.getElementById('confirmLocation');
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    
+    // Update status
+    document.getElementById('locationStatus').textContent = 'Location selected. Tap "Confirm Location" to proceed.';
+    
+    console.log('Location selected:', location.lat(), location.lng());
+    
+    // Reverse geocode to get address
+    reverseGeocode(location);
+}
+
+function reverseGeocode(location) {
+    geocoder.geocode({ location: location }, function(results, status) {
+        if (status === 'OK' && results[0]) {
+            const addressComponents = results[0].address_components;
+            const formattedAddress = results[0].formatted_address;
+            
+            // Extract address components with better fallback logic
+            let locality = '';
+            let city = '';
+            let pincode = '';
+            
+            for (let component of addressComponents) {
+                const types = component.types;
+                
+                // For locality - try multiple types
+                if (types.includes('sublocality_level_1') || 
+                    types.includes('sublocality_level_2') || 
+                    types.includes('locality')) {
+                    if (!locality) locality = component.long_name;
+                }
+                
+                // For city - try multiple administrative levels
+                if (types.includes('administrative_area_level_2') || 
+                    types.includes('administrative_area_level_3') ||
+                    types.includes('locality')) {
+                    if (!city) city = component.long_name;
+                }
+                
+                // For pincode
+                if (types.includes('postal_code')) {
+                    pincode = component.long_name;
+                }
+            }
+            
+            // Fallback: if city is still empty, use locality
+            if (!city && locality) {
+                city = locality;
+            }
+            
+            // Update confirmation modal text
+            document.getElementById('selectedLocationText').textContent = formattedAddress;
+            
+            // Pre-fill form fields (will be populated when location is confirmed)
+            window.pendingLocationData = {
+                locality: locality,
+                city: city,
+                pincode: pincode,
+                formattedAddress: formattedAddress
+            };
+            
+            console.log('Geocoding result:', { locality, city, pincode, formattedAddress });
+        } else {
+            console.error('Geocoding failed:', status);
+            document.getElementById('locationStatus').textContent = 'Unable to get address details. You can enter them manually.';
+        }
+    });
+}
+
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        document.getElementById('locationStatus').textContent = 'Getting your location...';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const location = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                
+                map.setCenter(location);
+                map.setZoom(16);
+                setMarker(location);
+            },
+            function(error) {
+                document.getElementById('locationStatus').textContent = 'Unable to access location. Please tap on the map to select.';
+                console.error('Geolocation error:', error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    } else {
+        document.getElementById('locationStatus').textContent = 'Location not supported. Please tap on the map to select.';
+    }
+}
+
+function openMapModal() {
+    // Show modal
+    document.getElementById('mapModal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    
+    // Initialize map if not already done
+    if (!map) {
+        initMap();
+    } else {
+        // Trigger resize if map already exists
+        setTimeout(() => {
+            google.maps.event.trigger(map, 'resize');
+            if (selectedLocation) {
+                const latLng = new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng);
+                map.setCenter(latLng);
+            }
+        }, 100);
+    }
+}
+
+function closeMapModal() {
+    document.getElementById('mapModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+}
+
+function confirmLocationSelection() {
+    if (selectedLocation) {
+        document.getElementById('locationConfirmModal').classList.remove('hidden');
+    }
+}
+
+// Mini Map Functions
+function showMiniMap() {
+    if (selectedLocation) {
+        const mapContainer = document.getElementById('selectedLocationMap');
+        mapContainer.classList.remove('hidden');
+        
+        // Store coordinates for form submission
+        document.getElementById('latitude').value = selectedLocation.lat;
+        document.getElementById('longitude').value = selectedLocation.lng;
+        
+        // Initialize mini map
+        setTimeout(() => {
+            const latLng = new google.maps.LatLng(selectedLocation.lat, selectedLocation.lng);
+            miniMap = new google.maps.Map(document.getElementById('miniMap'), {
+                zoom: 15,
+                center: latLng,
+                disableDefaultUI: true,
+                gestureHandling: 'none', // Disable interaction
+                clickableIcons: false
+            });
+            
+            // Add marker to mini map
+            miniMarker = new google.maps.Marker({
+                position: latLng,
+                map: miniMap,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="15" cy="15" r="8" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+                            <circle cx="15" cy="15" r="3" fill="#ffffff"/>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(30, 30),
+                    anchor: new google.maps.Point(15, 15)
+                }
+            });
+        }, 100);
+        
+        // Update location text
+        const locationText = document.getElementById('selectedLocationText');
+        if (window.pendingLocationData?.formattedAddress) {
+            locationText.textContent = window.pendingLocationData.formattedAddress;
+        } else {
+            locationText.textContent = `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`;
+        }
+    }
+}
+</script>
+{% endblock %}
     
     document.getElementById('confirmLocationFinal').addEventListener('click', function() {
         // Hide modals
