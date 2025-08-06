@@ -17,7 +17,7 @@ class DatabaseExporter:
     """Handles exporting database data to JSON format"""
     
     @staticmethod
-    def serialize_value(value):
+    def serialize_value(value, for_excel=False):
         """Convert database values to JSON-serializable format"""
         if isinstance(value, (datetime, date)):
             return value.isoformat()
@@ -25,14 +25,33 @@ class DatabaseExporter:
             return float(value)
         elif value is None:
             return None
+        elif isinstance(value, dict) and for_excel:
+            # Convert complex objects to strings for Excel compatibility
+            return json.dumps(value)
+        elif isinstance(value, (list, tuple)) and for_excel:
+            # Convert arrays to strings for Excel compatibility
+            return json.dumps(value)
         else:
             return value
     
     @staticmethod
-    def get_table_data(table_name):
+    def get_table_data(table_name, for_excel=False):
         """Get all data from a specific table"""
         try:
-            query = f"SELECT * FROM {table_name} ORDER BY id"
+            # Check if table has an 'id' column for ordering
+            has_id_query = f"""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = '{table_name}' AND column_name = 'id'
+            """
+            has_id = DatabaseService.execute_query(has_id_query)
+            
+            # Use appropriate ORDER BY clause
+            if has_id:
+                query = f"SELECT * FROM {table_name} ORDER BY id"
+            else:
+                query = f"SELECT * FROM {table_name}"
+                
             result = DatabaseService.execute_query(query)
             
             if not result:
@@ -43,7 +62,7 @@ class DatabaseExporter:
             for row in result:
                 row_dict = {}
                 for key, value in dict(row).items():
-                    row_dict[key] = DatabaseExporter.serialize_value(value)
+                    row_dict[key] = DatabaseExporter.serialize_value(value, for_excel=for_excel)
                 table_data.append(row_dict)
             
             return table_data
@@ -61,6 +80,7 @@ class DatabaseExporter:
                 FROM information_schema.tables 
                 WHERE table_schema = 'public' 
                 AND table_type = 'BASE TABLE'
+                AND table_name != 'spatial_ref_sys'
                 ORDER BY table_name
             """
             result = DatabaseService.execute_query(query)
@@ -269,8 +289,11 @@ class DatabaseExporter:
                 if not table_data:
                     continue
                 
-                # Create DataFrame from table data
-                df = pd.DataFrame(table_data)
+                # Get Excel-compatible data for this table
+                excel_table_data = DatabaseExporter.get_table_data(table_name, for_excel=True)
+                
+                # Create DataFrame from Excel-compatible table data
+                df = pd.DataFrame(excel_table_data)
                 
                 # Create worksheet for this table
                 # Excel sheet names can't exceed 31 characters
