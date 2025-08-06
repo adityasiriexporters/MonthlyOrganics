@@ -492,7 +492,7 @@ def health_check():
 @app.route('/admin/export-database', methods=['GET', 'POST'])
 @admin_required
 def admin_export_database():
-    """Export database data to JSON file"""
+    """Export database data in various formats"""
     try:
         from utils.database_export import DatabaseExporter
         from flask import make_response
@@ -501,14 +501,14 @@ def admin_export_database():
         import json
 
         if request.method == 'POST':
-            # Get export type from form
+            # Get export parameters from form
             export_type = request.form.get('export_type', 'full')
+            export_format = request.form.get('export_format', 'json')
 
+            # Get data based on export type
             if export_type == 'full':
-                # Export entire database
                 export_data = DatabaseExporter.export_full_database()
             else:
-                # Export specific tables (if implemented in form)
                 selected_tables = request.form.getlist('tables')
                 if not selected_tables:
                     flash('Please select at least one table to export.', 'error')
@@ -519,19 +519,47 @@ def admin_export_database():
                 flash('Error exporting database data.', 'error')
                 return redirect(url_for('admin_export_database'))
 
-            # Create JSON response
-            json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
+            # Generate timestamp for filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Handle different export formats
+            if export_format == 'json':
+                # JSON export
+                json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
+                response = make_response(json_str)
+                response.headers['Content-Type'] = 'application/json'
+                response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{timestamp}.json'
+                
+            elif export_format == 'csv':
+                # CSV export (ZIP file)
+                csv_data = DatabaseExporter.export_to_csv(export_data, export_type)
+                if not csv_data:
+                    flash('Error generating CSV export.', 'error')
+                    return redirect(url_for('admin_export_database'))
+                
+                response = make_response(csv_data)
+                response.headers['Content-Type'] = 'application/zip'
+                response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{timestamp}.zip'
+                
+            elif export_format == 'xlsx':
+                # XLSX export
+                xlsx_data = DatabaseExporter.export_to_xlsx(export_data, export_type)
+                if not xlsx_data:
+                    flash('Error generating XLSX export.', 'error')
+                    return redirect(url_for('admin_export_database'))
+                
+                response = make_response(xlsx_data)
+                response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{timestamp}.xlsx'
+                
+            else:
+                flash('Invalid export format selected.', 'error')
+                return redirect(url_for('admin_export_database'))
 
-            # Create file response
-            response = make_response(json_str)
-            response.headers['Content-Type'] = 'application/json'
-            response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-
-            logger.info("Database export file generated successfully")
+            logger.info(f"Database export file generated successfully in {export_format.upper()} format")
             return response
 
         # GET request - show export form
-        # Get available tables for selection
         table_names = DatabaseExporter.get_all_table_names()
 
         return render_template('admin/admin_export.html', 
