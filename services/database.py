@@ -253,55 +253,35 @@ class CartService:
         return dict(result) if result else None
 
 class UserService:
-    """Service for user-related database operations using SQLAlchemy ORM"""
+    """Service for user-related database operations"""
     
     @staticmethod
-    def find_user_by_phone(phone: str):
+    def find_user_by_phone(phone: str) -> Optional[Dict]:
         """Find user by phone number using encrypted phone hash"""
         from models import User
         from utils.encryption import DataEncryption
         
-        try:
-            # Create hash of the phone number for lookup
-            phone_hash = DataEncryption.hash_for_search(phone)
-            user = User.query.filter_by(phone_hash=phone_hash, is_active=True).first()
-            return user
-        except Exception as e:
-            logger.error(f"Error finding user by phone: {e}")
-            return None
+        # Create hash of the phone number for lookup
+        phone_hash = DataEncryption.hash_for_search(phone)
+        user = User.query.filter_by(phone_hash=phone_hash).first()
+        return user
     
     @staticmethod
-    def create_user(phone: str, first_name: str = "Customer", last_name: str = "", email: str = None):
+    def create_user(phone: str) -> Optional[Dict]:
         """Create new user with phone number using encrypted storage"""
         from models import User, db
-        from utils.id_generator import CustomIDGenerator
-        
         try:
-            # Generate email if not provided
-            if not email:
-                email = f"user{phone[-4:]}@monthlyorganics.com"
-            
-            # Generate custom ID
-            custom_id = CustomIDGenerator.generate_user_id()
-            
             user = User(
-                first_name=first_name.strip().title() if first_name else "Customer",
-                last_name=last_name.strip().title() if last_name else "",
-                email=email
+                first_name="User",
+                last_name=phone[-4:],
+                email=f"user{phone}@monthlyorganics.com"
             )
-            
-            # Set custom_id and phone separately after creation
-            user.custom_id = custom_id
-            
             # Use the set_phone method which handles encryption
             user.set_phone(phone)
             
             db.session.add(user)
             db.session.commit()
-            
-            logger.info(f"Created new user with ID {user.id} and custom_id {custom_id}")
             return user
-            
         except Exception as e:
             logger.error(f"Error creating user: {e}")
             db.session.rollback()
