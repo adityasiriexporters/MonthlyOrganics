@@ -34,7 +34,27 @@ class User(db.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
     
+    @property
+    def phone(self):
+        """Decrypt and return phone number for backwards compatibility"""
+        if self.phone_encrypted:
+            try:
+                from utils.encryption import DataEncryption
+                decrypted = DataEncryption.decrypt_phone(self.phone_encrypted)
+                return decrypted if decrypted else None
+            except Exception:
+                return None
+        return None
     
+    def set_phone(self, phone_number: str):
+        """Set phone number with automatic encryption"""
+        if phone_number:
+            from utils.encryption import DataEncryption
+            self.phone_encrypted = DataEncryption.encrypt_phone(phone_number)
+            self.phone_hash = DataEncryption.hash_for_search(phone_number)
+        else:
+            self.phone_encrypted = None
+            self.phone_hash = None
 
 # Address and Subscription models handled through service layer
 
@@ -101,15 +121,20 @@ def init_db(app):
             if Product.query.count() == 0:
                 sample_products = [
                     Product(name='Organic Apples', description='Fresh organic apples from local orchards', 
-                           category_id=1),
+                           category='fruit', season='fall', origin_farm='Green Valley Farm', 
+                           price_per_unit=2.50, unit_type='pound'),
                     Product(name='Organic Carrots', description='Sweet organic carrots grown locally', 
-                           category_id=2),
+                           category='vegetable', season='year-round', origin_farm='Sunrise Gardens', 
+                           price_per_unit=1.75, unit_type='pound'),
                     Product(name='Organic Spinach', description='Fresh organic spinach leaves', 
-                           category_id=2),
+                           category='vegetable', season='spring', origin_farm='Healthy Harvest Farm', 
+                           price_per_unit=3.25, unit_type='bunch'),
                     Product(name='Organic Tomatoes', description='Vine-ripened organic tomatoes', 
-                           category_id=2),
+                           category='vegetable', season='summer', origin_farm='Sunny Acres', 
+                           price_per_unit=4.00, unit_type='pound'),
                     Product(name='Organic Basil', description='Fresh organic basil for cooking', 
-                           category_id=3)
+                           category='herb', season='summer', origin_farm='Herb Haven', 
+                           price_per_unit=2.00, unit_type='bunch')
                 ]
                 
                 for product in sample_products:

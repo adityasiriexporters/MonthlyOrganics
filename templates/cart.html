@@ -4,23 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, height=device-height">
     <title>Your Cart - Monthly Organics</title>
-
-    <!-- Tailwind CSS - Local Build -->
-    <link href="/static/css/output.css" rel="stylesheet">
-
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- Alpine.js CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+    
     <!-- htmx CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-
+    
     <!-- Mobile Navigation Fix CSS -->
     <style>
         :root {
             --vh: 1vh;
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
         }
-
+        
         /* Mobile navigation bar positioning fixes */
         .mobile-nav-bar {
             position: fixed !important;
@@ -34,7 +34,7 @@
             pointer-events: auto !important;
             touch-action: manipulation !important;
         }
-
+        
         /* Ensure navigation links are clickable */
         .mobile-nav-bar a {
             pointer-events: auto !important;
@@ -42,7 +42,7 @@
             position: relative !important;
             z-index: 999999 !important;
         }
-
+        
         /* Mobile specific fixes */
         @media screen and (max-width: 768px) {
             .mobile-nav-bar {
@@ -52,11 +52,11 @@
                 -webkit-backface-visibility: hidden !important;
                 backface-visibility: hidden !important;
             }
-
+            
             body {
                 padding-bottom: 100px !important;
             }
-
+            
             /* Fix cart page scrolling within bounds */
             .cart-container {
                 height: 100vh !important;
@@ -65,7 +65,7 @@
                 flex-direction: column !important;
                 padding-bottom: 0 !important;
             }
-
+            
             .cart-content {
                 flex: 1 !important;
                 height: calc(100vh - 160px) !important; /* Header + Navigation */
@@ -78,7 +78,24 @@
         }
     </style>
 
-
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2C7A3C',
+                        secondary: '#402D1C',
+                        background: '#F9F1E5'
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
     <!-- Mobile Viewport Handler JavaScript -->
     <script>
         // Dynamic viewport height calculation for mobile browsers
@@ -86,29 +103,29 @@
             const vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', vh + 'px');
         }
-
+        
         // Set viewport height on page load
         setViewportHeight();
-
+        
         // Update viewport height on resize and orientation change
         window.addEventListener('resize', setViewportHeight);
         window.addEventListener('orientationchange', function() {
             setTimeout(setViewportHeight, 100);
         });
-
+        
         // Mobile navigation fixes
         document.addEventListener('DOMContentLoaded', function() {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
+            
             if (isMobile) {
                 document.body.classList.add('mobile-device');
-
+                
                 // Ensure navigation is always clickable
                 const mobileNavs = document.querySelectorAll('.mobile-nav-bar');
                 mobileNavs.forEach(nav => {
                     nav.style.pointerEvents = 'auto';
                     nav.style.touchAction = 'manipulation';
-
+                    
                     // Make all navigation links clickable
                     const navLinks = nav.querySelectorAll('a');
                     navLinks.forEach(link => {
@@ -133,7 +150,7 @@
                      alt="Monthly Organics Logo" 
                      class="h-10 w-auto">
             </div>
-
+            
             <!-- Brand Name with Font Style (Right) -->
             <div class="flex items-center flex-1 justify-end">
                 <img src="{{ url_for('static', filename='img/brand_name_with_font.png') }}" 
@@ -174,12 +191,12 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
-
+                            
                             <!-- Product Details -->
                             <div class="flex-1 min-w-0">
                                 <h3 class="font-medium text-gray-900 text-sm">{{ item.product_name }}</h3>
                                 <p class="text-sm text-gray-600">{{ item.variation_name }}</p>
-
+                                
                                 <div class="flex items-center justify-between mt-2">
                                     <!-- Quantity Controls -->
                                     <div class="flex items-center space-x-2 bg-gray-50 rounded-lg px-2 py-1">
@@ -197,7 +214,7 @@
                                             +
                                         </button>
                                     </div>
-
+                                    
                                     <!-- Price -->
                                     <div class="text-right">
                                         <p class="text-sm font-medium text-gray-900">₹{{ "%.2f"|format(item.total_price) }}</p>
@@ -214,19 +231,19 @@
             <div class="bg-white shadow-sm mt-4" id="order-summary">
                 <div class="p-4">
                     <h2 class="font-medium text-gray-900 mb-3">Order Summary</h2>
-
+                    
                     <div class="space-y-2" 
                          id="order-totals">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Subtotal</span>
                             <span class="text-gray-900">₹{{ "%.2f"|format(subtotal) }}</span>
                         </div>
-
+                        
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Delivery Fee</span>
                             <span class="text-gray-600 text-xs italic">To be calculated at checkout</span>
                         </div>
-
+                        
                         <div class="border-t border-gray-200 pt-2 mt-2">
                             <div class="flex justify-between font-medium">
                                 <span class="text-gray-900">Total</span>
@@ -257,11 +274,11 @@
             <div class="bg-white shadow-sm">
                 <div class="text-center py-12 px-4">
                     <svg class="w-20 h-20 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4-5L3 3m0 0h.01M7 13v6a2 2 0 002 2h6a2 2 0 002-2v-6m-8 2h.01M15 15h.01"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0v-2m8 2v-2M7 18a2 2 0 11-4 0 2 2 0 014 0zM19 18a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
                     <p class="text-sm text-gray-500 mb-6">Add some fresh organic products to get started!</p>
-
+                    
                     <a href="{{ url_for('store') }}" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
                         Start Shopping
                     </a>
@@ -286,7 +303,7 @@
                 <!-- Store -->
                 <a href="/store" class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 text-gray-500 hover:text-primary transition-colors">
                     <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 01-1-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
                     <span class="text-xs font-medium">Store</span>
                 </a>
@@ -333,7 +350,7 @@
                 </div>
             {% endfor %}
         </div>
-
+        
         <!-- Auto-hide flash messages after 3 seconds -->
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -359,10 +376,10 @@ console.log('Cart page loaded with reliable cart totals system');
 // Approach 1: Direct click events with smart delay
 window.updateCartTotalsReliable = function() {
     console.log('Reliable cart totals update initiated');
-
+    
     // Try multiple delays to catch different timing scenarios
     const delays = [150, 300, 500];
-
+    
     delays.forEach((delay, index) => {
         setTimeout(() => {
             console.log(`Attempt ${index + 1}: Fetching cart totals (${delay}ms delay)`);
@@ -395,7 +412,7 @@ window.updateCartTotalsReliable = function() {
 // Approach 2: Fallback function for emergency updates
 window.fallbackCartTotalsUpdate = function() {
     console.log('Fallback cart totals update triggered');
-
+    
     // Use HTMX to directly update the totals section
     const totalsElement = document.getElementById('order-totals');
     if (totalsElement && window.htmx) {

@@ -346,9 +346,23 @@
         <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
             <div class="mt-3">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Automatic Delivery Date Cleanup System</h3>
-                <div class="text-sm text-gray-700 space-y-2">
-                    <p><strong>Automatic Cleanup:</strong> Daily at 11:00 AM, expired free delivery dates are removed.</p>
-                    <p><strong>Testing:</strong> Use "Run Date Cleanup" to manually trigger cleanup.</p>
+                <div class="text-sm text-gray-700 space-y-3">
+                    <p><strong>How it works:</strong></p>
+                    <ul class="list-disc list-inside space-y-1 ml-4">
+                        <li>The system runs automatically every day at 11:00 AM</li>
+                        <li>It scans all delivery zones for free delivery dates</li>
+                        <li>Any date set for the next day (tomorrow) gets automatically deleted</li>
+                        <li>This happens 13 hours before the actual delivery day starts (at midnight)</li>
+                    </ul>
+                    
+                    <p><strong>Example:</strong></p>
+                    <p class="bg-gray-100 p-3 rounded">
+                        If today is January 15th and you have a free delivery date set for January 16th, 
+                        the system will delete that date during the 11:00 AM cleanup on January 15th.
+                    </p>
+                    
+                    <p><strong>Testing:</strong></p>
+                    <p>Use the "Run Date Cleanup" button to manually trigger the cleanup process for testing purposes.</p>
                 </div>
                 <div class="flex justify-end mt-4">
                     <button id="closeHelpBtn" class="btn-sm" style="background-color: #6b7280; color: white;">

@@ -4,24 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Store - Monthly Organics</title>
-
+    
     <!-- Tailwind CSS CDN -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
-
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- Alpine.js CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+    
     <!-- htmx CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-
-
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2C7A3C',
+                        secondary: '#402D1C',
+                        background: '#F9F1E5'
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
     <!-- Simplified Store Page CSS -->
     <style>
         :root {
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
             --nav-height: 80px;
         }
-
+        
         /* Simplified mobile navigation positioning */
         .mobile-nav-bar {
             position: fixed;
@@ -35,14 +52,14 @@
             border-top: 1px solid #e5e7eb;
             padding-bottom: var(--safe-area-inset-bottom);
         }
-
+        
         /* Center navigation content within max-width container */
         .mobile-nav-bar > div {
             max-width: 448px; /* max-w-md */
             margin: 0 auto;
             height: 100%;
         }
-
+        
         /* Store page main container */
         .store-container {
             height: 100vh;
@@ -53,7 +70,7 @@
             display: flex;
             flex-direction: column;
         }
-
+        
         /* Fixed header positioning */
         .store-header {
             max-width: 448px;
@@ -61,7 +78,7 @@
             left: 50%;
             transform: translateX(-50%);
         }
-
+        
         @media (max-width: 448px) {
             .store-header {
                 left: 0;
@@ -70,7 +87,7 @@
                 max-width: none;
             }
         }
-
+        
         /* Store content with contained scrolling */
         .store-content {
             flex: 1;
@@ -79,7 +96,7 @@
             overflow: hidden; /* Prevent this container from scrolling */
             position: relative;
         }
-
+        
         /* Category sidebar with proper header/footer constraints */
         .category-sidebar {
             position: fixed;
@@ -94,7 +111,7 @@
             overflow-x: hidden;
             z-index: 10;
         }
-
+        
         /* Products main area with independent scrolling */
         .products-main {
             position: absolute;
@@ -108,7 +125,7 @@
             z-index: 5;
             /* Ensure products scroll independently from sidebar */
         }
-
+        
         /* Mobile responsive adjustments */
         @media (max-width: 448px) {
             .category-sidebar {
@@ -119,14 +136,14 @@
                 background: #f9fafb !important;
                 z-index: 10;
             }
-
+            
             .products-main {
                 left: 20vw;
                 background: white !important;
                 z-index: 5;
             }
         }
-
+        
         /* Fallback for browsers that don't support dvh */
         @supports not (height: 100dvh) {
             .store-container {
@@ -139,7 +156,7 @@
                 bottom: 80px; /* Fixed navigation height */
             }
         }
-
+        
         /* Custom CSS for category highlighting */
         .category-item.active {
             background-color: #2C7A3C !important;
@@ -155,7 +172,7 @@
             background-color: rgba(255, 255, 255, 0.2) !important;
         }
     </style>
-
+    
 
 </head>
 <body class="bg-background text-gray-800 antialiased">
@@ -170,7 +187,7 @@
                      alt="Monthly Organics Logo" 
                      class="h-10 w-auto">
             </div>
-
+            
             <!-- Brand Name with Font Style (Right) -->
             <div class="flex items-center flex-1 justify-end">
                 <img src="{{ url_for('static', filename='img/brand_name_with_font.png') }}" 
@@ -249,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeScrolling() {
     const categoryItems = document.querySelectorAll('.category-item');
     const firstCategory = categoryItems[0];
-
+    
     if (firstCategory) {
         // Highlight first category by default
         highlightCategory(firstCategory.dataset.categoryId);
@@ -262,7 +279,7 @@ function highlightCategory(categoryId) {
     document.querySelectorAll('.category-item').forEach(item => {
         item.classList.remove('active');
     });
-
+    
     // Add active class to selected category
     const activeItem = document.querySelector(`[data-category-id="${categoryId}"]`);
     if (activeItem) {
@@ -275,14 +292,14 @@ function scrollToCategory(categoryId) {
     // Find the target section
     const targetSection = document.querySelector(`[data-category-id="${categoryId}"].category-section`);
     const mainContainer = document.querySelector('main');
-
+    
     if (targetSection && mainContainer) {
         // Simple scroll to section with smooth behavior
         targetSection.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
         });
-
+        
         // Highlight the clicked category
         highlightCategory(categoryId);
     }

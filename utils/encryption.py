@@ -157,7 +157,15 @@ class SecureDataHandler:
         
         return secure_data
     
-    
+    @staticmethod
+    def decrypt_user_data(user_data: dict) -> dict:
+        """Decrypt user data for display"""
+        decrypted = user_data.copy()
+        
+        if 'phone_encrypted' in user_data:
+            decrypted['phone'] = DataEncryption.decrypt_phone(user_data['phone_encrypted'])
+        
+        return decrypted
     
     @staticmethod
     def decrypt_address_data(address_data: dict) -> dict:

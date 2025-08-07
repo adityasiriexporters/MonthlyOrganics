@@ -37,7 +37,6 @@ The application adheres to a Flask web application architecture, emphasizing sep
 -   **Admin Panel Encryption Support:** Updated all admin customer management functions to work with encrypted phone data. Fixed SQL queries in `get_all_customers_with_stats()` and `get_filtered_customers()` to use `phone_encrypted` column and properly decrypt data for display.
 -   **Unified Service Layer:** Consolidated phone lookup functionality across both UserService (ORM) and SecureUserService (raw SQL) to use consistent encryption methods. Both services now provide identical results for phone-based user searches.
 -   **Email Column Removal:** Successfully removed the email column from the users table per user requirements. Updated all code references, SQL queries, admin panel functions, and database exports to no longer depend on email data. Users are now identified by phone numbers and custom IDs only.
--   **Dependency Cleanup (August 2025):** Removed unused email-validator dependency, cleaned up duplicate migration logic, and eliminated Tailwind CDN warnings by implementing local CSS builds. Simplified data migration utilities and created comprehensive migration documentation for production deployments.
 
 ## External Dependencies
 

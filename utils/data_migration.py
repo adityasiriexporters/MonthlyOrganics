@@ -1,6 +1,6 @@
 """
-Data migration utility for maintaining encrypted customer data
-Post-email migration cleanup and verification utilities
+Data migration utility for encrypting existing customer data
+One-time script to encrypt sensitive data already in the database
 """
 import logging
 from services.database import DatabaseService
@@ -9,7 +9,7 @@ from utils.encryption import DataEncryption, SecureDataHandler
 logger = logging.getLogger(__name__)
 
 class DataMigration:
-    """Handles verification and maintenance of encrypted data post-migration"""
+    """Handles migration of existing plaintext data to encrypted format"""
     
     @staticmethod
     def migrate_user_phones():
@@ -46,19 +46,20 @@ class DataMigration:
                             WHERE id = %s
                         """
                         DatabaseService.execute_query(update_query, (phone_hash, user_id))
-                        migrated_count += 1
-                        
+                    
+                    migrated_count += 1
+                    logger.info(f"Encrypted phone for user {user_id}")
+                    
                 except Exception as e:
-                    logger.error(f"Failed to migrate user {user['id']}: {e}")
+                    logger.error(f"Failed to encrypt phone for user {user['id']}: {e}")
                     continue
             
             logger.info(f"Successfully migrated {migrated_count} user phone numbers")
             return True
             
         except Exception as e:
-            logger.error(f"Error migrating user phone data: {e}")
+            logger.error(f"Error migrating user phones: {e}")
             return False
-
     
     @staticmethod
     def migrate_address_data():

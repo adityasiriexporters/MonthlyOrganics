@@ -6,28 +6,31 @@
     <meta name="description" content="Monthly Organics - Your monthly dose of organic goodness">
     <meta name="keywords" content="organic, produce, monthly, delivery, fresh, vegetables, fruits">
     <meta name="author" content="Monthly Organics">
-
+    
     <title>{% block title %}Monthly Organics - Your Monthly Dose of Organic Goodness{% endblock %}</title>
-
+    
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/fulllogo_transparent.png') }}">
-
-    <!-- Tailwind CSS Local Build -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
-
+    
+    <!-- Local Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- Alpine.js CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+    
     <!-- htmx CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-
+    
     <!-- Simplified Mobile CSS -->
     <style>
         :root {
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
             --nav-height: 80px;
         }
-
+        
         /* Simplified mobile navigation positioning */
         .mobile-nav-bar {
             position: fixed;
@@ -41,14 +44,14 @@
             border-top: 1px solid #e5e7eb;
             padding-bottom: var(--safe-area-inset-bottom);
         }
-
+        
         /* Center navigation content within max-width container */
         .mobile-nav-bar > div {
             max-width: 448px; /* max-w-md */
             margin: 0 auto;
             height: 100%;
         }
-
+        
         /* Fixed header positioning for homepage */
         header[class*="fixed"] {
             max-width: 448px;
@@ -56,7 +59,7 @@
             left: 50%;
             transform: translateX(-50%);
         }
-
+        
         @media (max-width: 448px) {
             header[class*="fixed"] {
                 left: 0;
@@ -65,7 +68,7 @@
                 max-width: none;
             }
         }
-
+        
         /* Main container with proper flex layout */
         .main-container {
             height: 100vh;
@@ -76,7 +79,7 @@
             display: flex;
             flex-direction: column;
         }
-
+        
         /* Content area with contained scrolling */
         .page-content {
             flex: 1;
@@ -85,7 +88,7 @@
             overflow-y: auto;
             overflow-x: hidden;
         }
-
+        
         /* Fallback for browsers that don't support dvh */
         @supports not (height: 100dvh) {
             .main-container {
@@ -97,16 +100,33 @@
         }
     </style>
 
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2C7A3C',
+                        secondary: '#402D1C',
+                        background: '#F9F1E5'
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
 
-
-
+    
     <!-- Additional meta tags for SEO -->
     <meta property="og:title" content="Monthly Organics - Your Monthly Dose of Organic Goodness">
     <meta property="og:description" content="Fresh, organic produce delivered monthly to your door">
     <meta property="og:image" content="{{ url_for('static', filename='img/fulllogo_transparent.png', _external=True) }}">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-
+    
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-background text-gray-800 antialiased">
@@ -114,7 +134,7 @@
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50">
         Skip to main content
     </a>
-
+    
     <div class="main-container">
         <!-- Dynamic Header - Mobile First -->
         {% if request.path != '/' %}
@@ -129,7 +149,7 @@
                                  class="h-10 w-auto">
                         </a>
                     </div>
-
+                    
                     <!-- Brand Name with Font (Right) -->
                     <div class="flex items-center flex-shrink-0">
                         <a href="{{ url_for('index') }}">
@@ -141,14 +161,14 @@
                 </div>
             </header>
         {% endif %}
-
+        
         <!-- Scrollable Main Content -->
         <div class="page-content">
             <main id="main-content" class="{% if request.path != '/' %}pt-20{% endif %} pb-24">
                 {% block content %}{% endblock %}
             </main>
         </div>
-
+        
         <!-- Mobile Navigation Bar -->
         <nav class="mobile-nav-bar md:hidden">
         <div class="w-full">
@@ -224,10 +244,10 @@
             </div>
         </div>
     </footer>
-
+    
     <!-- Local JavaScript -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
+    
     <!-- Address Selection Script -->
     <script>
         function selectAddress(addressId) {
@@ -251,7 +271,7 @@
             });
         }
     </script>
-
+    
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
