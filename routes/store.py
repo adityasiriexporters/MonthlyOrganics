@@ -55,15 +55,20 @@ def products_by_category(category_id):
         
         # Get user cart items if logged in using custom_id
         user_cart = {}
-        if 'user_custom_id' in session:
-            user_custom_id = session['user_custom_id']
-            cart_query = """
-                SELECT variation_id, quantity 
-                FROM cart_items 
-                WHERE user_custom_id = %s
-            """
-            cart_items = DatabaseService.execute_query(cart_query, (user_custom_id,))
-            user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
+        if 'user_id' in session:
+            # Get user's custom_id
+            from models import User
+            from flask import current_app
+            with current_app.app_context():
+                user = User.query.get(session['user_id'])
+                if user:
+                    cart_query = """
+                        SELECT variation_id, quantity 
+                        FROM cart_items 
+                        WHERE user_custom_id = %s
+                    """
+                    cart_items = DatabaseService.execute_query(cart_query, (user.custom_id,))
+                    user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
         
         query = """
             SELECT 
@@ -144,8 +149,15 @@ def all_products():
             ORDER BY c.name, p.name, pv.variation_name
         """
         
-        # Get user custom_id directly from session for cart operations
-        user_custom_id = session.get('user_custom_id')
+        # Get user custom_id for cart operations
+        user_custom_id = None
+        if session.get('user_id'):
+            from models import User
+            from flask import current_app
+            with current_app.app_context():
+                user = User.query.get(session['user_id'])
+                if user:
+                    user_custom_id = user.custom_id
         
         raw_data = DatabaseService.execute_query(query, (user_custom_id or '',))
         
