@@ -1726,11 +1726,11 @@ def get_recent_orders(limit=5):
 
     try:
         query = """
-            SELECT o.id, o.user_id, o.total_amount, o.order_status as status, o.created_at,
+            SELECT o.id, o.user_custom_id, o.total_amount, o.order_status as status, o.created_at,
                    COUNT(oi.id) as item_count
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
-            GROUP BY o.id, o.user_id, o.total_amount, o.order_status, o.created_at
+            GROUP BY o.id, o.user_custom_id, o.total_amount, o.order_status, o.created_at
             ORDER BY o.created_at DESC 
             LIMIT %s
         """
@@ -1747,7 +1747,7 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
     try:
         # Base query with parameterized conditions
         base_query = """
-            SELECT o.id, o.user_id, o.total_amount, o.order_status as status, o.created_at,
+            SELECT o.id, o.user_custom_id, o.total_amount, o.order_status as status, o.created_at,
                    COUNT(oi.id) as item_count
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
@@ -1768,7 +1768,7 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
         # Category filter (requires joining with product tables)
         if category_filter and category_filter.isdigit():
             base_query = """
-                SELECT DISTINCT o.id, o.user_id, o.total_amount, o.order_status as status, o.created_at,
+                SELECT DISTINCT o.id, o.user_custom_id, o.total_amount, o.order_status as status, o.created_at,
                        COUNT(oi.id) as item_count
                 FROM orders o
                 LEFT JOIN order_items oi ON o.id = oi.order_id
@@ -1790,7 +1790,7 @@ def get_filtered_orders(date_from=None, date_to=None, category_filter=None, min_
             query = base_query
 
         query += """
-            GROUP BY o.id, o.user_id, o.total_amount, o.order_status, o.created_at
+            GROUP BY o.id, o.user_custom_id, o.total_amount, o.order_status, o.created_at
             ORDER BY o.created_at DESC 
             LIMIT %s
         """
@@ -1822,7 +1822,7 @@ def get_all_customers_with_stats():
                    MAX(o.created_at) as last_order_date,
                    COALESCE(SUM(o.total_amount), 0) as total_spent
             FROM users u
-            LEFT JOIN orders o ON u.id = o.user_id
+            LEFT JOIN orders o ON u.custom_id = o.user_custom_id
             GROUP BY u.id, u.first_name, u.last_name, u.phone_encrypted, u.custom_id, u.created_at, u.is_active
             ORDER BY u.created_at DESC
         """
@@ -1849,9 +1849,9 @@ def get_all_customers_with_stats():
             addr_cursor.execute("""
                 SELECT id, nickname, locality, city, pincode, is_default
                 FROM addresses 
-                WHERE user_id = %s 
+                WHERE user_custom_id = %s 
                 ORDER BY is_default DESC, created_at DESC
-            """, (customer_dict['id'],))
+            """, (customer_dict['custom_id'],))
             addresses = addr_cursor.fetchall()
 
             # Convert addresses to proper format
@@ -1897,7 +1897,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
                    MAX(o.created_at) as last_order_date,
                    COALESCE(SUM(o.total_amount), 0) as total_spent
             FROM users u
-            LEFT JOIN orders o ON u.id = o.user_id
+            LEFT JOIN orders o ON u.custom_id = o.user_custom_id
             WHERE 1=1
         """
 
@@ -1965,9 +1965,9 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
             addr_cursor.execute("""
                 SELECT id, nickname, locality, city, pincode, is_default
                 FROM addresses 
-                WHERE user_id = %s 
+                WHERE user_custom_id = %s 
                 ORDER BY is_default DESC, created_at DESC
-            """, (customer_dict['id'],))
+            """, (customer_dict['custom_id'],))
             addresses = addr_cursor.fetchall()
 
             # Convert addresses to proper format

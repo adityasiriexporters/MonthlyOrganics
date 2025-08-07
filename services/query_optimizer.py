@@ -9,8 +9,8 @@ class QueryOptimizer:
     """Optimized database queries for common operations"""
     
     @staticmethod
-    def get_cart_summary(user_id: int) -> Dict:
-        """Get cart summary with totals in single query"""
+    def get_cart_summary(user_custom_id: str) -> Dict:
+        """Get cart summary with totals in single query using custom_id"""
         query = """
             SELECT 
                 COUNT(*) as item_count,
@@ -18,9 +18,9 @@ class QueryOptimizer:
                 SUM(ci.quantity * pv.mrp) as subtotal
             FROM cart_items ci
             INNER JOIN product_variations pv ON ci.variation_id = pv.id
-            WHERE ci.user_id = %s
+            WHERE ci.user_custom_id = %s
         """
-        result = DatabaseService.execute_query(query, (user_id,), fetch_one=True)
+        result = DatabaseService.execute_query(query, (user_custom_id,), fetch_one=True)
         
         if result:
             return {
@@ -31,29 +31,30 @@ class QueryOptimizer:
         return {'item_count': 0, 'total_quantity': 0, 'subtotal': 0.0}
     
     @staticmethod
-    def get_user_with_default_address(user_id: int) -> Optional[Dict]:
-        """Get user with their default address in single query"""
+    def get_user_with_default_address(user_custom_id: str) -> Optional[Dict]:
+        """Get user with their default address in single query using custom_id"""
         query = """
             SELECT 
                 u.id as user_id,
+                u.custom_id,
                 u.first_name,
                 u.last_name,
-                u.phone,
+                u.phone_encrypted,
                 a.id as address_id,
                 a.nickname,
-                a.house_number,
+                a.house_number_encrypted,
                 a.locality,
                 a.city,
                 a.pincode
             FROM users u
-            LEFT JOIN addresses a ON u.id = a.user_id AND a.is_default = true
-            WHERE u.id = %s
+            LEFT JOIN addresses a ON u.custom_id = a.user_custom_id AND a.is_default = true
+            WHERE u.custom_id = %s
         """
-        return DatabaseService.execute_query(query, (user_id,), fetch_one=True)
+        return DatabaseService.execute_query(query, (user_custom_id,), fetch_one=True)
     
     @staticmethod
-    def get_products_with_cart_quantities(user_id: int, category_id: Optional[int] = None) -> List[Dict]:
-        """Get products with cart quantities in single optimized query"""
+    def get_products_with_cart_quantities(user_custom_id: str, category_id: Optional[int] = None) -> List[Dict]:
+        """Get products with cart quantities in single optimized query using custom_id"""
         base_query = """
             SELECT 
                 p.id as product_id,
@@ -69,12 +70,12 @@ class QueryOptimizer:
                 c.name as category_name
             FROM products p
             LEFT JOIN product_variations pv ON p.id = pv.product_id
-            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_id = %s
+            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_custom_id = %s
             LEFT JOIN categories c ON p.category_id = c.id
             WHERE p.id IS NOT NULL
         """
         
-        params = [user_id]
+        params = [user_custom_id]
         
         if category_id:
             base_query += " AND p.category_id = %s"

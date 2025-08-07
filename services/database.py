@@ -268,22 +268,29 @@ class UserService:
     
     @staticmethod
     def create_user(phone: str, first_name: str = "User", last_name: str = "") -> Optional['User']:
-        """Create new user with phone number using encrypted storage"""
+        """Create new user with phone number using encrypted storage and custom_id"""
         from models import User, db
+        from utils.id_generator import CustomIDGenerator
         try:
             # Generate default values if not provided
             if not last_name:
                 last_name = phone[-4:]
+            
+            # Generate custom_id
+            custom_id = CustomIDGenerator.generate_user_id()
                 
             user = User(
                 first_name=first_name,
-                last_name=last_name
+                last_name=last_name,
+                custom_id=custom_id
             )
             # Use the set_phone method which handles encryption
             user.set_phone(phone)
             
             db.session.add(user)
             db.session.commit()
+            
+            logger.info(f"Created new user with custom_id: {custom_id}")
             return user
         except Exception as e:
             logger.error(f"Error creating user: {e}")
@@ -304,9 +311,9 @@ class AddressService:
         """Get all addresses for a user using custom_id"""
         query = """
             SELECT 
-                id, nickname, house_number, block_name, floor_door, 
-                contact_number, latitude, longitude, locality, city, 
-                pincode, nearby_landmark, address_notes, is_default,
+                id, nickname, house_number_encrypted, block_name, floor_door_encrypted, 
+                contact_number_encrypted, latitude, longitude, locality, city, 
+                pincode, nearby_landmark_encrypted, address_notes, is_default,
                 created_at, updated_at
             FROM addresses
             WHERE user_custom_id = %s
@@ -320,9 +327,9 @@ class AddressService:
         """Get default address for a user using custom_id"""
         query = """
             SELECT 
-                id, nickname, house_number, block_name, floor_door, 
-                contact_number, latitude, longitude, locality, city, 
-                pincode, nearby_landmark, address_notes, is_default,
+                id, nickname, house_number_encrypted, block_name, floor_door_encrypted, 
+                contact_number_encrypted, latitude, longitude, locality, city, 
+                pincode, nearby_landmark_encrypted, address_notes, is_default,
                 created_at, updated_at
             FROM addresses
             WHERE user_custom_id = %s AND is_default = true
@@ -336,9 +343,9 @@ class AddressService:
         """Create a new address for a user using custom_id"""
         query = """
             INSERT INTO addresses (
-                user_custom_id, nickname, house_number, block_name, floor_door,
-                contact_number, latitude, longitude, locality, city, 
-                pincode, nearby_landmark, address_notes, is_default,
+                user_custom_id, nickname, house_number_encrypted, block_name, floor_door_encrypted,
+                contact_number_encrypted, latitude, longitude, locality, city, 
+                pincode, nearby_landmark_encrypted, address_notes, is_default,
                 created_at, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
