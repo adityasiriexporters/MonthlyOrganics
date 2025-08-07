@@ -257,22 +257,28 @@ class UserService:
     
     @staticmethod
     def find_user_by_phone(phone: str) -> Optional[Dict]:
-        """Find user by phone number"""
+        """Find user by phone number using encrypted phone hash"""
         from models import User
-        user = User.query.filter_by(phone=phone).first()
+        from utils.encryption import DataEncryption
+        
+        # Create hash of the phone number for lookup
+        phone_hash = DataEncryption.hash_for_search(phone)
+        user = User.query.filter_by(phone_hash=phone_hash).first()
         return user
     
     @staticmethod
     def create_user(phone: str) -> Optional[Dict]:
-        """Create new user with phone number"""
+        """Create new user with phone number using encrypted storage"""
         from models import User, db
         try:
             user = User(
                 first_name="User",
                 last_name=phone[-4:],
-                phone=phone,
                 email=f"user{phone}@monthlyorganics.com"
             )
+            # Use the set_phone method which handles encryption
+            user.set_phone(phone)
+            
             db.session.add(user)
             db.session.commit()
             return user

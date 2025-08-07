@@ -30,7 +30,10 @@ The application adheres to a Flask web application architecture, emphasizing sep
 -   **Cart & Checkout:** Implements comprehensive cart functionality with real-time updates and a two-page checkout flow including address selection (with map integration), order summary, delivery options (including free delivery based on zones), and payment (Cash on Delivery).
 -   **Address Management:** Supports adding, editing, and deleting addresses with geolocation, custom labels, and secure encryption for sensitive data. It includes a unified address confirmation system for both saved and one-time addresses.
 -   **Admin Panel:** A secure administrative section for managing customers, sales analysis, and a hyper-local delivery zone management system with PostGIS, Leaflet.js, and polygon drawing tools. It includes dynamic delivery date assignment and automated cleanup.
--   **Performance & Security:** Employs database connection pooling, query optimization, critical indexing, data encryption (Fernet), and comprehensive cache control.
+-   **Performance & Security:** Employs database connection pooling, query optimization, critical indexing, comprehensive data encryption (Fernet) for all sensitive customer data including phone numbers, and comprehensive cache control.
+
+**Recent Changes (August 2025):**
+-   **Phone Number Encryption Migration:** Successfully migrated all user phone numbers from plaintext to encrypted storage. The system now uses `phone_encrypted` and `phone_hash` columns for secure storage and fast lookup, while maintaining backwards compatibility through SQLAlchemy property methods. The plaintext `phone` column has been removed from the database.
 
 ## External Dependencies
 

@@ -18,7 +18,9 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    phone = db.Column(db.String(20), nullable=True)
+    phone_encrypted = db.Column(db.Text, nullable=True)  # Encrypted phone number
+    phone_hash = db.Column(db.String(255), nullable=True, index=True)  # Hash for searching
+    custom_id = db.Column(db.String(20), nullable=True, unique=True)  # Custom user ID format
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -31,6 +33,24 @@ class User(db.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def phone(self):
+        """Decrypt and return phone number for backwards compatibility"""
+        if self.phone_encrypted:
+            from utils.encryption import DataEncryption
+            return DataEncryption.decrypt_phone(self.phone_encrypted)
+        return None
+    
+    def set_phone(self, phone_number: str):
+        """Set phone number with automatic encryption"""
+        if phone_number:
+            from utils.encryption import DataEncryption
+            self.phone_encrypted = DataEncryption.encrypt_phone(phone_number)
+            self.phone_hash = DataEncryption.hash_for_search(phone_number)
+        else:
+            self.phone_encrypted = None
+            self.phone_hash = None
 
 # Address and Subscription models handled through service layer
 

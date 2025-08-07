@@ -16,17 +16,27 @@ class SecureUserService:
     
     @staticmethod
     def find_user_by_phone(phone: str) -> Optional[Dict]:
-        """Find user by phone number - simplified for current schema"""
+        """Find user by phone number using encrypted phone hash"""
         try:
+            # Create hash of the phone number for lookup
+            phone_hash = DataEncryption.hash_for_search(phone)
+            
             query = """
-                SELECT id, phone, first_name, last_name, email, custom_id,
+                SELECT id, phone_encrypted, phone_hash, first_name, last_name, email, custom_id,
                        created_at, is_active
                 FROM users 
-                WHERE phone = %s AND is_active = true
+                WHERE phone_hash = %s AND is_active = true
             """
-            user_data = DatabaseService.execute_query(query, (phone,), fetch_one=True)
+            user_data = DatabaseService.execute_query(query, (phone_hash,), fetch_one=True)
             
-            return user_data
+            # Convert to dict and decrypt phone number for return
+            if user_data:
+                user_dict = dict(user_data)
+                if user_dict.get('phone_encrypted'):
+                    user_dict['phone'] = DataEncryption.decrypt_phone(user_dict['phone_encrypted'])
+                return user_dict
+            
+            return None
             
         except Exception as e:
             logger.error(f"Error finding user by phone: {e}")
@@ -34,27 +44,36 @@ class SecureUserService:
     
     @staticmethod
     def create_user(phone: str) -> Optional[Dict]:
-        """Create new user - simplified for current schema"""
+        """Create new user with encrypted phone storage"""
         try:
             # Generate custom ID
             custom_id = CustomIDGenerator.generate_user_id()
             
+            # Encrypt phone data
+            phone_encrypted = DataEncryption.encrypt_phone(phone)
+            phone_hash = DataEncryption.hash_for_search(phone)
+            
             query = """
-                INSERT INTO users (phone, first_name, last_name, custom_id)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, phone, first_name, last_name, email, custom_id, created_at
+                INSERT INTO users (phone_encrypted, phone_hash, first_name, last_name, custom_id)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, phone_encrypted, phone_hash, first_name, last_name, email, custom_id, created_at
             """
             
             user_data = DatabaseService.execute_query(
                 query, 
                 (
-                    phone,
+                    phone_encrypted,
+                    phone_hash,
                     "Customer",  # Default name
                     "",
                     custom_id
                 ),
                 fetch_one=True
             )
+            
+            # Add decrypted phone for backwards compatibility
+            if user_data:
+                user_data['phone'] = phone
             
             return user_data
             
@@ -64,7 +83,7 @@ class SecureUserService:
     
     @staticmethod
     def create_user_with_details(phone: str, first_name: str, last_name: str) -> Optional[Dict]:
-        """Create new user with provided details"""
+        """Create new user with provided details and encrypted phone storage"""
         try:
             # Auto-capitalize first letter of names
             first_name = first_name.strip().title() if first_name else ""
@@ -73,22 +92,31 @@ class SecureUserService:
             # Generate custom ID
             custom_id = CustomIDGenerator.generate_user_id()
             
+            # Encrypt phone data
+            phone_encrypted = DataEncryption.encrypt_phone(phone)
+            phone_hash = DataEncryption.hash_for_search(phone)
+            
             query = """
-                INSERT INTO users (phone, first_name, last_name, custom_id)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, phone, first_name, last_name, email, custom_id, created_at
+                INSERT INTO users (phone_encrypted, phone_hash, first_name, last_name, custom_id)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, phone_encrypted, phone_hash, first_name, last_name, email, custom_id, created_at
             """
             
             user_data = DatabaseService.execute_query(
                 query, 
                 (
-                    phone,
+                    phone_encrypted,
+                    phone_hash,
                     first_name,
                     last_name,
                     custom_id
                 ),
                 fetch_one=True
             )
+            
+            # Add decrypted phone for backwards compatibility
+            if user_data:
+                user_data['phone'] = phone
             
             return user_data
             
