@@ -34,27 +34,7 @@ class User(db.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
     
-    @property
-    def phone(self):
-        """Decrypt and return phone number for backwards compatibility"""
-        if self.phone_encrypted:
-            try:
-                from utils.encryption import DataEncryption
-                decrypted = DataEncryption.decrypt_phone(self.phone_encrypted)
-                return decrypted if decrypted else None
-            except Exception:
-                return None
-        return None
     
-    def set_phone(self, phone_number: str):
-        """Set phone number with automatic encryption"""
-        if phone_number:
-            from utils.encryption import DataEncryption
-            self.phone_encrypted = DataEncryption.encrypt_phone(phone_number)
-            self.phone_hash = DataEncryption.hash_for_search(phone_number)
-        else:
-            self.phone_encrypted = None
-            self.phone_hash = None
 
 # Address and Subscription models handled through service layer
 

@@ -46,6 +46,19 @@ class DataMigration:
                             WHERE id = %s
                         """
                         DatabaseService.execute_query(update_query, (phone_hash, user_id))
+                        migrated_count += 1
+                        
+                except Exception as e:
+                    logger.error(f"Failed to migrate user {user['id']}: {e}")
+                    continue
+            
+            logger.info(f"Successfully migrated {migrated_count} user phone numbers")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error migrating user phone data: {e}")
+            return False
+                        DatabaseService.execute_query(update_query, (phone_hash, user_id))
                     
                     migrated_count += 1
                     logger.info(f"Encrypted phone for user {user_id}")
