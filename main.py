@@ -1059,6 +1059,14 @@ def delivery_fee_calculation():
     """Delivery fee calculation page between pre-checkout and final checkout."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot access delivery fee calculation: user_id {user_id} not found in database")
+            session.clear()
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
         # Get selected address ID from query params
         address_id = request.args.get('address_id', type=int)
@@ -1066,14 +1074,14 @@ def delivery_fee_calculation():
             flash('Please select a delivery address first.', 'error')
             return redirect(url_for('pre_checkout'))
 
-        # Check if cart has items
-        cart_items = CartService.get_cart_items(user_id)
+        # Check if cart has items using custom_id
+        cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:
             flash('Your cart is empty. Please add items before checkout.', 'error')
             return redirect(url_for('cart'))
 
-        # Get the selected address
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        # Get the selected address using custom_id
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         selected_address = None
 
         for addr in user_addresses:
@@ -1270,8 +1278,8 @@ def save_address_for_delivery():
 
         if address_id:
             flash('Address saved successfully!', 'success')
-            # Redirect to delivery fee calculation with new address selected
-            return redirect(url_for('delivery_fee_calculation', address_id=address_id))
+            # Redirect back to pre-checkout with the new address selected
+            return redirect(url_for('pre_checkout', selected_address=address_id))
         else:
             flash('Error saving address. Please try again.', 'error')
             return redirect(url_for('add_new_address_for_delivery'))
@@ -1389,7 +1397,8 @@ def update_address_for_delivery(address_id):
             if SecureAddressService.update_address(address_id, user_custom_id, address_data):
                 SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_delivery")
                 flash('Address updated successfully!', 'success')
-                return redirect(url_for('delivery_fee_calculation', address_id=address_id))
+                # Redirect back to pre-checkout with the updated address selected
+                return redirect(url_for('pre_checkout', selected_address=address_id))
             else:
                 flash('Error updating address.', 'error')
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
