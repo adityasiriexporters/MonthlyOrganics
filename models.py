@@ -15,7 +15,7 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     phone_encrypted = db.Column(db.Text, nullable=True)  # Encrypted phone number
@@ -28,7 +28,7 @@ class User(db.Model):
     # Relationships will be added when needed
     
     def __repr__(self):
-        return f'<User {self.email}>'
+        return f'<User {self.custom_id or self.id}>'
     
     @property
     def full_name(self):

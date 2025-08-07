@@ -22,7 +22,7 @@ class SecureUserService:
             phone_hash = DataEncryption.hash_for_search(phone)
             
             query = """
-                SELECT id, phone_encrypted, phone_hash, first_name, last_name, email, custom_id,
+                SELECT id, phone_encrypted, phone_hash, first_name, last_name, custom_id,
                        created_at, is_active
                 FROM users 
                 WHERE phone_hash = %s AND is_active = true
@@ -56,7 +56,7 @@ class SecureUserService:
             query = """
                 INSERT INTO users (phone_encrypted, phone_hash, first_name, last_name, custom_id)
                 VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, phone_encrypted, phone_hash, first_name, last_name, email, custom_id, created_at
+                RETURNING id, phone_encrypted, phone_hash, first_name, last_name, custom_id, created_at
             """
             
             user_data = DatabaseService.execute_query(
@@ -99,7 +99,7 @@ class SecureUserService:
             query = """
                 INSERT INTO users (phone_encrypted, phone_hash, first_name, last_name, custom_id)
                 VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, phone_encrypted, phone_hash, first_name, last_name, email, custom_id, created_at
+                RETURNING id, phone_encrypted, phone_hash, first_name, last_name, custom_id, created_at
             """
             
             user_data = DatabaseService.execute_query(

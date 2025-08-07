@@ -267,20 +267,17 @@ class UserService:
         return user
     
     @staticmethod
-    def create_user(phone: str, first_name: str = "User", last_name: str = "", email: str = None) -> Optional['User']:
+    def create_user(phone: str, first_name: str = "User", last_name: str = "") -> Optional['User']:
         """Create new user with phone number using encrypted storage"""
         from models import User, db
         try:
             # Generate default values if not provided
             if not last_name:
                 last_name = phone[-4:]
-            if not email:
-                email = f"user{phone}@monthlyorganics.com"
                 
             user = User(
                 first_name=first_name,
-                last_name=last_name,
-                email=email
+                last_name=last_name
             )
             # Use the set_phone method which handles encryption
             user.set_phone(phone)

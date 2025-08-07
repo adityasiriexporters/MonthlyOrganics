@@ -1792,14 +1792,14 @@ def get_all_customers_with_stats():
 
         # Get customer data with order statistics
         query = """
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone_encrypted, u.custom_id,
+            SELECT u.id, u.first_name, u.last_name, u.phone_encrypted, u.custom_id,
                    u.created_at, u.is_active,
                    COUNT(o.id) as order_count,
                    MAX(o.created_at) as last_order_date,
                    COALESCE(SUM(o.total_amount), 0) as total_spent
             FROM users u
             LEFT JOIN orders o ON u.id = o.user_id
-            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_encrypted, u.custom_id, u.created_at, u.is_active
+            GROUP BY u.id, u.first_name, u.last_name, u.phone_encrypted, u.custom_id, u.created_at, u.is_active
             ORDER BY u.created_at DESC
         """
         cursor.execute(query)
@@ -1867,7 +1867,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
 
         # Base query with parameterized conditions
         base_query = """
-            SELECT u.id, u.first_name, u.last_name, u.email, u.phone_encrypted, u.custom_id,
+            SELECT u.id, u.first_name, u.last_name, u.phone_encrypted, u.custom_id,
                    u.created_at, u.is_active,
                    COUNT(o.id) as order_count,
                    MAX(o.created_at) as last_order_date,
@@ -1880,11 +1880,11 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         conditions = []
         params = []
 
-        # Search filter (name or email)
+        # Search filter (name only)
         if search and search.strip():
-            conditions.append("(LOWER(u.first_name) LIKE LOWER(%s) OR LOWER(u.last_name) LIKE LOWER(%s) OR LOWER(u.email) LIKE LOWER(%s))")
+            conditions.append("(LOWER(u.first_name) LIKE LOWER(%s) OR LOWER(u.last_name) LIKE LOWER(%s))")
             search_param = f"%{search.strip()}%"
-            params.extend([search_param, search_param, search_param])
+            params.extend([search_param, search_param])
 
         # Date range filter
         if date_from:
@@ -1908,7 +1908,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
             query = base_query
 
         query += """
-            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_encrypted, u.custom_id, u.created_at, u.is_active
+            GROUP BY u.id, u.first_name, u.last_name, u.phone_encrypted, u.custom_id, u.created_at, u.is_active
         """
 
         # Minimum orders filter (applied after GROUP BY)
@@ -2105,7 +2105,7 @@ def admin_customers_export():
 
         # CSV headers
         writer.writerow([
-            'Customer ID', 'First Name', 'Last Name', 'Email', 'Phone',
+            'Customer ID', 'First Name', 'Last Name', 'Phone',
             'Joined Date', 'Status', 'Order Count', 'Last Order Date', 'Total Spent'
         ])
 
@@ -2115,7 +2115,7 @@ def admin_customers_export():
                 customer['id'],
                 customer['first_name'] or '',
                 customer['last_name'] or '',
-                customer['email'] or '',
+
                 customer['phone'] or '',
                 customer['created_at'].strftime('%Y-%m-%d') if customer['created_at'] else '',
                 'Active' if customer['is_active'] else 'Inactive',
