@@ -28,18 +28,17 @@ class DatabaseExporter:
                 if 'phone_encrypted' in row_dict:
                     decrypted_phone = DataEncryption.decrypt_phone(row_dict['phone_encrypted'])
                     if decrypted_phone:
-                        # Use phone_decrypted for export clarity
-                        decrypted_row['phone_decrypted'] = decrypted_phone
-                    # Keep encrypted version for reference
+                        # Use phone for export (clean field name)
+                        decrypted_row['phone'] = decrypted_phone
                     
             # Handle address table encryption
             elif table_name == 'addresses':
                 encrypted_fields = {
-                    'house_number_encrypted': 'house_number_decrypted',
-                    'floor_door_encrypted': 'floor_door_decrypted',
-                    'contact_number_encrypted': 'contact_number_decrypted',
-                    'nearby_landmark_encrypted': 'nearby_landmark_decrypted',
-                    'receiver_name_encrypted': 'receiver_name_decrypted'
+                    'house_number_encrypted': 'house_number',
+                    'floor_door_encrypted': 'floor_door',
+                    'contact_number_encrypted': 'contact_number',
+                    'nearby_landmark_encrypted': 'nearby_landmark',
+                    'receiver_name_encrypted': 'receiver_name'
                 }
                 
                 for encrypted_field, decrypted_field in encrypted_fields.items():
@@ -52,6 +51,35 @@ class DatabaseExporter:
             
         except Exception as e:
             logger.error(f"Error decrypting row data for table {table_name}: {e}")
+            return row_dict
+    
+    @staticmethod
+    def _remove_encrypted_fields(table_name, row_dict):
+        """Remove encrypted fields from row data when decryption is enabled"""
+        try:
+            cleaned_row = row_dict.copy()
+            
+            # Define encrypted fields to remove by table
+            encrypted_fields_to_remove = {
+                'users': ['phone_encrypted', 'phone_hash'],
+                'addresses': [
+                    'house_number_encrypted',
+                    'floor_door_encrypted', 
+                    'contact_number_encrypted',
+                    'nearby_landmark_encrypted',
+                    'receiver_name_encrypted'
+                ]
+            }
+            
+            # Remove encrypted fields for this table type
+            if table_name in encrypted_fields_to_remove:
+                for field_to_remove in encrypted_fields_to_remove[table_name]:
+                    cleaned_row.pop(field_to_remove, None)
+            
+            return cleaned_row
+            
+        except Exception as e:
+            logger.error(f"Error removing encrypted fields for table {table_name}: {e}")
             return row_dict
     
     @staticmethod
@@ -103,6 +131,8 @@ class DatabaseExporter:
                 # Apply decryption if requested
                 if decrypt_data:
                     row_dict = DatabaseExporter._decrypt_row_data(table_name, row_dict)
+                    # Remove encrypted fields when decryption is enabled
+                    row_dict = DatabaseExporter._remove_encrypted_fields(table_name, row_dict)
                 
                 # Serialize values for export
                 processed_row = {}

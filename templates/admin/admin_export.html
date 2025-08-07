@@ -26,7 +26,7 @@
                             <ul class="list-disc list-inside space-y-1">
                                 <li>Exported data includes all records and metadata</li>
                                 <li>Choose whether to export encrypted or decrypted data</li>
-                                <li>Decrypted exports add new fields (e.g., phone_decrypted)</li>
+                                <li>Decrypted exports show readable fields and hide encrypted columns</li>
                                 <li>File will be named with current timestamp</li>
                                 <li>Large databases may take time to export</li>
                             </ul>
@@ -91,7 +91,7 @@
                                    class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
                             <label for="decrypt-yes" class="ml-3 block text-sm font-medium text-gray-700">
                                 Export with Decryption
-                                <span class="text-xs text-gray-500 block">Decrypts sensitive fields and adds them to export</span>
+                                <span class="text-xs text-gray-500 block">Decrypts sensitive fields and replaces encrypted columns with readable data</span>
                             </label>
                         </div>
                     </div>
