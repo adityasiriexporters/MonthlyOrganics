@@ -256,21 +256,21 @@ class SecureAddressService:
             return None
     
     @staticmethod
-    def set_default_address(address_id: int, user_id: int) -> bool:
-        """Set an address as default (no encryption needed)"""
+    def set_default_address(address_id: int, user_custom_id: str) -> bool:
+        """Set an address as default using custom_id"""
         try:
             # First unset all defaults for this user
             DatabaseService.execute_query(
-                "UPDATE addresses SET is_default = false WHERE user_id = %s",
-                (user_id,),
+                "UPDATE addresses SET is_default = false WHERE user_custom_id = %s",
+                (user_custom_id,),
                 fetch_one=False,
                 fetch_all=False
             )
             
             # Set the specified address as default
             result = DatabaseService.execute_query(
-                "UPDATE addresses SET is_default = true WHERE id = %s AND user_id = %s",
-                (address_id, user_id),
+                "UPDATE addresses SET is_default = true WHERE id = %s AND user_custom_id = %s",
+                (address_id, user_custom_id),
                 fetch_one=False,
                 fetch_all=False
             )
@@ -283,8 +283,8 @@ class SecureAddressService:
             return False
     
     @staticmethod
-    def update_address(address_id: int, user_id: int, address_data: Dict) -> bool:
-        """Update an existing address with encrypted sensitive data"""
+    def update_address(address_id: int, user_custom_id: str, address_data: Dict) -> bool:
+        """Update an existing address with encrypted sensitive data using custom_id"""
         try:
             # Prepare secure address data
             secure_data = SecureDataHandler.prepare_address_data_for_storage(address_data)
@@ -292,8 +292,8 @@ class SecureAddressService:
             # If this is set as default, unset other defaults first
             if secure_data.get('is_default'):
                 DatabaseService.execute_query(
-                    "UPDATE addresses SET is_default = false WHERE user_id = %s AND id != %s",
-                    (user_id, address_id),
+                    "UPDATE addresses SET is_default = false WHERE user_custom_id = %s AND id != %s",
+                    (user_custom_id, address_id),
                     fetch_one=False,
                     fetch_all=False
                 )
@@ -314,7 +314,7 @@ class SecureAddressService:
                     address_notes = %s,
                     receiver_name_encrypted = %s,
                     is_default = %s
-                WHERE id = %s AND user_id = %s
+                WHERE id = %s AND user_custom_id = %s
             """
             
             result = DatabaseService.execute_query(
@@ -335,7 +335,7 @@ class SecureAddressService:
                     secure_data.get('receiver_name_encrypted'),
                     secure_data.get('is_default', False),
                     address_id,
-                    user_id
+                    user_custom_id
                 ),
                 fetch_one=False,
                 fetch_all=False
@@ -349,12 +349,12 @@ class SecureAddressService:
             return False
     
     @staticmethod
-    def delete_address(address_id: int, user_id: int) -> bool:
-        """Delete an address (secure deletion)"""
+    def delete_address(address_id: int, user_custom_id: str) -> bool:
+        """Delete an address using custom_id"""
         try:
             result = DatabaseService.execute_query(
-                "DELETE FROM addresses WHERE id = %s AND user_id = %s",
-                (address_id, user_id),
+                "DELETE FROM addresses WHERE id = %s AND user_custom_id = %s",
+                (address_id, user_custom_id),
                 fetch_one=False,
                 fetch_all=False
             )

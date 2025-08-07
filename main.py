@@ -320,6 +320,13 @@ def set_default_address(address_id):
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot set default address: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
         if SecureAddressService.set_default_address(address_id, user_custom_id):
             SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_default")
@@ -484,6 +491,13 @@ def delete_address(address_id):
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot delete address: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
         if SecureAddressService.delete_address(address_id, user_custom_id):
             SecurityAuditLogger.log_data_access(user_id, "DELETE", "address")
