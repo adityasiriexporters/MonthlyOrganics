@@ -440,6 +440,16 @@ def update_address(address_id):
         if requested_nickname and requested_nickname.lower() in existing_nicknames:
             final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
+        # Find the current address to preserve its default status
+        current_address = None
+        for addr in existing_addresses:
+            if addr['id'] == address_id:
+                current_address = addr
+                break
+        
+        # Preserve the existing default status - if it was default, keep it default
+        is_currently_default = current_address.get('is_default', False) if current_address else False
+
         # Prepare address data
         address_data = {
             'nickname': final_nickname,
@@ -455,7 +465,7 @@ def update_address(address_id):
             'contact_number': form_data.get('contact_number', ''),
             'address_notes': form_data.get('address_notes', ''),
             'receiver_name': form_data.get('receiver_name', ''),
-            'is_default': bool(form_data.get('is_default'))
+            'is_default': is_currently_default  # Preserve existing default status
         }
 
         # Validate address data
@@ -1368,6 +1378,16 @@ def update_address_for_delivery(address_id):
             if requested_nickname.lower() in existing_nicknames:
                 final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
+            # Find the current address to preserve its default status
+            current_address = None
+            for addr in existing_addresses:
+                if addr['id'] == address_id:
+                    current_address = addr
+                    break
+            
+            # Preserve the existing default status - if it was default, keep it default
+            is_currently_default = current_address.get('is_default', False) if current_address else False
+
             # Prepare address data
             address_data = {
                 'nickname': final_nickname,
@@ -1383,7 +1403,7 @@ def update_address_for_delivery(address_id):
                 'contact_number': form_data.get('contact_number', ''),
                 'address_notes': form_data.get('address_notes', ''),
                 'receiver_name': form_data.get('receiver_name', ''),
-                'is_default': bool(form_data.get('is_default'))
+                'is_default': is_currently_default  # Preserve existing default status
             }
 
             # Validate address data
