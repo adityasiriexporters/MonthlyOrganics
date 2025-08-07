@@ -28,6 +28,9 @@ class DatabaseExporter:
                 if 'phone_encrypted' in row_dict:
                     decrypted_phone = DataEncryption.decrypt_phone(row_dict['phone_encrypted'])
                     if decrypted_phone:
+                        # Use 'phone' for consistency with admin panel expectations
+                        decrypted_row['phone'] = decrypted_phone
+                        # Also add phone_decrypted for export clarity
                         decrypted_row['phone_decrypted'] = decrypted_phone
                     # Keep encrypted version for reference
                     
