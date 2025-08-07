@@ -1004,6 +1004,13 @@ def pre_checkout():
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot access pre-checkout: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
         # Check if cart has items
         cart_items = CartService.get_cart_items(user_custom_id)
@@ -1011,8 +1018,8 @@ def pre_checkout():
             flash('Your cart is empty. Please add items before checkout.', 'error')
             return redirect(url_for('cart'))
 
-        # Get user's addresses
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        # Get user's addresses using custom_id
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses_checkout")
 
         # Check if a specific address should be selected (from query params)
