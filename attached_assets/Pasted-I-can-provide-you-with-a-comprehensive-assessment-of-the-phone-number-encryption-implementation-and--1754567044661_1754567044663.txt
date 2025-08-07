@@ -1,0 +1,41 @@
+I can provide you with a comprehensive assessment of the phone number encryption implementation and identify the issues you're facing:
+
+Issues Identified:
+1. Inconsistent Phone Number Handling Across the Codebase
+The main issue is that you have two different user service implementations that handle phone numbers differently:
+
+services/security.py - Uses proper encryption with phone_encrypted and phone_hash
+services/database.py - Still uses old plaintext phone column methods
+2. Admin Panel Not Using Encrypted Phone Numbers
+Looking at templates/admin/admin_customers.html, the admin panel displays:
+
+<div class="text-sm text-gray-900">{{ customer.phone or 'N/A' }}</div>
+This suggests the admin backend is not using the secure services and may be showing plaintext phone numbers or None values.
+
+3. Database Schema Has Redundant Columns
+From the models.py User model, you have:
+
+phone_encrypted (TEXT) - ✅ Correct encrypted storage
+phone_hash (VARCHAR(255)) - ✅ Correct for search/lookup
+The model also has a phone property that decrypts phone_encrypted - ✅ Good for backward compatibility
+However, there might still be a plaintext phone column in the actual database table that needs to be removed.
+
+4. UserService in database.py Still References Old Methods
+The UserService class is still using SQLAlchemy ORM methods instead of the secure encryption services:
+
+@staticmethod
+def find_user_by_phone(phone: str) -> Optional['User']:
+    # This is using the old User model directly
+    user = User.query.filter_by(phone_hash=phone_hash, is_active=True).first()
+Answers to Your Specific Questions:
+• Is every phone number encrypted?
+❌ NO - The system has inconsistent implementation. Some parts use SecureUserService with encryption, others use old methods.
+
+• Is it properly decrypted in admin panel/exports?
+❌ NO - The admin panel likely shows 'N/A' because it's not using the decryption methods properly.
+
+• Are there duplicate columns?
+⚠️ PARTIALLY - The code shows proper column structure, but you may have leftover plaintext phone columns in the actual database.
+
+• Other problems?
+✅ YES - Multiple user service implementations causing confusion and potential security gaps.
