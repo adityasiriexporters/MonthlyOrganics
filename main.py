@@ -138,6 +138,14 @@ def cart():
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot access cart: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
+        
         logger.info(f"Cart page accessed by user_id: {user_id}, custom_id: {user_custom_id}")
 
         # Use CartService for database operations with custom_id
@@ -192,6 +200,13 @@ def addresses():
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot access addresses: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
         # Get user's addresses using SecureAddressService with custom_id
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
@@ -863,6 +878,13 @@ def add_to_cart(variation_id):
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot add to cart: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            return "Session expired. Please login again.", 401
+        
         logger.info(f"Add to cart request for variation {variation_id} by user {user_custom_id}")
 
         # Use CartService to add item with custom_id
