@@ -10,7 +10,7 @@ from decimal import Decimal
 
 # Import services and utilities
 from models import db
-from services.database import CartService
+from services.database import CartService, DatabaseService
 from services.security import SecureUserService, SecureAddressService, SecurityAuditLogger
 from utils.decorators import login_required
 from validators.forms import FormValidator
@@ -129,16 +129,17 @@ app.jinja_env.filters['format_date_ist'] = format_date_ist
 app.jinja_env.filters['format_time_ist'] = format_time_ist
 
 @app.route('/cart')
-@login_required
 def cart():
-    """Display user's shopping cart using CartService with custom_id."""
-    try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
-        logger.info(f"Cart page accessed by user_id: {user_id}, custom_id: {user_custom_id}")
+    """Cart page - shows user's cart items"""
+    if 'user_custom_id' not in session:
+        flash('Please log in to view your cart.', 'info')
+        return redirect(url_for('login'))
 
-        # Use CartService for database operations with custom_id
+    try:
+        # Use custom_id directly from session for cart operations
+        user_custom_id = session['user_custom_id']
         cart_items = CartService.get_cart_items(user_custom_id)
+        logger.info(f"Cart page accessed for user_custom_id: {user_custom_id}")
         logger.info(f"Found {len(cart_items)} cart items for user {user_custom_id}")
 
         # Calculate cart totals
@@ -187,12 +188,12 @@ def profile_settings():
 def addresses():
     """Addresses page route using custom_id."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Addresses page accessed for user_custom_id: {user_custom_id}")
 
         # Get user's addresses using SecureAddressService with custom_id
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "addresses") # Assuming user_id is still available for audit
         logger.info(f"Found {len(user_addresses)} addresses for user {user_custom_id}")
 
         # Create response with cache control headers to prevent browser caching
@@ -230,8 +231,8 @@ def add_address():
 def save_address():
     """Save new address."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Saving address for user_custom_id: {user_custom_id}")
 
         # Log all form data for debugging
         logger.info(f"Received form data: {dict(request.form)}")
@@ -274,7 +275,7 @@ def save_address():
         address_id = SecureAddressService.create_address(user_custom_id, address_data)
         logger.info(f"Address creation result: {address_id}")
 
-        SecurityAuditLogger.log_data_access(user_id, "CREATE", "address", bool(address_id))
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "CREATE", "address", bool(address_id)) # Assuming user_id is still available for audit
 
         if address_id:
             flash('Address saved successfully!', 'success')
@@ -300,11 +301,11 @@ def save_address():
 def set_default_address(address_id):
     """Set an address as default using custom_id."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Setting default address for user_custom_id: {user_custom_id}, address_id: {address_id}")
 
         if SecureAddressService.set_default_address(address_id, user_custom_id):
-            SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_default")
+            SecurityAuditLogger.log_data_access(session.get('user_id'), "UPDATE", "address_default") # Assuming user_id is still available for audit
 
             # Return JSON for AJAX calls, redirect for normal calls
             if request.method == 'POST' and request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
@@ -336,10 +337,10 @@ def set_default_address(address_id):
 def edit_address(address_id):
     """Edit address page."""
     try:
-        user_id = session['user_id']
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Editing address {address_id} for user_custom_id: {user_custom_id}")
 
         # Get the specific address using SecureAddressService with custom_id
-        user_custom_id = get_user_custom_id(user_id)
         addresses = SecureAddressService.get_user_addresses(user_custom_id)
         address = None
 
@@ -352,7 +353,7 @@ def edit_address(address_id):
             flash('Address not found.', 'error')
             return redirect(url_for('addresses'))
 
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "address")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "address") # Assuming user_id is still available for audit
 
         # Create response with cache control headers to prevent browser caching
         response = make_response(render_template('edit_address.html', 
@@ -376,8 +377,8 @@ def edit_address(address_id):
 def update_address(address_id):
     """Update an existing address using custom_id."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Updating address {address_id} for user_custom_id: {user_custom_id}")
 
         # Get form data
         form_data = request.form.to_dict()
@@ -407,7 +408,6 @@ def update_address(address_id):
 
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
-        user_custom_id = get_user_custom_id(user_id)
         existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
 
@@ -442,7 +442,7 @@ def update_address(address_id):
 
         # Update address using SecureAddressService
         if SecureAddressService.update_address(address_id, user_custom_id, address_data):
-            SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
+            SecurityAuditLogger.log_data_access(session.get('user_id'), "UPDATE", "address") # Assuming user_id is still available for audit
             flash('Address updated successfully!', 'success')
             # Create redirect response with cache control headers
             response = make_response(redirect(url_for('addresses')))
@@ -464,11 +464,11 @@ def update_address(address_id):
 def delete_address(address_id):
     """Delete an address using custom_id."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Deleting address {address_id} for user_custom_id: {user_custom_id}")
 
         if SecureAddressService.delete_address(address_id, user_custom_id):
-            SecurityAuditLogger.log_data_access(user_id, "DELETE", "address")
+            SecurityAuditLogger.log_data_access(session.get('user_id'), "DELETE", "address") # Assuming user_id is still available for audit
             flash('Address deleted successfully!', 'success')
         else:
             flash('Error deleting address.', 'error')
@@ -489,10 +489,10 @@ def delete_address(address_id):
 def api_addresses():
     """API endpoint to get user addresses for dropdown."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Fetching addresses API for user_custom_id: {user_custom_id}")
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "addresses_api") # Assuming user_id is still available for audit
 
         # Convert to simple list for JSON response
         addresses_list = []
@@ -805,7 +805,7 @@ def verify_otp():
             # Check if user was already created during this session to prevent duplicates
             existing_user = SecureUserService.find_user_by_phone(mobile_number or '')
             if existing_user:
-                # User was already created, use existing user
+                # User already exists, use existing user
                 user_id = existing_user['id']
                 logger.info(f"User already exists, using existing account: {user_id}")
             else:
@@ -829,7 +829,9 @@ def verify_otp():
 
         # Login user with permanent session
         session.permanent = True  # Make session permanent (lasts 30 days)
-        session['user_id'] = user_id
+        # Store user custom_id in session instead of internal ID
+        session['user_custom_id'] = user['custom_id'] 
+        session['user_phone'] = mobile_number
 
         # Clear OTP data from session
         session.pop('otp', None)
@@ -837,6 +839,7 @@ def verify_otp():
         session.pop('first_name', None)
         session.pop('last_name', None)
         session.pop('otp_attempts', None)
+        session.pop('is_existing_user', None) # Remove this flag after successful login/signup
 
         flash('Login successful!', 'success')
         return redirect(url_for('index'))
@@ -848,51 +851,60 @@ def verify_otp():
 
 @app.route('/logout')
 def logout():
-    """Logout user by clearing session."""
-    session.clear()
+    """Log out the current user"""
+    session.pop('user_custom_id', None)
+    session.pop('user_phone', None)
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('index'))
 
 @app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
 @login_required
 def add_to_cart(variation_id):
-    """Add item to cart using CartService with custom_id."""
+    """Add item to cart - requires login"""
+    if 'user_custom_id' not in session:
+        return jsonify({'success': False, 'message': 'Please log in first'}), 401
+
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
-        logger.info(f"Add to cart request for variation {variation_id} by user {user_custom_id}")
+        data = request.get_json()
+        variation_id = data.get('variation_id') # This is redundant, variation_id is passed in URL
 
-        # Use CartService to add item with custom_id
-        new_quantity = CartService.add_to_cart(user_custom_id, variation_id)
+        if not variation_id:
+            return jsonify({'success': False, 'message': 'Invalid product variation'}), 400
 
-        if new_quantity is None:
-            return "Error adding to cart", 500
+        # Use custom_id directly from session for cart operations
+        user_custom_id = session['user_custom_id']
+        quantity = CartService.add_to_cart(user_custom_id, variation_id)
+
+        if quantity is None:
+            logger.error(f"CartService.add_to_cart returned None for user {user_custom_id}, variation {variation_id}")
+            return jsonify({'success': False, 'message': 'Error adding to cart'}), 500
 
         # Return quantity stepper HTML using template helper
-        return render_store_quantity_stepper(variation_id, new_quantity)
+        return render_store_quantity_stepper(variation_id, quantity)
 
     except Exception as e:
         logger.error(f"Error adding to cart: {e}")
-        return "Error adding to cart", 500
+        return jsonify({'success': False, 'message': 'An unexpected error occurred'}), 500
 
 @app.route('/update-cart/<int:variation_id>/<string:action>', methods=['POST'])
 @login_required
 def update_cart(variation_id, action):
     """Update cart item quantity using CartService and template helpers."""
     try:
-        user_id = session['user_id']
-        logger.info(f"Cart update request: user={user_id}, variation={variation_id}, action={action}")
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Cart update request: user={user_custom_id}, variation={variation_id}, action={action}")
 
         # Validate action
         if action not in ['incr', 'decr']:
             return "Invalid action", 400
 
         # Use CartService to update quantity with custom_id
-        user_custom_id = get_user_custom_id(user_id)
         new_quantity = CartService.update_cart_quantity(user_custom_id, variation_id, action)
 
         if new_quantity is None:
-            return "Item not found in cart", 404
+            # Item not found or other service error
+            logger.warning(f"Item {variation_id} not found in cart for user {user_custom_id} or error during update.")
+            return "Item not found in cart or update failed", 404
 
         # If quantity becomes 0, remove the item
         if new_quantity <= 0:
@@ -910,7 +922,8 @@ def update_cart(variation_id, action):
         item = CartService.get_cart_item_details(user_custom_id, variation_id)
 
         if not item:
-            return "Item not found", 404
+            logger.error(f"Failed to retrieve item details after update for user {user_custom_id}, variation {variation_id}")
+            return "Item details not found", 404
 
         # Check if request comes from store page (referer check)
         referer = request.headers.get('Referer', '')
@@ -930,9 +943,8 @@ def update_cart(variation_id, action):
 def cart_totals():
     """Return updated cart totals using CartService and template helpers."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
-        logger.info(f"Calculating cart totals for user {user_custom_id}")
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Calculating cart totals for user_custom_id: {user_custom_id}")
 
         # Get cart items using CartService
         cart_items = CartService.get_cart_items(user_custom_id)
@@ -963,8 +975,8 @@ def cart_totals():
 def pre_checkout():
     """Pre-checkout page for address selection and confirmation."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Pre-checkout accessed for user_custom_id: {user_custom_id}")
 
         # Check if cart has items
         cart_items = CartService.get_cart_items(user_custom_id)
@@ -974,7 +986,7 @@ def pre_checkout():
 
         # Get user's addresses
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses_checkout")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "addresses_checkout") # Assuming user_id is still available for audit
 
         # Check if a specific address should be selected (from query params)
         selected_address_id = request.args.get('selected_address', type=int)
@@ -1012,8 +1024,8 @@ def pre_checkout():
 def delivery_fee_calculation():
     """Delivery fee calculation page between pre-checkout and final checkout."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Delivery fee calculation for user_custom_id: {user_custom_id}")
 
         # Get selected address ID from query params
         address_id = request.args.get('address_id', type=int)
@@ -1071,7 +1083,7 @@ def delivery_fee_calculation():
         # Calculate total
         total = subtotal + delivery_fee
 
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "delivery_fee_calculation")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "delivery_fee_calculation") # Assuming user_id is still available for audit
 
         return render_template('delivery_fee_calculation.html',
                              selected_address=selected_address,
@@ -1093,8 +1105,7 @@ def delivery_fee_calculation():
 def update_shipping_option():
     """Update shipping option selection and recalculate totals."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
         data = request.get_json()
 
         logger.debug(f"Update shipping option request data: {data}")
@@ -1175,8 +1186,8 @@ def add_new_address_for_delivery():
 def save_address_for_delivery():
     """Save new address and return to pre-checkout with new address selected."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Saving address for delivery for user_custom_id: {user_custom_id}")
 
         # Generate incremental label if nickname already exists
         requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
@@ -1209,7 +1220,7 @@ def save_address_for_delivery():
 
         # Save address
         address_id = SecureAddressService.create_address(user_custom_id, address_data)
-        SecurityAuditLogger.log_data_access(user_id, "CREATE", "address_delivery", bool(address_id))
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "CREATE", "address_delivery", bool(address_id)) # Assuming user_id is still available for audit
 
         if address_id:
             flash('Address saved successfully!', 'success')
@@ -1229,8 +1240,8 @@ def save_address_for_delivery():
 def edit_address_for_delivery(address_id):
     """Edit address page specifically for delivery checkout."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Editing address {address_id} for delivery for user_custom_id: {user_custom_id}")
 
         # Get the specific address
         addresses = SecureAddressService.get_user_addresses(user_custom_id)
@@ -1245,7 +1256,7 @@ def edit_address_for_delivery(address_id):
             flash('Address not found.', 'error')
             return redirect(url_for('pre_checkout'))
 
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "address_edit_delivery")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "address_edit_delivery") # Assuming user_id is still available for audit
 
         return render_template('edit_address_for_delivery.html',
                              address=address,
@@ -1261,8 +1272,8 @@ def edit_address_for_delivery(address_id):
 def update_address_for_delivery(address_id):
     """Update address and return to pre-checkout with updated address selected."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Updating address {address_id} for delivery for user_custom_id: {user_custom_id}")
         action = request.form.get('action', 'update_and_use')
 
         if action == 'update_and_use':
@@ -1317,7 +1328,7 @@ def update_address_for_delivery(address_id):
 
             # Update address
             if SecureAddressService.update_address(address_id, user_custom_id, address_data):
-                SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_delivery")
+                SecurityAuditLogger.log_data_access(session.get('user_id'), "UPDATE", "address_delivery") # Assuming user_id is still available for audit
                 flash('Address updated successfully!', 'success')
                 return redirect(url_for('delivery_fee_calculation', address_id=address_id))
             else:
@@ -1338,8 +1349,8 @@ def update_address_for_delivery(address_id):
 def checkout():
     """Final checkout page with order summary and payment."""
     try:
-        user_id = session['user_id']
-        user_custom_id = get_user_custom_id(user_id)
+        user_custom_id = session['user_custom_id']
+        logger.info(f"Checkout accessed for user_custom_id: {user_custom_id}")
         address_id = request.args.get('address_id', type=int)
 
         if not address_id:
@@ -1370,7 +1381,7 @@ def checkout():
         delivery_fee = Decimal('50.00') if subtotal > 0 else Decimal('0.00')
         total = subtotal + delivery_fee
 
-        SecurityAuditLogger.log_data_access(user_id, "VIEW", "checkout")
+        SecurityAuditLogger.log_data_access(session.get('user_id'), "VIEW", "checkout") # Assuming user_id is still available for audit
 
         return render_template('checkout.html',
                              cart_items=cart_items,
