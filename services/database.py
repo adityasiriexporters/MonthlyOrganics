@@ -253,7 +253,7 @@ class CartService:
         return dict(result) if result else None
 
 class UserService:
-    """Service for user-related database operations - Updated for encrypted phone storage"""
+    """Service for user-related database operations using encrypted phone storage"""
     
     @staticmethod
     def find_user_by_phone(phone: str) -> Optional['User']:
@@ -267,14 +267,20 @@ class UserService:
         return user
     
     @staticmethod
-    def create_user(phone: str) -> Optional['User']:
+    def create_user(phone: str, first_name: str = "User", last_name: str = "", email: str = None) -> Optional['User']:
         """Create new user with phone number using encrypted storage"""
         from models import User, db
         try:
+            # Generate default values if not provided
+            if not last_name:
+                last_name = phone[-4:]
+            if not email:
+                email = f"user{phone}@monthlyorganics.com"
+                
             user = User(
-                first_name="User",
-                last_name=phone[-4:],
-                email=f"user{phone}@monthlyorganics.com"
+                first_name=first_name,
+                last_name=last_name,
+                email=email
             )
             # Use the set_phone method which handles encryption
             user.set_phone(phone)
@@ -286,6 +292,12 @@ class UserService:
             logger.error(f"Error creating user: {e}")
             db.session.rollback()
             return None
+    
+    @staticmethod
+    def find_user_by_id(user_id: int) -> Optional['User']:
+        """Find user by ID"""
+        from models import User
+        return User.query.filter_by(id=user_id, is_active=True).first()
 
 class AddressService:
     """Service for address-related database operations"""

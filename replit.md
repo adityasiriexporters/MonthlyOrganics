@@ -34,6 +34,8 @@ The application adheres to a Flask web application architecture, emphasizing sep
 
 **Recent Changes (August 2025):**
 -   **Phone Number Encryption Migration:** Successfully migrated all user phone numbers from plaintext to encrypted storage. The system now uses `phone_encrypted` and `phone_hash` columns for secure storage and fast lookup, while maintaining backwards compatibility through SQLAlchemy property methods. The plaintext `phone` column has been removed from the database.
+-   **Admin Panel Encryption Support:** Updated all admin customer management functions to work with encrypted phone data. Fixed SQL queries in `get_all_customers_with_stats()` and `get_filtered_customers()` to use `phone_encrypted` column and properly decrypt data for display.
+-   **Unified Service Layer:** Consolidated phone lookup functionality across both UserService (ORM) and SecureUserService (raw SQL) to use consistent encryption methods. Both services now provide identical results for phone-based user searches.
 
 ## External Dependencies
 
