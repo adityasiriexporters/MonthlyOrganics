@@ -115,26 +115,29 @@ def init_db(app):
         try:
             # Create all tables
             db.create_all()
+            
+            # Run email removal migration if needed
+            try:
+                from utils.remove_email_migration import EmailRemovalMigration
+                EmailRemovalMigration.run_migration()
+            except Exception as e:
+                logger.warning(f"Email migration warning (might already be complete): {e}")
+            
             logger.info("Database tables created successfully")
             
             # Add sample data if tables are empty
             if Product.query.count() == 0:
                 sample_products = [
                     Product(name='Organic Apples', description='Fresh organic apples from local orchards', 
-                           category='fruit', season='fall', origin_farm='Green Valley Farm', 
-                           price_per_unit=2.50, unit_type='pound'),
+                           category_id=1),
                     Product(name='Organic Carrots', description='Sweet organic carrots grown locally', 
-                           category='vegetable', season='year-round', origin_farm='Sunrise Gardens', 
-                           price_per_unit=1.75, unit_type='pound'),
+                           category_id=2),
                     Product(name='Organic Spinach', description='Fresh organic spinach leaves', 
-                           category='vegetable', season='spring', origin_farm='Healthy Harvest Farm', 
-                           price_per_unit=3.25, unit_type='bunch'),
+                           category_id=2),
                     Product(name='Organic Tomatoes', description='Vine-ripened organic tomatoes', 
-                           category='vegetable', season='summer', origin_farm='Sunny Acres', 
-                           price_per_unit=4.00, unit_type='pound'),
+                           category_id=2),
                     Product(name='Organic Basil', description='Fresh organic basil for cooking', 
-                           category='herb', season='summer', origin_farm='Herb Haven', 
-                           price_per_unit=2.00, unit_type='bunch')
+                           category_id=3)
                 ]
                 
                 for product in sample_products:
