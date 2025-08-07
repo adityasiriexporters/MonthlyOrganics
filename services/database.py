@@ -9,7 +9,6 @@ import psycopg2.extras
 from psycopg2 import pool
 from typing import Optional, Dict, List, Any
 import threading
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -102,38 +101,6 @@ class DatabaseService:
                 logger.error(f"Failed to return connection to pool: {e}")
     
     @classmethod
-    def convert_timestamps_to_ist(cls, data):
-        """Convert UTC timestamps in query results to IST for display"""
-        from utils.timezone_helpers import TimezoneHelper
-        
-        if data is None:
-            return None
-        
-        # Handle single row (dict-like)
-        if hasattr(data, 'keys'):
-            converted = dict(data)
-            for key, value in converted.items():
-                if isinstance(value, datetime) and 'at' in key.lower():
-                    converted[key] = TimezoneHelper.utc_to_ist(value)
-            return converted
-        
-        # Handle multiple rows (list of dicts)
-        if isinstance(data, list):
-            converted_list = []
-            for row in data:
-                if hasattr(row, 'keys'):
-                    converted_row = dict(row)
-                    for key, value in converted_row.items():
-                        if isinstance(value, datetime) and 'at' in key.lower():
-                            converted_row[key] = TimezoneHelper.utc_to_ist(value)
-                    converted_list.append(converted_row)
-                else:
-                    converted_list.append(row)
-            return converted_list
-        
-        return data
-    
-    @classmethod
     def execute_query(cls, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = True) -> Any:
         """Execute query with connection pool management and retry logic"""
         max_retries = 2
@@ -159,10 +126,8 @@ class DatabaseService:
                 if is_select_query:
                     if fetch_one:
                         result = cursor.fetchone()
-                        result = cls.convert_timestamps_to_ist(result)
                     elif fetch_all:
                         result = cursor.fetchall()
-                        result = cls.convert_timestamps_to_ist(result)
                     else:
                         result = None
                 else:

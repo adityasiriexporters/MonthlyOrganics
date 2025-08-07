@@ -19,7 +19,6 @@ from utils.template_helpers import (
     render_cart_item, render_store_quantity_stepper, 
     render_add_to_cart_button, render_cart_totals_without_delivery
 )
-from utils.timezone_helpers import TimezoneHelper
 from admin_auth import AdminAuth, admin_required
 
 # Import admin routes blueprint
@@ -82,12 +81,6 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 # Initialize the app with the extension
 db.init_app(app)
-
-# Add timezone helper to template context
-@app.context_processor
-def inject_timezone_helper():
-    """Make timezone helper available in all templates"""
-    return dict(tz=TimezoneHelper)
 
 with app.app_context():
     # Make sure to import the models here or their tables won't be created
