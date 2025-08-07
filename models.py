@@ -38,8 +38,12 @@ class User(db.Model):
     def phone(self):
         """Decrypt and return phone number for backwards compatibility"""
         if self.phone_encrypted:
-            from utils.encryption import DataEncryption
-            return DataEncryption.decrypt_phone(self.phone_encrypted)
+            try:
+                from utils.encryption import DataEncryption
+                decrypted = DataEncryption.decrypt_phone(self.phone_encrypted)
+                return decrypted if decrypted else None
+            except Exception:
+                return None
         return None
     
     def set_phone(self, phone_number: str):

@@ -15,12 +15,12 @@ class DataMigration:
     def migrate_user_phones():
         """Migrate existing user phone numbers to encrypted format"""
         try:
-            # Get users with plaintext phone numbers (where encrypted columns are empty)
+            # Get users with missing encrypted data (migration should be complete by now)
             query = """
-                SELECT id, phone 
+                SELECT id, phone_encrypted, phone_hash 
                 FROM users 
-                WHERE phone IS NOT NULL 
-                AND (phone_encrypted IS NULL OR phone_hash IS NULL)
+                WHERE phone_encrypted IS NOT NULL 
+                AND (phone_hash IS NULL OR phone_hash = '')
             """
             users = DatabaseService.execute_query(query)
             
@@ -31,26 +31,21 @@ class DataMigration:
             migrated_count = 0
             for user in users:
                 try:
-                    phone = user['phone']
+                    phone_encrypted = user['phone_encrypted']
                     user_id = user['id']
                     
-                    # Prepare encrypted data
-                    secure_data = SecureDataHandler.prepare_user_data_for_storage(phone)
-                    
-                    # Update user with encrypted data
-                    update_query = """
-                        UPDATE users 
-                        SET phone_encrypted = %s, phone_hash = %s
-                        WHERE id = %s
-                    """
-                    DatabaseService.execute_query(
-                        update_query,
-                        (
-                            secure_data['phone_encrypted'],
-                            secure_data['phone_hash'],
-                            user_id
-                        )
-                    )
+                    # Decrypt to get original phone, then regenerate hash
+                    phone = DataEncryption.decrypt_phone(phone_encrypted)
+                    if phone:
+                        phone_hash = DataEncryption.hash_for_search(phone)
+                        
+                        # Update user with correct hash
+                        update_query = """
+                            UPDATE users 
+                            SET phone_hash = %s
+                            WHERE id = %s
+                        """
+                        DatabaseService.execute_query(update_query, (phone_hash, user_id))
                     
                     migrated_count += 1
                     logger.info(f"Encrypted phone for user {user_id}")
@@ -161,13 +156,13 @@ class DataMigration:
     def verify_migration():
         """Verify that migration was successful"""
         try:
-            # Check users
+            # Check users  
             user_query = """
                 SELECT COUNT(*) as total_users,
                        COUNT(phone_encrypted) as encrypted_phones,
                        COUNT(phone_hash) as hashed_phones
                 FROM users 
-                WHERE phone IS NOT NULL
+                WHERE is_active = true
             """
             user_stats = DatabaseService.execute_query(user_query, fetch_one=True)
             

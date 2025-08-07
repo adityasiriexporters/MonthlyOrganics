@@ -253,21 +253,21 @@ class CartService:
         return dict(result) if result else None
 
 class UserService:
-    """Service for user-related database operations"""
+    """Service for user-related database operations - Updated for encrypted phone storage"""
     
     @staticmethod
-    def find_user_by_phone(phone: str) -> Optional[Dict]:
+    def find_user_by_phone(phone: str) -> Optional['User']:
         """Find user by phone number using encrypted phone hash"""
         from models import User
         from utils.encryption import DataEncryption
         
         # Create hash of the phone number for lookup
         phone_hash = DataEncryption.hash_for_search(phone)
-        user = User.query.filter_by(phone_hash=phone_hash).first()
+        user = User.query.filter_by(phone_hash=phone_hash, is_active=True).first()
         return user
     
     @staticmethod
-    def create_user(phone: str) -> Optional[Dict]:
+    def create_user(phone: str) -> Optional['User']:
         """Create new user with phone number using encrypted storage"""
         from models import User, db
         try:
