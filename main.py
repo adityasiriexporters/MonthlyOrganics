@@ -24,6 +24,9 @@ from admin_auth import AdminAuth, admin_required
 # Import admin routes blueprint
 from routes.admin import admin_bp
 
+# Import timezone utilities
+from utils.timezone import TimezoneHelper, format_datetime_ist, format_date_ist, format_time_ist
+
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -113,6 +116,11 @@ app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
 # Register admin blueprint
 app.register_blueprint(admin_bp)
+
+# Register timezone template filters
+app.jinja_env.filters['format_datetime_ist'] = format_datetime_ist
+app.jinja_env.filters['format_date_ist'] = format_date_ist
+app.jinja_env.filters['format_time_ist'] = format_time_ist
 
 @app.route('/cart')
 @login_required
@@ -2117,10 +2125,10 @@ def admin_customers_export():
                 customer['last_name'] or '',
 
                 customer['phone'] or '',
-                customer['created_at'].strftime('%Y-%m-%d') if customer['created_at'] else '',
+                TimezoneHelper.format_ist_datetime(customer['created_at'], "full") if customer['created_at'] else '',
                 'Active' if customer['is_active'] else 'Inactive',
                 customer['order_count'] or 0,
-                customer['last_order_date'].strftime('%Y-%m-%d') if customer['last_order_date'] else 'No orders',
+                TimezoneHelper.format_ist_datetime(customer['last_order_date'], "full") if customer['last_order_date'] else 'No orders',
                 f"₹{customer['total_spent'] or 0:.2f}"
             ])
 

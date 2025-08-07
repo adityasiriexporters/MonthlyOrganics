@@ -11,6 +11,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from services.database import DatabaseService
 from utils.encryption import SecureDataHandler, DataEncryption
+from utils.timezone import TimezoneHelper
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +85,13 @@ class DatabaseExporter:
     
     @staticmethod
     def serialize_value(value, for_excel=False):
-        """Convert database values to JSON-serializable format"""
-        if isinstance(value, (datetime, date)):
-            return value.isoformat()
+        """Convert database values to JSON-serializable format with IST timestamps"""
+        if isinstance(value, datetime):
+            # Format datetime in IST as "07 Jan 2025, 06:24 PM"
+            return TimezoneHelper.format_ist_datetime(value, "full")
+        elif isinstance(value, date):
+            # Format date only
+            return value.strftime("%d %b %Y")
         elif isinstance(value, Decimal):
             return float(value)
         elif value is None:
@@ -176,7 +181,7 @@ class DatabaseExporter:
         try:
             export_data = {
                 'export_metadata': {
-                    'export_timestamp': datetime.utcnow().isoformat(),
+                    'export_timestamp': TimezoneHelper.format_ist_datetime(TimezoneHelper.utc_now(), "full"),
                     'database_name': 'monthly_organics',
                     'export_type': 'full_database',
                     'data_decrypted': decrypt_data
@@ -220,7 +225,7 @@ class DatabaseExporter:
         try:
             export_data = {
                 'export_metadata': {
-                    'export_timestamp': datetime.utcnow().isoformat(),
+                    'export_timestamp': TimezoneHelper.format_ist_datetime(TimezoneHelper.utc_now(), "full"),
                     'database_name': 'monthly_organics',
                     'export_type': 'selective_tables',
                     'requested_tables': table_list,
@@ -268,7 +273,7 @@ class DatabaseExporter:
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                 # Add metadata file
                 metadata = {
-                    'export_timestamp': datetime.utcnow().isoformat(),
+                    'export_timestamp': TimezoneHelper.format_ist_datetime(TimezoneHelper.utc_now(), "full"),
                     'database_name': 'monthly_organics',
                     'export_type': export_type,
                     'format': 'csv'
