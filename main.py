@@ -35,7 +35,10 @@ def get_user_custom_id(user_id: int) -> str:
     """Get user's custom_id from database using user_id from session"""
     from models import User
     user = User.query.get(user_id)
-    return user.custom_id if user else None
+    if not user:
+        logger.warning(f"User with ID {user_id} not found in database - session may be stale")
+        return None
+    return user.custom_id
 
 def generate_incremental_label(user_custom_id: str, requested_nickname: str) -> str:
     """Generate incremental label for address nickname if it already exists."""
@@ -490,7 +493,8 @@ def api_addresses():
     """API endpoint to get user addresses for dropdown."""
     try:
         user_id = session['user_id']
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        user_custom_id = get_user_custom_id(user_id)
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
 
         # Convert to simple list for JSON response
@@ -930,10 +934,11 @@ def cart_totals():
     """Return updated cart totals using CartService and template helpers."""
     try:
         user_id = session['user_id']
-        logger.info(f"Calculating cart totals for user {user_id}")
+        user_custom_id = get_user_custom_id(user_id)
+        logger.info(f"Calculating cart totals for user {user_id}, custom_id: {user_custom_id}")
 
-        # Get cart items using CartService
-        cart_items = CartService.get_cart_items(user_id)
+        # Get cart items using CartService with custom_id
+        cart_items = CartService.get_cart_items(user_custom_id)
         logger.info(f"Found {len(cart_items)} cart items")
 
         # Calculate cart totals with proper Decimal handling
@@ -962,9 +967,10 @@ def pre_checkout():
     """Pre-checkout page for address selection and confirmation."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Check if cart has items
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:
             flash('Your cart is empty. Please add items before checkout.', 'error')
             return redirect(url_for('cart'))
@@ -1331,6 +1337,7 @@ def checkout():
     """Final checkout page with order summary and payment."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
         address_id = request.args.get('address_id', type=int)
 
         if not address_id:
@@ -1338,13 +1345,13 @@ def checkout():
             return redirect(url_for('pre_checkout'))
 
         # Get cart items
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:
             flash('Your cart is empty.', 'error')
             return redirect(url_for('cart'))
 
         # Get selected address
-        addresses = SecureAddressService.get_user_addresses(user_id)
+        addresses = SecureAddressService.get_user_addresses(user_custom_id)
         selected_address = None
 
         for addr in addresses:
