@@ -115,9 +115,6 @@ def init_db(app):
         try:
             # Create all tables
             db.create_all()
-            
-            # Note: Email column migration completed - users now identified by phone and custom_id only
-            
             logger.info("Database tables created successfully")
             
             # Add sample data if tables are empty
