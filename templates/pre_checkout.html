@@ -306,9 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showAddressConfirmation(defaultAddress);
         // Show edit address option for default address
         document.getElementById('edit-address-section').classList.remove('hidden');
-    } else if (dropdown.value === 'add_new') {
-        // If no default address and "Add new address" is selected by default, redirect immediately
-        window.location.href = "{{ url_for('add_new_address_for_delivery') }}";
     }
 });
 
