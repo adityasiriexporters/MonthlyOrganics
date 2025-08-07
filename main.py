@@ -1032,6 +1032,11 @@ def pre_checkout():
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses_checkout")
 
+        # If user has no saved addresses, redirect directly to add delivery address
+        if not user_addresses:
+            logger.info(f"User {user_custom_id} has no saved addresses, redirecting to add delivery address")
+            return redirect(url_for('add_new_address_for_delivery'))
+
         # Check if a specific address should be selected (from query params)
         selected_address_id = request.args.get('selected_address', type=int)
         if selected_address_id:
