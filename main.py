@@ -21,6 +21,9 @@ from utils.template_helpers import (
 )
 from admin_auth import AdminAuth, admin_required
 
+# Import admin routes blueprint
+from routes.admin import admin_bp
+
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -107,6 +110,9 @@ from routes.store import store as store_view, products_by_category, all_products
 app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
+
+# Register admin blueprint
+app.register_blueprint(admin_bp)
 
 @app.route('/cart')
 @login_required
@@ -504,16 +510,17 @@ def admin_export_database():
             # Get export parameters from form
             export_type = request.form.get('export_type', 'full')
             export_format = request.form.get('export_format', 'json')
+            decrypt_data = request.form.get('decrypt_data', 'false').lower() == 'true' # Get decrypt option
 
             # Get data based on export type
             if export_type == 'full':
-                export_data = DatabaseExporter.export_full_database()
+                export_data = DatabaseExporter.export_full_database(decrypt_data=decrypt_data)
             else:
                 selected_tables = request.form.getlist('tables')
                 if not selected_tables:
                     flash('Please select at least one table to export.', 'error')
                     return redirect(url_for('admin_export_database'))
-                export_data = DatabaseExporter.export_specific_tables(selected_tables)
+                export_data = DatabaseExporter.export_specific_tables(selected_tables, decrypt_data=decrypt_data)
 
             if not export_data:
                 flash('Error exporting database data.', 'error')
@@ -521,7 +528,7 @@ def admin_export_database():
 
             # Generate timestamp for filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
+
             # Handle different export formats
             if export_format == 'json':
                 # JSON export
@@ -529,29 +536,29 @@ def admin_export_database():
                 response = make_response(json_str)
                 response.headers['Content-Type'] = 'application/json'
                 response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{timestamp}.json'
-                
+
             elif export_format == 'csv':
                 # CSV export (ZIP file)
                 csv_data = DatabaseExporter.export_to_csv(export_data, export_type)
                 if not csv_data:
                     flash('Error generating CSV export.', 'error')
                     return redirect(url_for('admin_export_database'))
-                
+
                 response = make_response(csv_data)
                 response.headers['Content-Type'] = 'application/zip'
                 response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{timestamp}.zip'
-                
+
             elif export_format == 'xlsx':
                 # XLSX export
                 xlsx_data = DatabaseExporter.export_to_xlsx(export_data, export_type)
                 if not xlsx_data:
                     flash('Error generating XLSX export.', 'error')
                     return redirect(url_for('admin_export_database'))
-                
+
                 response = make_response(xlsx_data)
                 response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 response.headers['Content-Disposition'] = f'attachment; filename=monthly_organics_export_{timestamp}.xlsx'
-                
+
             else:
                 flash('Invalid export format selected.', 'error')
                 return redirect(url_for('admin_export_database'))

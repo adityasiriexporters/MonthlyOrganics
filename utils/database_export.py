@@ -1,7 +1,7 @@
 
 """
 Database export utility for Monthly Organics
-Exports all database data to JSON, CSV, or XLSX format
+Exports all database data to JSON, CSV, or XLSX format with optional decryption
 """
 import json
 import logging
@@ -10,11 +10,48 @@ import io
 from datetime import datetime, date
 from decimal import Decimal
 from services.database import DatabaseService
+from utils.encryption import SecureDataHandler, DataEncryption
 
 logger = logging.getLogger(__name__)
 
 class DatabaseExporter:
     """Handles exporting database data to JSON format"""
+    
+    @staticmethod
+    def _decrypt_row_data(table_name, row_dict):
+        """Decrypt encrypted fields in a row based on table type"""
+        try:
+            decrypted_row = row_dict.copy()
+            
+            # Handle user table encryption
+            if table_name == 'users':
+                if 'phone_encrypted' in row_dict:
+                    decrypted_phone = DataEncryption.decrypt_phone(row_dict['phone_encrypted'])
+                    if decrypted_phone:
+                        decrypted_row['phone_decrypted'] = decrypted_phone
+                    # Keep encrypted version for reference
+                    
+            # Handle address table encryption
+            elif table_name == 'addresses':
+                encrypted_fields = {
+                    'house_number_encrypted': 'house_number_decrypted',
+                    'floor_door_encrypted': 'floor_door_decrypted',
+                    'contact_number_encrypted': 'contact_number_decrypted',
+                    'nearby_landmark_encrypted': 'nearby_landmark_decrypted',
+                    'receiver_name_encrypted': 'receiver_name_decrypted'
+                }
+                
+                for encrypted_field, decrypted_field in encrypted_fields.items():
+                    if encrypted_field in row_dict and row_dict[encrypted_field]:
+                        decrypted_value = DataEncryption.decrypt_address_field(row_dict[encrypted_field])
+                        if decrypted_value:
+                            decrypted_row[decrypted_field] = decrypted_value
+            
+            return decrypted_row
+            
+        except Exception as e:
+            logger.error(f"Error decrypting row data for table {table_name}: {e}")
+            return row_dict
     
     @staticmethod
     def serialize_value(value, for_excel=False):
@@ -35,8 +72,8 @@ class DatabaseExporter:
             return value
     
     @staticmethod
-    def get_table_data(table_name, for_excel=False):
-        """Get all data from a specific table"""
+    def get_table_data(table_name, for_excel=False, decrypt_data=False):
+        """Get all data from a specific table with optional decryption"""
         try:
             # Check if table has an 'id' column for ordering
             has_id_query = f"""
@@ -60,10 +97,18 @@ class DatabaseExporter:
             # Convert to list of dictionaries with serialized values
             table_data = []
             for row in result:
-                row_dict = {}
-                for key, value in dict(row).items():
-                    row_dict[key] = DatabaseExporter.serialize_value(value, for_excel=for_excel)
-                table_data.append(row_dict)
+                row_dict = dict(row)
+                
+                # Apply decryption if requested
+                if decrypt_data:
+                    row_dict = DatabaseExporter._decrypt_row_data(table_name, row_dict)
+                
+                # Serialize values for export
+                processed_row = {}
+                for key, value in row_dict.items():
+                    processed_row[key] = DatabaseExporter.serialize_value(value, for_excel=for_excel)
+                
+                table_data.append(processed_row)
             
             return table_data
             
@@ -95,14 +140,15 @@ class DatabaseExporter:
             return []
     
     @staticmethod
-    def export_full_database():
-        """Export entire database to JSON format"""
+    def export_full_database(decrypt_data=False):
+        """Export entire database to JSON format with optional decryption"""
         try:
             export_data = {
                 'export_metadata': {
                     'export_timestamp': datetime.utcnow().isoformat(),
                     'database_name': 'monthly_organics',
-                    'export_type': 'full_database'
+                    'export_type': 'full_database',
+                    'data_decrypted': decrypt_data
                 },
                 'tables': {}
             }
@@ -117,8 +163,8 @@ class DatabaseExporter:
             # Export data from each table
             total_records = 0
             for table_name in table_names:
-                logger.info(f"Exporting table: {table_name}")
-                table_data = DatabaseExporter.get_table_data(table_name)
+                logger.info(f"Exporting table: {table_name} (decrypt: {decrypt_data})")
+                table_data = DatabaseExporter.get_table_data(table_name, decrypt_data=decrypt_data)
                 export_data['tables'][table_name] = {
                     'record_count': len(table_data),
                     'data': table_data
@@ -138,15 +184,16 @@ class DatabaseExporter:
             return None
     
     @staticmethod
-    def export_specific_tables(table_list):
-        """Export specific tables to JSON format"""
+    def export_specific_tables(table_list, decrypt_data=False):
+        """Export specific tables to JSON format with optional decryption"""
         try:
             export_data = {
                 'export_metadata': {
                     'export_timestamp': datetime.utcnow().isoformat(),
                     'database_name': 'monthly_organics',
                     'export_type': 'selective_tables',
-                    'requested_tables': table_list
+                    'requested_tables': table_list,
+                    'data_decrypted': decrypt_data
                 },
                 'tables': {}
             }
@@ -155,8 +202,8 @@ class DatabaseExporter:
             exported_tables = []
             
             for table_name in table_list:
-                logger.info(f"Exporting table: {table_name}")
-                table_data = DatabaseExporter.get_table_data(table_name)
+                logger.info(f"Exporting table: {table_name} (decrypt: {decrypt_data})")
+                table_data = DatabaseExporter.get_table_data(table_name, decrypt_data=decrypt_data)
                 
                 if table_data is not None:  # Even empty tables should be included
                     export_data['tables'][table_name] = {
@@ -290,7 +337,9 @@ class DatabaseExporter:
                     continue
                 
                 # Get Excel-compatible data for this table
-                excel_table_data = DatabaseExporter.get_table_data(table_name, for_excel=True)
+                # Check if metadata indicates decryption was used
+                decrypt_data = metadata.get('data_decrypted', False)
+                excel_table_data = DatabaseExporter.get_table_data(table_name, for_excel=True, decrypt_data=decrypt_data)
                 
                 # Create DataFrame from Excel-compatible table data
                 df = pd.DataFrame(excel_table_data)
