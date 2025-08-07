@@ -167,8 +167,8 @@ class CartService:
     """Service for cart-related database operations"""
     
     @staticmethod
-    def get_cart_items(user_id: int) -> List[Dict]:
-        """Get all cart items for a user with product details"""
+    def get_cart_items(user_custom_id: str) -> List[Dict]:
+        """Get all cart items for a user with product details using custom_id"""
         query = """
             SELECT 
                 ci.variation_id,
@@ -181,61 +181,61 @@ class CartService:
             FROM cart_items ci
             INNER JOIN product_variations pv ON ci.variation_id = pv.id
             INNER JOIN products p ON pv.product_id = p.id
-            WHERE ci.user_id = %s
+            WHERE ci.user_custom_id = %s
             ORDER BY p.name, pv.variation_name
         """
-        result = DatabaseService.execute_query(query, (user_id,))
+        result = DatabaseService.execute_query(query, (user_custom_id,))
         return result if result else []
     
     @staticmethod
-    def add_to_cart(user_id: int, variation_id: int) -> Optional[int]:
-        """Add item to cart or update quantity using UPSERT"""
+    def add_to_cart(user_custom_id: str, variation_id: int) -> Optional[int]:
+        """Add item to cart or update quantity using UPSERT with custom_id"""
         query = """
-            INSERT INTO cart_items (user_id, variation_id, quantity)
+            INSERT INTO cart_items (user_custom_id, variation_id, quantity)
             VALUES (%s, %s, 1)
-            ON CONFLICT (user_id, variation_id)
+            ON CONFLICT (user_custom_id, variation_id)
             DO UPDATE SET quantity = cart_items.quantity + 1
             RETURNING quantity
         """
-        result = DatabaseService.execute_query(query, (user_id, variation_id), fetch_one=True)
+        result = DatabaseService.execute_query(query, (user_custom_id, variation_id), fetch_one=True)
         return result[0] if result else None
     
     @staticmethod
-    def update_cart_quantity(user_id: int, variation_id: int, action: str) -> Optional[int]:
-        """Update cart item quantity (increment or decrement)"""
+    def update_cart_quantity(user_custom_id: str, variation_id: int, action: str) -> Optional[int]:
+        """Update cart item quantity (increment or decrement) using custom_id"""
         if action == 'incr':
             query = """
                 UPDATE cart_items 
                 SET quantity = quantity + 1 
-                WHERE user_id = %s AND variation_id = %s
+                WHERE user_custom_id = %s AND variation_id = %s
                 RETURNING quantity
             """
         elif action == 'decr':
             query = """
                 UPDATE cart_items 
                 SET quantity = quantity - 1 
-                WHERE user_id = %s AND variation_id = %s
+                WHERE user_custom_id = %s AND variation_id = %s
                 RETURNING quantity
             """
         else:
             return None
             
-        result = DatabaseService.execute_query(query, (user_id, variation_id), fetch_one=True)
+        result = DatabaseService.execute_query(query, (user_custom_id, variation_id), fetch_one=True)
         return result[0] if result else None
     
     @staticmethod
-    def remove_cart_item(user_id: int, variation_id: int) -> bool:
-        """Remove item from cart"""
+    def remove_cart_item(user_custom_id: str, variation_id: int) -> bool:
+        """Remove item from cart using custom_id"""
         query = """
             DELETE FROM cart_items 
-            WHERE user_id = %s AND variation_id = %s
+            WHERE user_custom_id = %s AND variation_id = %s
         """
-        result = DatabaseService.execute_query(query, (user_id, variation_id), fetch_all=False)
+        result = DatabaseService.execute_query(query, (user_custom_id, variation_id), fetch_all=False)
         return result is not None
     
     @staticmethod
-    def get_cart_item_details(user_id: int, variation_id: int) -> Optional[Dict]:
-        """Get single cart item details"""
+    def get_cart_item_details(user_custom_id: str, variation_id: int) -> Optional[Dict]:
+        """Get single cart item details using custom_id"""
         query = """
             SELECT 
                 ci.variation_id,
@@ -247,9 +247,9 @@ class CartService:
             FROM cart_items ci
             INNER JOIN product_variations pv ON ci.variation_id = pv.id
             INNER JOIN products p ON pv.product_id = p.id
-            WHERE ci.user_id = %s AND ci.variation_id = %s
+            WHERE ci.user_custom_id = %s AND ci.variation_id = %s
         """
-        result = DatabaseService.execute_query(query, (user_id, variation_id), fetch_one=True)
+        result = DatabaseService.execute_query(query, (user_custom_id, variation_id), fetch_one=True)
         return dict(result) if result else None
 
 class UserService:
@@ -300,8 +300,8 @@ class AddressService:
     """Service for address-related database operations"""
     
     @staticmethod
-    def get_user_addresses(user_id: int) -> List[Dict]:
-        """Get all addresses for a user"""
+    def get_user_addresses(user_custom_id: str) -> List[Dict]:
+        """Get all addresses for a user using custom_id"""
         query = """
             SELECT 
                 id, nickname, house_number, block_name, floor_door, 
@@ -309,15 +309,15 @@ class AddressService:
                 pincode, nearby_landmark, address_notes, is_default,
                 created_at, updated_at
             FROM addresses
-            WHERE user_id = %s
+            WHERE user_custom_id = %s
             ORDER BY is_default DESC, created_at DESC
         """
-        result = DatabaseService.execute_query(query, (user_id,))
+        result = DatabaseService.execute_query(query, (user_custom_id,))
         return result if result else []
     
     @staticmethod
-    def get_default_address(user_id: int) -> Optional[Dict]:
-        """Get default address for a user"""
+    def get_default_address(user_custom_id: str) -> Optional[Dict]:
+        """Get default address for a user using custom_id"""
         query = """
             SELECT 
                 id, nickname, house_number, block_name, floor_door, 
@@ -325,18 +325,18 @@ class AddressService:
                 pincode, nearby_landmark, address_notes, is_default,
                 created_at, updated_at
             FROM addresses
-            WHERE user_id = %s AND is_default = true
+            WHERE user_custom_id = %s AND is_default = true
             LIMIT 1
         """
-        result = DatabaseService.execute_query(query, (user_id,), fetch_one=True)
+        result = DatabaseService.execute_query(query, (user_custom_id,), fetch_one=True)
         return dict(result) if result else None
     
     @staticmethod
-    def create_address(user_id: int, address_data: Dict) -> Optional[int]:
-        """Create a new address for a user"""
+    def create_address(user_custom_id: str, address_data: Dict) -> Optional[int]:
+        """Create a new address for a user using custom_id"""
         query = """
             INSERT INTO addresses (
-                user_id, nickname, house_number, block_name, floor_door,
+                user_custom_id, nickname, house_number, block_name, floor_door,
                 contact_number, latitude, longitude, locality, city, 
                 pincode, nearby_landmark, address_notes, is_default,
                 created_at, updated_at
@@ -349,10 +349,10 @@ class AddressService:
         
         # If this is set as default, first unset all other defaults
         if address_data.get('is_default', False):
-            AddressService.unset_default_address(user_id)
+            AddressService.unset_default_address(user_custom_id)
         
         result = DatabaseService.execute_query(query, (
-            user_id,
+            user_custom_id,
             address_data['nickname'],
             address_data['house_number'],
             address_data.get('block_name', ''),
@@ -371,20 +371,20 @@ class AddressService:
         return result[0] if result else None
     
     @staticmethod
-    def update_address(address_id: int, user_id: int, address_data: Dict) -> bool:
-        """Update an existing address"""
+    def update_address(address_id: int, user_custom_id: str, address_data: Dict) -> bool:
+        """Update an existing address using custom_id"""
         query = """
             UPDATE addresses SET
                 nickname = %s, house_number = %s, block_name = %s, floor_door = %s,
                 contact_number = %s, latitude = %s, longitude = %s, locality = %s, 
                 city = %s, pincode = %s, nearby_landmark = %s, address_notes = %s,
                 is_default = %s, updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s AND user_id = %s
+            WHERE id = %s AND user_custom_id = %s
         """
         
         # If this is set as default, first unset all other defaults
         if address_data.get('is_default', False):
-            AddressService.unset_default_address(user_id)
+            AddressService.unset_default_address(user_custom_id)
         
         result = DatabaseService.execute_query(query, (
             address_data['nickname'],
@@ -401,48 +401,48 @@ class AddressService:
             address_data.get('address_notes', ''),
             address_data.get('is_default', False),
             address_id,
-            user_id
+            user_custom_id
         ), fetch_all=False)
         
         return result is not None
     
     @staticmethod
-    def delete_address(address_id: int, user_id: int) -> bool:
-        """Delete an address"""
+    def delete_address(address_id: int, user_custom_id: str) -> bool:
+        """Delete an address using custom_id"""
         query = """
             DELETE FROM addresses 
-            WHERE id = %s AND user_id = %s
+            WHERE id = %s AND user_custom_id = %s
         """
-        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_all=False)
+        result = DatabaseService.execute_query(query, (address_id, user_custom_id), fetch_all=False)
         return result is not None
     
     @staticmethod
-    def unset_default_address(user_id: int) -> bool:
-        """Unset default flag for all addresses of a user"""
+    def unset_default_address(user_custom_id: str) -> bool:
+        """Unset default flag for all addresses of a user using custom_id"""
         query = """
             UPDATE addresses SET is_default = false 
-            WHERE user_id = %s AND is_default = true
+            WHERE user_custom_id = %s AND is_default = true
         """
-        result = DatabaseService.execute_query(query, (user_id,), fetch_all=False)
+        result = DatabaseService.execute_query(query, (user_custom_id,), fetch_all=False)
         return result is not None
     
     @staticmethod
-    def set_default_address(address_id: int, user_id: int) -> bool:
-        """Set an address as default"""
+    def set_default_address(address_id: int, user_custom_id: str) -> bool:
+        """Set an address as default using custom_id"""
         # First unset all defaults
-        AddressService.unset_default_address(user_id)
+        AddressService.unset_default_address(user_custom_id)
         
         # Then set the new default
         query = """
             UPDATE addresses SET is_default = true, updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s AND user_id = %s
+            WHERE id = %s AND user_custom_id = %s
         """
-        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_all=False)
+        result = DatabaseService.execute_query(query, (address_id, user_custom_id), fetch_all=False)
         return result is not None
     
     @staticmethod
-    def get_address_by_id(address_id: int, user_id: int) -> Optional[Dict]:
-        """Get a specific address by ID"""
+    def get_address_by_id(address_id: int, user_custom_id: str) -> Optional[Dict]:
+        """Get a specific address by ID using custom_id"""
         query = """
             SELECT 
                 id, nickname, house_number, block_name, floor_door, 
@@ -450,7 +450,7 @@ class AddressService:
                 pincode, nearby_landmark, address_notes, is_default,
                 created_at, updated_at
             FROM addresses
-            WHERE id = %s AND user_id = %s
+            WHERE id = %s AND user_custom_id = %s
         """
-        result = DatabaseService.execute_query(query, (address_id, user_id), fetch_one=True)
+        result = DatabaseService.execute_query(query, (address_id, user_custom_id), fetch_one=True)
         return dict(result) if result else None

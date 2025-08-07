@@ -149,19 +149,19 @@ class SecureAddressService:
     """Secure address operations with data encryption"""
     
     @staticmethod
-    def get_user_addresses(user_id: int) -> List[Dict]:
-        """Get user addresses with decryption"""
+    def get_user_addresses(user_custom_id: str) -> List[Dict]:
+        """Get user addresses with decryption using custom_id"""
         try:
             query = """
-                SELECT id, user_id, nickname, house_number_encrypted, block_name,
+                SELECT id, user_custom_id, nickname, house_number_encrypted, block_name,
                        floor_door_encrypted, contact_number_encrypted, latitude, longitude,
                        locality, city, pincode, nearby_landmark_encrypted, 
                        address_notes, receiver_name_encrypted, is_default, created_at
                 FROM addresses 
-                WHERE user_id = %s 
+                WHERE user_custom_id = %s 
                 ORDER BY is_default DESC, created_at DESC
             """
-            addresses = DatabaseService.execute_query(query, (user_id,), fetch_all=True)
+            addresses = DatabaseService.execute_query(query, (user_custom_id,), fetch_all=True)
             
             if addresses:
                 # Decrypt sensitive data for each address
@@ -200,8 +200,8 @@ class SecureAddressService:
             return []
     
     @staticmethod
-    def create_address(user_id: int, address_data: Dict) -> Optional[int]:
-        """Create address with encrypted sensitive data"""
+    def create_address(user_custom_id: str, address_data: Dict) -> Optional[int]:
+        """Create address with encrypted sensitive data using custom_id"""
         try:
             # Prepare secure address data
             secure_data = SecureDataHandler.prepare_address_data_for_storage(address_data)
@@ -209,8 +209,8 @@ class SecureAddressService:
             # If this is set as default, unset other defaults first
             if secure_data.get('is_default'):
                 DatabaseService.execute_query(
-                    "UPDATE addresses SET is_default = false WHERE user_id = %s",
-                    (user_id,),
+                    "UPDATE addresses SET is_default = false WHERE user_custom_id = %s",
+                    (user_custom_id,),
                     fetch_one=False,
                     fetch_all=False
                 )
@@ -218,7 +218,7 @@ class SecureAddressService:
             # Encrypted insertion for security
             query = """
                 INSERT INTO addresses (
-                    user_id, nickname, house_number_encrypted, block_name, floor_door_encrypted, 
+                    user_custom_id, nickname, house_number_encrypted, block_name, floor_door_encrypted, 
                     contact_number_encrypted, latitude, longitude, locality, city, pincode, 
                     nearby_landmark_encrypted, address_notes, receiver_name_encrypted, is_default
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -228,7 +228,7 @@ class SecureAddressService:
             result = DatabaseService.execute_query(
                 query,
                 (
-                    user_id,
+                    user_custom_id,
                     secure_data['nickname'],
                     secure_data.get('house_number_encrypted'),
                     secure_data.get('block_name', ''),

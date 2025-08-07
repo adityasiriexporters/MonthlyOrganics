@@ -53,16 +53,22 @@ def products_by_category(category_id):
     try:
         from flask import session
         
-        # Get user cart items if logged in
+        # Get user cart items if logged in using custom_id
         user_cart = {}
         if 'user_id' in session:
-            cart_query = """
-                SELECT variation_id, quantity 
-                FROM cart_items 
-                WHERE user_id = %s
-            """
-            cart_items = DatabaseService.execute_query(cart_query, (session['user_id'],))
-            user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
+            # Get user's custom_id
+            from models import User
+            from flask import current_app
+            with current_app.app_context():
+                user = User.query.get(session['user_id'])
+                if user:
+                    cart_query = """
+                        SELECT variation_id, quantity 
+                        FROM cart_items 
+                        WHERE user_custom_id = %s
+                    """
+                    cart_items = DatabaseService.execute_query(cart_query, (user.custom_id,))
+                    user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
         
         query = """
             SELECT 
@@ -138,13 +144,22 @@ def all_products():
             FROM categories c
             LEFT JOIN products p ON c.id = p.category_id
             LEFT JOIN product_variations pv ON p.id = pv.product_id
-            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_id = %s
+            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_custom_id = %s
             WHERE p.id IS NOT NULL
             ORDER BY c.name, p.name, pv.variation_name
         """
         
-        user_id = session.get('user_id', 0)
-        raw_data = DatabaseService.execute_query(query, (user_id,))
+        # Get user custom_id for cart operations
+        user_custom_id = None
+        if session.get('user_id'):
+            from models import User
+            from flask import current_app
+            with current_app.app_context():
+                user = User.query.get(session['user_id'])
+                if user:
+                    user_custom_id = user.custom_id
+        
+        raw_data = DatabaseService.execute_query(query, (user_custom_id or '',))
         
         # Group data by categories and products
         categories_with_products = {}

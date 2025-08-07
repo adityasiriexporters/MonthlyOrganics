@@ -31,11 +31,17 @@ from utils.timezone import TimezoneHelper, format_datetime_ist, format_date_ist,
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def generate_incremental_label(user_id: int, requested_nickname: str) -> str:
+def get_user_custom_id(user_id: int) -> str:
+    """Get user's custom_id from database using user_id from session"""
+    from models import User
+    user = User.query.get(user_id)
+    return user.custom_id if user else None
+
+def generate_incremental_label(user_custom_id: str, requested_nickname: str) -> str:
     """Generate incremental label for address nickname if it already exists."""
     try:
-        # Get existing addresses for the user
-        existing_addresses = SecureAddressService.get_user_addresses(user_id)
+        # Get existing addresses for the user using custom_id
+        existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses]
 
         # Check if the requested nickname already exists
@@ -125,14 +131,15 @@ app.jinja_env.filters['format_time_ist'] = format_time_ist
 @app.route('/cart')
 @login_required
 def cart():
-    """Display user's shopping cart using CartService."""
+    """Display user's shopping cart using CartService with custom_id."""
     try:
         user_id = session['user_id']
-        logger.info(f"Cart page accessed by user_id: {user_id}")
+        user_custom_id = get_user_custom_id(user_id)
+        logger.info(f"Cart page accessed by user_id: {user_id}, custom_id: {user_custom_id}")
 
-        # Use CartService for database operations
-        cart_items = CartService.get_cart_items(user_id)
-        logger.info(f"Found {len(cart_items)} cart items for user {user_id}")
+        # Use CartService for database operations with custom_id
+        cart_items = CartService.get_cart_items(user_custom_id)
+        logger.info(f"Found {len(cart_items)} cart items for user {user_custom_id}")
 
         # Calculate cart totals
         subtotal = sum(item['total_price'] for item in cart_items)
@@ -178,14 +185,15 @@ def profile_settings():
 @app.route('/addresses')
 @login_required
 def addresses():
-    """Addresses page route."""
+    """Addresses page route using custom_id."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
-        # Get user's addresses using SecureAddressService
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        # Get user's addresses using SecureAddressService with custom_id
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
-        logger.info(f"Found {len(user_addresses)} addresses for user {user_id}")
+        logger.info(f"Found {len(user_addresses)} addresses for user {user_custom_id}")
 
         # Create response with cache control headers to prevent browser caching
         response = make_response(render_template('addresses.html', addresses=user_addresses))
@@ -223,13 +231,14 @@ def save_address():
     """Save new address."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Log all form data for debugging
         logger.info(f"Received form data: {dict(request.form)}")
 
         # Generate incremental label if nickname already exists
         requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
-        final_nickname = generate_incremental_label(user_id, requested_nickname)
+        final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
         # Get form data with more robust handling
         address_data = {
@@ -260,9 +269,9 @@ def save_address():
                 flash(error, 'error')
             return redirect(url_for('add_address'))
 
-        # Save address using SecureAddressService
-        logger.info(f"Attempting to save address for user {user_id}")
-        address_id = SecureAddressService.create_address(user_id, address_data)
+        # Save address using SecureAddressService with custom_id
+        logger.info(f"Attempting to save address for user {user_custom_id}")
+        address_id = SecureAddressService.create_address(user_custom_id, address_data)
         logger.info(f"Address creation result: {address_id}")
 
         SecurityAuditLogger.log_data_access(user_id, "CREATE", "address", bool(address_id))
@@ -289,11 +298,12 @@ def save_address():
 @app.route('/set-default-address/<int:address_id>', methods=['GET', 'POST'])
 @login_required
 def set_default_address(address_id):
-    """Set an address as default."""
+    """Set an address as default using custom_id."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
-        if SecureAddressService.set_default_address(address_id, user_id):
+        if SecureAddressService.set_default_address(address_id, user_custom_id):
             SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_default")
 
             # Return JSON for AJAX calls, redirect for normal calls
@@ -328,8 +338,9 @@ def edit_address(address_id):
     try:
         user_id = session['user_id']
 
-        # Get the specific address using SecureAddressService
-        addresses = SecureAddressService.get_user_addresses(user_id)
+        # Get the specific address using SecureAddressService with custom_id
+        user_custom_id = get_user_custom_id(user_id)
+        addresses = SecureAddressService.get_user_addresses(user_custom_id)
         address = None
 
         for addr in addresses:
@@ -363,9 +374,10 @@ def edit_address(address_id):
 @app.route('/update-address/<int:address_id>', methods=['POST'])
 @login_required
 def update_address(address_id):
-    """Update an existing address."""
+    """Update an existing address using custom_id."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Get form data
         form_data = request.form.to_dict()
@@ -395,12 +407,13 @@ def update_address(address_id):
 
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
-        existing_addresses = SecureAddressService.get_user_addresses(user_id)
+        user_custom_id = get_user_custom_id(user_id)
+        existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
 
         final_nickname = requested_nickname
         if requested_nickname and requested_nickname.lower() in existing_nicknames:
-            final_nickname = generate_incremental_label(user_id, requested_nickname)
+            final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
         # Prepare address data
         address_data = {
@@ -428,7 +441,7 @@ def update_address(address_id):
             return redirect(url_for('edit_address', address_id=address_id))
 
         # Update address using SecureAddressService
-        if SecureAddressService.update_address(address_id, user_id, address_data):
+        if SecureAddressService.update_address(address_id, user_custom_id, address_data):
             SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address")
             flash('Address updated successfully!', 'success')
             # Create redirect response with cache control headers
@@ -449,11 +462,12 @@ def update_address(address_id):
 @app.route('/delete-address/<int:address_id>')
 @login_required
 def delete_address(address_id):
-    """Delete an address."""
+    """Delete an address using custom_id."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
-        if SecureAddressService.delete_address(address_id, user_id):
+        if SecureAddressService.delete_address(address_id, user_custom_id):
             SecurityAuditLogger.log_data_access(user_id, "DELETE", "address")
             flash('Address deleted successfully!', 'success')
         else:
@@ -841,13 +855,14 @@ def logout():
 @app.route('/add-to-cart/<int:variation_id>', methods=['POST'])
 @login_required
 def add_to_cart(variation_id):
-    """Add item to cart using CartService."""
+    """Add item to cart using CartService with custom_id."""
     try:
         user_id = session['user_id']
-        logger.info(f"Add to cart request for variation {variation_id} by user {user_id}")
+        user_custom_id = get_user_custom_id(user_id)
+        logger.info(f"Add to cart request for variation {variation_id} by user {user_custom_id}")
 
-        # Use CartService to add item
-        new_quantity = CartService.add_to_cart(user_id, variation_id)
+        # Use CartService to add item with custom_id
+        new_quantity = CartService.add_to_cart(user_custom_id, variation_id)
 
         if new_quantity is None:
             return "Error adding to cart", 500
@@ -871,15 +886,16 @@ def update_cart(variation_id, action):
         if action not in ['incr', 'decr']:
             return "Invalid action", 400
 
-        # Use CartService to update quantity
-        new_quantity = CartService.update_cart_quantity(user_id, variation_id, action)
+        # Use CartService to update quantity with custom_id
+        user_custom_id = get_user_custom_id(user_id)
+        new_quantity = CartService.update_cart_quantity(user_custom_id, variation_id, action)
 
         if new_quantity is None:
             return "Item not found in cart", 404
 
         # If quantity becomes 0, remove the item
         if new_quantity <= 0:
-            CartService.remove_cart_item(user_id, variation_id)
+            CartService.remove_cart_item(user_custom_id, variation_id)
 
             # Check if request comes from store page to restore Add to Cart button
             referer = request.headers.get('Referer', '')
@@ -890,7 +906,7 @@ def update_cart(variation_id, action):
                 return ''
 
         # Get updated cart item details
-        item = CartService.get_cart_item_details(user_id, variation_id)
+        item = CartService.get_cart_item_details(user_custom_id, variation_id)
 
         if not item:
             return "Item not found", 404
