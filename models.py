@@ -116,12 +116,7 @@ def init_db(app):
             # Create all tables
             db.create_all()
             
-            # Run email removal migration if needed
-            try:
-                from utils.remove_email_migration import EmailRemovalMigration
-                EmailRemovalMigration.run_migration()
-            except Exception as e:
-                logger.warning(f"Email migration warning (might already be complete): {e}")
+            # Note: Email column migration completed - users now identified by phone and custom_id only
             
             logger.info("Database tables created successfully")
             
