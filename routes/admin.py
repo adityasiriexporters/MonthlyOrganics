@@ -5,7 +5,7 @@ Handles admin dashboard, export, and management functionality
 """
 from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
 from utils.database_export import DatabaseExporter
-from utils.decorators import admin_required
+from admin_auth import admin_required
 import json
 import io
 from datetime import datetime
