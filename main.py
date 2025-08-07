@@ -1222,8 +1222,15 @@ def save_address_for_delivery():
         user_id = session['user_id']
 
         # Generate incremental label if nickname already exists
+        user_custom_id = get_user_custom_id(user_id)
+        if not user_custom_id:
+            logger.error(f"Cannot save address for delivery: user_id {user_id} not found in database")
+            session.clear()
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
+            
         requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
-        final_nickname = generate_incremental_label(user_id, requested_nickname)
+        final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
         # Get form data
         address_data = {
@@ -1250,8 +1257,15 @@ def save_address_for_delivery():
                 flash(error, 'error')
             return redirect(url_for('add_new_address_for_delivery'))
 
-        # Save address
-        address_id = SecureAddressService.create_address(user_id, address_data)
+        # Get user custom_id and save address
+        user_custom_id = get_user_custom_id(user_id)
+        if not user_custom_id:
+            logger.error(f"Cannot save address for delivery: user_id {user_id} not found in database")
+            session.clear()
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
+            
+        address_id = SecureAddressService.create_address(user_custom_id, address_data)
         SecurityAuditLogger.log_data_access(user_id, "CREATE", "address_delivery", bool(address_id))
 
         if address_id:
@@ -1273,9 +1287,17 @@ def edit_address_for_delivery(address_id):
     """Edit address page specifically for delivery checkout."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot edit address for delivery: user_id {user_id} not found in database")
+            session.clear()
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
-        # Get the specific address
-        addresses = SecureAddressService.get_user_addresses(user_id)
+        # Get the specific address using custom_id
+        addresses = SecureAddressService.get_user_addresses(user_custom_id)
         address = None
 
         for addr in addresses:
@@ -1324,12 +1346,19 @@ def update_address_for_delivery(address_id):
                 flash('Nickname is required.', 'error')
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
 
-            existing_addresses = SecureAddressService.get_user_addresses(user_id)
+            user_custom_id = get_user_custom_id(user_id)
+            if not user_custom_id:
+                logger.error(f"Cannot update address for delivery: user_id {user_id} not found in database")
+                session.clear()
+                flash('Your session has expired. Please login again.', 'error')
+                return redirect(url_for('login'))
+                
+            existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
             existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
 
             final_nickname = requested_nickname
             if requested_nickname.lower() in existing_nicknames:
-                final_nickname = generate_incremental_label(user_id, requested_nickname)
+                final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
             # Prepare address data
             address_data = {
@@ -1357,7 +1386,7 @@ def update_address_for_delivery(address_id):
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
 
             # Update address
-            if SecureAddressService.update_address(address_id, user_id, address_data):
+            if SecureAddressService.update_address(address_id, user_custom_id, address_data):
                 SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_delivery")
                 flash('Address updated successfully!', 'success')
                 return redirect(url_for('delivery_fee_calculation', address_id=address_id))
