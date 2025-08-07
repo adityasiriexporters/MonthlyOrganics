@@ -490,7 +490,8 @@ def api_addresses():
     """API endpoint to get user addresses for dropdown."""
     try:
         user_id = session['user_id']
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        user_custom_id = get_user_custom_id(user_id)
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
 
         # Convert to simple list for JSON response
@@ -930,10 +931,11 @@ def cart_totals():
     """Return updated cart totals using CartService and template helpers."""
     try:
         user_id = session['user_id']
-        logger.info(f"Calculating cart totals for user {user_id}")
+        user_custom_id = get_user_custom_id(user_id)
+        logger.info(f"Calculating cart totals for user {user_custom_id}")
 
         # Get cart items using CartService
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         logger.info(f"Found {len(cart_items)} cart items")
 
         # Calculate cart totals with proper Decimal handling
@@ -962,15 +964,16 @@ def pre_checkout():
     """Pre-checkout page for address selection and confirmation."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Check if cart has items
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:
             flash('Your cart is empty. Please add items before checkout.', 'error')
             return redirect(url_for('cart'))
 
         # Get user's addresses
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses_checkout")
 
         # Check if a specific address should be selected (from query params)
@@ -1010,6 +1013,7 @@ def delivery_fee_calculation():
     """Delivery fee calculation page between pre-checkout and final checkout."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Get selected address ID from query params
         address_id = request.args.get('address_id', type=int)
@@ -1018,13 +1022,13 @@ def delivery_fee_calculation():
             return redirect(url_for('pre_checkout'))
 
         # Check if cart has items
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:
             flash('Your cart is empty. Please add items before checkout.', 'error')
             return redirect(url_for('cart'))
 
         # Get the selected address
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         selected_address = None
 
         for addr in user_addresses:
@@ -1090,6 +1094,7 @@ def update_shipping_option():
     """Update shipping option selection and recalculate totals."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
         data = request.get_json()
 
         logger.debug(f"Update shipping option request data: {data}")
@@ -1103,7 +1108,7 @@ def update_shipping_option():
             return jsonify({'error': 'Missing required parameters'}), 400
 
         # Get address coordinates
-        user_addresses = SecureAddressService.get_user_addresses(user_id)
+        user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         selected_address = None
 
         for addr in user_addresses:
@@ -1112,13 +1117,13 @@ def update_shipping_option():
                 break
 
         if not selected_address:
-            logger.error(f"Address {address_id} not found for user {user_id}")
+            logger.error(f"Address {address_id} not found for user {user_custom_id}")
             return jsonify({'error': 'Address not found'}), 404
 
         logger.debug(f"Selected address: {selected_address}")
 
         # Get cart totals
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         from decimal import Decimal
         subtotal = Decimal('0.00')
 
@@ -1171,10 +1176,11 @@ def save_address_for_delivery():
     """Save new address and return to pre-checkout with new address selected."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Generate incremental label if nickname already exists
         requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
-        final_nickname = generate_incremental_label(user_id, requested_nickname)
+        final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
         # Get form data
         address_data = {
@@ -1202,7 +1208,7 @@ def save_address_for_delivery():
             return redirect(url_for('add_new_address_for_delivery'))
 
         # Save address
-        address_id = SecureAddressService.create_address(user_id, address_data)
+        address_id = SecureAddressService.create_address(user_custom_id, address_data)
         SecurityAuditLogger.log_data_access(user_id, "CREATE", "address_delivery", bool(address_id))
 
         if address_id:
@@ -1224,9 +1230,10 @@ def edit_address_for_delivery(address_id):
     """Edit address page specifically for delivery checkout."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
 
         # Get the specific address
-        addresses = SecureAddressService.get_user_addresses(user_id)
+        addresses = SecureAddressService.get_user_addresses(user_custom_id)
         address = None
 
         for addr in addresses:
@@ -1255,6 +1262,7 @@ def update_address_for_delivery(address_id):
     """Update address and return to pre-checkout with updated address selected."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
         action = request.form.get('action', 'update_and_use')
 
         if action == 'update_and_use':
@@ -1275,12 +1283,12 @@ def update_address_for_delivery(address_id):
                 flash('Nickname is required.', 'error')
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
 
-            existing_addresses = SecureAddressService.get_user_addresses(user_id)
+            existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
             existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
 
             final_nickname = requested_nickname
             if requested_nickname.lower() in existing_nicknames:
-                final_nickname = generate_incremental_label(user_id, requested_nickname)
+                final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
 
             # Prepare address data
             address_data = {
@@ -1308,7 +1316,7 @@ def update_address_for_delivery(address_id):
                 return redirect(url_for('edit_address_for_delivery', address_id=address_id))
 
             # Update address
-            if SecureAddressService.update_address(address_id, user_id, address_data):
+            if SecureAddressService.update_address(address_id, user_custom_id, address_data):
                 SecurityAuditLogger.log_data_access(user_id, "UPDATE", "address_delivery")
                 flash('Address updated successfully!', 'success')
                 return redirect(url_for('delivery_fee_calculation', address_id=address_id))
@@ -1331,6 +1339,7 @@ def checkout():
     """Final checkout page with order summary and payment."""
     try:
         user_id = session['user_id']
+        user_custom_id = get_user_custom_id(user_id)
         address_id = request.args.get('address_id', type=int)
 
         if not address_id:
@@ -1338,13 +1347,13 @@ def checkout():
             return redirect(url_for('pre_checkout'))
 
         # Get cart items
-        cart_items = CartService.get_cart_items(user_id)
+        cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:
             flash('Your cart is empty.', 'error')
             return redirect(url_for('cart'))
 
         # Get selected address
-        addresses = SecureAddressService.get_user_addresses(user_id)
+        addresses = SecureAddressService.get_user_addresses(user_custom_id)
         selected_address = None
 
         for addr in addresses:
@@ -1833,7 +1842,7 @@ def get_all_customers_with_stats():
         result = []
         for customer in customers:
             customer_dict = dict(customer)
-            
+
             # Decrypt phone number for display
             if customer_dict.get('phone_encrypted'):
                 from utils.encryption import DataEncryption
@@ -1844,14 +1853,14 @@ def get_all_customers_with_stats():
             else:
                 customer_dict['phone'] = None
 
-            # Get addresses for this customer
+            # Get addresses for this customer using custom_id
             addr_cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             addr_cursor.execute("""
                 SELECT id, nickname, locality, city, pincode, is_default
                 FROM addresses 
-                WHERE user_id = %s 
+                WHERE user_custom_id = %s 
                 ORDER BY is_default DESC, created_at DESC
-            """, (customer_dict['id'],))
+            """, (customer_dict['custom_id'],))
             addresses = addr_cursor.fetchall()
 
             # Convert addresses to proper format
@@ -1949,7 +1958,7 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
         result = []
         for customer in customers:
             customer_dict = dict(customer)
-            
+
             # Decrypt phone number for display
             if customer_dict.get('phone_encrypted'):
                 from utils.encryption import DataEncryption
@@ -1960,14 +1969,14 @@ def get_filtered_customers(search=None, date_from=None, date_to=None, status_fil
             else:
                 customer_dict['phone'] = None
 
-            # Get addresses for this customer
+            # Get addresses for this customer using custom_id
             addr_cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             addr_cursor.execute("""
                 SELECT id, nickname, locality, city, pincode, is_default
                 FROM addresses 
-                WHERE user_id = %s 
+                WHERE user_custom_id = %s 
                 ORDER BY is_default DESC, created_at DESC
-            """, (customer_dict['id'],))
+            """, (customer_dict['custom_id'],))
             addresses = addr_cursor.fetchall()
 
             # Convert addresses to proper format
