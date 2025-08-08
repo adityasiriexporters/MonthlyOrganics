@@ -165,7 +165,7 @@
                                 <p class="text-xs text-gray-500 mt-1">PNG, JPG, JPEG up to 5MB</p>
                             </div>
                         </div>
-                        <input id="primary_photo" name="primary_photo" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(this, 'primary')">
+                        <input id="primary_photo" name="primary_photo" type="file" accept="image/*" class="hidden">
                     </div>
                     <input type="hidden" name="current_primary_photo" value="{{ product.primary_photo_url or '' }}">
                     <input type="hidden" id="remove_primary_photo" name="remove_primary_photo" value="">
@@ -210,7 +210,7 @@
                                 <p class="text-xs text-gray-500 mt-1">PNG, JPG, JPEG up to 5MB each • Multiple files allowed</p>
                             </div>
                         </div>
-                        <input id="additional_photos" name="additional_photos" type="file" accept="image/*" multiple class="hidden" onchange="handleImageUpload(this, 'additional')">
+                        <input id="additional_photos" name="additional_photos" type="file" accept="image/*" multiple class="hidden">
                     </div>
                     <input type="hidden" name="current_photos" value="{{ (product.photo_urls or [])|join(',') }}">
                 </div>
@@ -368,52 +368,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<!-- Cropper.js for image cropping -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css">
-<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
-
-<!-- Image Cropping Modal -->
-<div id="imageCropModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Crop Image (16:9 Ratio)</h3>
-                        
-                        <div class="mb-4">
-                            <div class="max-h-96 overflow-hidden rounded-lg border border-gray-300">
-                                <img id="cropImage" src="" alt="Crop preview" class="max-w-full">
-                            </div>
-                        </div>
-                        
-                        <p class="text-sm text-gray-500 mb-4">
-                            Drag and resize the selection area to crop your image in 16:9 aspect ratio. This ensures consistent display across the website.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="applyCrop()" 
-                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    Apply Crop
-                </button>
-                <button type="button" onclick="closeCropModal()" 
-                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-let cropper = null;
-let currentCropInput = null;
-let currentCropType = null; // 'primary' or 'additional'
 // Remove primary photo
 function removePrimaryPhoto() {
     if (confirm('Are you sure you want to remove the primary photo?')) {
@@ -665,166 +620,5 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
-// Image Cropping Functions
-function handleImageUpload(input, type) {
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            alert('Please select a valid image file.');
-            input.value = '';
-            return;
-        }
-        
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Please select an image smaller than 5MB.');
-            input.value = '';
-            return;
-        }
-        
-        currentCropInput = input;
-        currentCropType = type;
-        openCropModal(file);
-    }
-}
-
-function openCropModal(file) {
-    const modal = document.getElementById('imageCropModal');
-    const cropImage = document.getElementById('cropImage');
-    
-    // Create FileReader to display image in modal
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        cropImage.src = e.target.result;
-        
-        // Show modal
-        modal.classList.remove('hidden');
-        
-        // Initialize Cropper.js after a short delay to ensure image is loaded
-        setTimeout(() => {
-            if (cropper) {
-                cropper.destroy();
-            }
-            
-            cropper = new Cropper(cropImage, {
-                aspectRatio: 16 / 9, // Force 16:9 aspect ratio
-                viewMode: 1, // Restrict crop box to the canvas
-                dragMode: 'move',
-                autoCropArea: 0.8,
-                restore: false,
-                guides: true,
-                center: true,
-                highlight: false,
-                cropBoxMovable: true,
-                cropBoxResizable: true,
-                toggleDragModeOnDblclick: false,
-                modal: true,
-                background: true,
-                responsive: true,
-                checkOrientation: false,
-                minContainerWidth: 300,
-                minContainerHeight: 200
-            });
-        }, 100);
-    };
-    reader.readAsDataURL(file);
-}
-
-function applyCrop() {
-    if (!cropper) return;
-    
-    // Get cropped canvas
-    const canvas = cropper.getCroppedCanvas({
-        width: 1280, // 16:9 ratio at good quality
-        height: 720,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-    });
-    
-    // Convert canvas to blob
-    canvas.toBlob(function(blob) {
-        if (!blob) {
-            alert('Error processing image. Please try again.');
-            return;
-        }
-        
-        // Create new File object from blob
-        const originalFile = currentCropInput.files[0];
-        const fileName = `cropped_${originalFile.name}`;
-        const croppedFile = new File([blob], fileName, {
-            type: originalFile.type,
-            lastModified: Date.now()
-        });
-        
-        // Create new FileList with cropped file
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(croppedFile);
-        currentCropInput.files = dataTransfer.files;
-        
-        // Handle the cropped image based on type
-        if (currentCropType === 'primary') {
-            handlePrimaryCroppedImage(canvas, fileName);
-        } else if (currentCropType === 'additional') {
-            handleAdditionalCroppedImage(canvas, fileName);
-        }
-        
-        closeCropModal();
-        showUploadSuccess('Image cropped successfully!');
-    }, currentCropInput.files[0].type, 0.9); // High quality
-}
-
-function handlePrimaryCroppedImage(canvas, fileName) {
-    // Create preview for primary photo
-    const gallery = document.getElementById('primary-photo-gallery');
-    const existingImage = gallery.querySelector('img');
-    
-    if (existingImage) {
-        // Replace existing image
-        existingImage.src = canvas.toDataURL();
-    } else {
-        // Create new image element
-        const preview = createImagePreview(canvas.toDataURL(), fileName, true);
-        gallery.innerHTML = '';
-        gallery.appendChild(preview);
-    }
-}
-
-function handleAdditionalCroppedImage(canvas, fileName) {
-    // Create preview for additional photo
-    const gallery = document.getElementById('additional-photos-gallery');
-    const preview = createImagePreview(canvas.toDataURL(), fileName, false);
-    
-    // Add to gallery
-    if (!gallery.querySelector('.grid')) {
-        gallery.innerHTML = '<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>';
-    }
-    gallery.querySelector('.grid').appendChild(preview);
-}
-
-function closeCropModal() {
-    const modal = document.getElementById('imageCropModal');
-    modal.classList.add('hidden');
-    
-    // Cleanup cropper
-    if (cropper) {
-        cropper.destroy();
-        cropper = null;
-    }
-    
-    // Reset variables
-    currentCropInput = null;
-    currentCropType = null;
-}
-
-// Close modal when clicking outside
-document.getElementById('imageCropModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeCropModal();
-    }
-});
-
 </script>
 {% endblock %}
