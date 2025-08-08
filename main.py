@@ -2524,9 +2524,17 @@ def admin_edit_product(product_id):
             ORDER BY id
         """
         
+        # Get all categories for dropdown
+        categories_query = """
+            SELECT id, name 
+            FROM categories 
+            ORDER BY name
+        """
+        
         from services.database import DatabaseService
         product = DatabaseService.execute_query(product_query, (product_id,), fetch_one=True)
         variations = DatabaseService.execute_query(variations_query, (product_id,), fetch_all=True)
+        categories = DatabaseService.execute_query(categories_query, (), fetch_all=True)
         
         if not product:
             flash('Product not found.', 'error')
@@ -2539,6 +2547,7 @@ def admin_edit_product(product_id):
         return render_template('admin/admin_edit_product.html', 
                              product=dict(product), 
                              variations=variations,
+                             categories=categories,
                              admin_user=admin_user)
         
     except Exception as e:

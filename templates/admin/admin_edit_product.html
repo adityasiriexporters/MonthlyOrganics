@@ -47,12 +47,19 @@
 
                     <!-- Category -->
                     <div>
-                        <label for="category_id" class="block text-sm font-medium text-gray-700">Category ID</label>
-                        <input type="number" 
-                               name="category_id" 
-                               id="category_id" 
-                               value="{{ product.category_id or '' }}"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                        <label for="category_id" class="block text-sm font-medium text-gray-700">Category *</label>
+                        <select name="category_id" 
+                                id="category_id" 
+                                required
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" 
+                                    {% if category.id == product.category_id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
