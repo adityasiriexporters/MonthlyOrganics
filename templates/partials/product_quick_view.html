@@ -21,7 +21,7 @@
     <div class="flex-1 overflow-y-auto">
         <!-- Image Slider Section -->
         <div class="relative bg-gray-100">
-            <div class="image-slider-container relative overflow-hidden select-none" style="touch-action: pan-y pinch-zoom;">
+            <div class="image-slider-container relative overflow-hidden select-none touch-pan-y">
                 <div class="image-slider flex transition-transform duration-300 ease-out" id="imageSlider">
                     <!-- Primary Photo -->
                     {% if product.primary_photo_url %}
@@ -309,10 +309,6 @@ function initializeTouchEvents() {
 currentImageIndex = 0;
 if (totalImages > 0) {
     updateSlider();
-}
-
-// Initialize touch events after a short delay to ensure DOM is ready
-setTimeout(() => {
     initializeTouchEvents();
-}, 100);
+}
 </script>
