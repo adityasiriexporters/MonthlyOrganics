@@ -25,76 +25,47 @@
     
     <!-- Simplified Mobile CSS -->
     <style>
-        :root {
-            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-            --nav-height: 80px;
-        }
-        
-        /* Simplified mobile navigation positioning */
+        /* Simple mobile navigation */
         .mobile-nav-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            width: 100%;
-            height: var(--nav-height);
-            z-index: 1000;
+            z-index: 50;
             background: white;
             border-top: 1px solid #e5e7eb;
-            padding-bottom: var(--safe-area-inset-bottom);
+            height: 80px;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
         }
         
-        /* Center navigation content within max-width container */
-        .mobile-nav-bar > div {
-            max-width: 448px; /* max-w-md */
-            margin: 0 auto;
-            height: 100%;
-        }
-        
-        /* Fixed header positioning for homepage */
-        header[class*="fixed"] {
+        /* Simple main container */
+        .main-container {
+            min-height: 100vh;
             max-width: 448px;
             margin: 0 auto;
+            background: white;
+        }
+        
+        /* Simple content area */
+        .page-content {
+            padding-bottom: 100px; /* Space for mobile nav */
+        }
+        
+        /* Simple header positioning */
+        .fixed-header {
+            position: fixed;
+            top: 0;
             left: 50%;
             transform: translateX(-50%);
+            max-width: 448px;
+            width: 100%;
+            z-index: 40;
         }
         
         @media (max-width: 448px) {
-            header[class*="fixed"] {
+            .fixed-header {
                 left: 0;
-                right: 0;
                 transform: none;
-                max-width: none;
-            }
-        }
-        
-        /* Main container with proper flex layout */
-        .main-container {
-            height: 100vh;
-            height: 100dvh;
-            max-width: 448px;
-            margin: 0 auto;
-            background: white;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Content area with contained scrolling */
-        .page-content {
-            flex: 1;
-            height: calc(100vh - var(--nav-height));
-            height: calc(100dvh - var(--nav-height));
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-        
-        /* Fallback for browsers that don't support dvh */
-        @supports not (height: 100dvh) {
-            .main-container {
-                height: 100vh;
-            }
-            .page-content {
-                height: calc(100vh - var(--nav-height));
             }
         }
     </style>
@@ -122,8 +93,8 @@
         <!-- Dynamic Header - Mobile First -->
         {% if request.path != '/' %}
             <!-- Other Pages Header (Simple) - Fixed -->
-            <header class="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-200">
-                <div class="max-w-md mx-auto flex items-center justify-between p-4">
+            <header class="fixed-header bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between p-4">
                     <!-- Logo Only (Left) -->
                     <div class="flex items-center flex-shrink-0">
                         <a href="{{ url_for('index') }}">
@@ -145,17 +116,16 @@
             </header>
         {% endif %}
         
-        <!-- Scrollable Main Content -->
+        <!-- Main Content -->
         <div class="page-content">
-            <main id="main-content" class="{% if request.path != '/' %}pt-20{% endif %} pb-24">
+            <main id="main-content" class="{% if request.path != '/' %}pt-20{% endif %}">
                 {% block content %}{% endblock %}
             </main>
         </div>
         
         <!-- Mobile Navigation Bar -->
         <nav class="mobile-nav-bar md:hidden">
-        <div class="w-full">
-            <div class="flex items-center justify-around py-2">
+            <div class="flex items-center justify-around h-full px-4">
                 <!-- Home -->
                 <a href="{{ url_for('index') }}" 
                    class="flex flex-col items-center justify-center py-2 px-3 text-center min-w-0 flex-1 
@@ -204,7 +174,6 @@
                     <span class="text-xs font-medium">Profile</span>
                 </a>
             </div>
-        </div>
         </nav>
     </div>
 
