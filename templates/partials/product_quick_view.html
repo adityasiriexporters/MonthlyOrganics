@@ -168,9 +168,17 @@
 </div>
 
 <script>
-// Image slider functionality
+// Image slider functionality with swipe support
 let currentImageIndex = 0;
 const totalImages = {{ total_media }};
+
+// Touch/swipe variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isSwiping = false;
+const minSwipeDistance = 50; // Minimum swipe distance in pixels
 
 function nextImage() {
     if (currentImageIndex < totalImages - 1) {
@@ -209,9 +217,89 @@ function updateSlider() {
     });
 }
 
+// Touch event handlers for swipe functionality
+function handleTouchStart(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+    isSwiping = false;
+}
+
+function handleTouchMove(e) {
+    if (!touchStartX || !touchStartY) {
+        return;
+    }
+    
+    const touchMoveX = e.changedTouches[0].screenX;
+    const touchMoveY = e.changedTouches[0].screenY;
+    
+    const diffX = touchStartX - touchMoveX;
+    const diffY = touchStartY - touchMoveY;
+    
+    // Check if this is a horizontal swipe (more horizontal than vertical movement)
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Prevent vertical scrolling when swiping horizontally
+        e.preventDefault();
+        isSwiping = true;
+    }
+}
+
+function handleTouchEnd(e) {
+    if (!touchStartX || !touchStartY || !isSwiping) {
+        return;
+    }
+    
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    
+    handleSwipe();
+    
+    // Reset touch coordinates
+    touchStartX = 0;
+    touchStartY = 0;
+    touchEndX = 0;
+    touchEndY = 0;
+    isSwiping = false;
+}
+
+function handleSwipe() {
+    const diffX = touchStartX - touchEndX;
+    const diffY = touchStartY - touchEndY;
+    
+    // Only process if it's primarily a horizontal swipe and meets minimum distance
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
+        if (diffX > 0) {
+            // Swiped left - go to next image
+            nextImage();
+        } else {
+            // Swiped right - go to previous image
+            previousImage();
+        }
+    }
+}
+
+// Initialize swipe functionality
+function initializeSwipe() {
+    const sliderContainer = document.querySelector('.image-slider-container');
+    if (sliderContainer && totalImages > 1) {
+        // Add touch event listeners
+        sliderContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+        sliderContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+        sliderContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+        
+        // Prevent context menu on long press
+        sliderContainer.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+        
+        console.log('Swipe functionality initialized for', totalImages, 'images');
+    }
+}
+
 // Reset slider when popup opens
 currentImageIndex = 0;
 if (totalImages > 0) {
     updateSlider();
+    // Initialize swipe functionality after a brief delay to ensure DOM is ready
+    setTimeout(initializeSwipe, 100);
 }
 </script>
