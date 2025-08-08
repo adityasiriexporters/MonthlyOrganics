@@ -105,21 +105,14 @@ class ZohoInventoryAPI:
         """
         Generate OAuth authorization URL for user consent
         """
-        # Try different scope formats to resolve 500 error
-        # Option 1: Standard format
-        scope_options = [
-            'ZohoInventory.fullaccess.all',
-            'ZohoInventory.FullAccess.all', 
-            'ZohoInventory.items.ALL,ZohoInventory.salesorders.ALL',
-            'ZohoInventory.items.READ,ZohoInventory.items.CREATE,ZohoInventory.items.UPDATE'
-        ]
+        # Use the correct scope format for Zoho Inventory API
+        scope = 'ZohoInventory.items.all,ZohoInventory.salesorders.all,ZohoInventory.settings.all'
         
-        # Start with the most common working format
         params = {
             'client_id': self.client_id,
             'response_type': 'code',
             'redirect_uri': redirect_uri,
-            'scope': scope_options[0],  # Use first option
+            'scope': scope,
             'access_type': 'offline'
         }
         

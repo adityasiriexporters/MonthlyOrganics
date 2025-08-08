@@ -351,13 +351,13 @@ def zoho_test_auth():
         client_id = os.environ.get('ZOHO_CLIENT_ID')
         redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
         
-        # Test different scope formats
+        # Test different scope formats including the corrected one
         test_scopes = [
-            'ZohoInventory.fullaccess.all',
-            'ZohoInventory.FullAccess.all',
-            'ZohoInventory.items.ALL',
-            'ZohoInventory.items.READ',
-            'ZohoInventory.salesorders.READ'
+            'ZohoInventory.items.all,ZohoInventory.salesorders.all,ZohoInventory.settings.all',
+            'ZohoInventory.items.all',
+            'ZohoInventory.salesorders.all',
+            'ZohoInventory.settings.all',
+            'ZohoInventory.fullaccess.all'
         ]
         
         test_urls = []
