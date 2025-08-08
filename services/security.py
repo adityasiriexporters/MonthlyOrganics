@@ -29,7 +29,7 @@ class SecureUserService:
             """
             user_data = DatabaseService.execute_query(query, (phone_hash,), fetch_one=True)
             
-            # Convert to dict and decrypt phone number for return
+            # Convert Row object to dict and decrypt phone number for return
             if user_data:
                 user_dict = dict(user_data)
                 if user_dict.get('phone_encrypted'):
@@ -71,11 +71,13 @@ class SecureUserService:
                 fetch_one=True
             )
             
-            # Add decrypted phone for backwards compatibility
+            # Convert Row object to dict and add decrypted phone for backwards compatibility
             if user_data:
-                user_data['phone'] = phone
+                user_dict = dict(user_data)
+                user_dict['phone'] = phone
+                return user_dict
             
-            return user_data
+            return None
             
         except Exception as e:
             logger.error(f"Error creating user: {e}")
@@ -114,11 +116,13 @@ class SecureUserService:
                 fetch_one=True
             )
             
-            # Add decrypted phone for backwards compatibility
+            # Convert Row object to dict and add decrypted phone for backwards compatibility
             if user_data:
-                user_data['phone'] = phone
+                user_dict = dict(user_data)
+                user_dict['phone'] = phone
+                return user_dict
             
-            return user_data
+            return None
             
         except Exception as e:
             logger.error(f"Error creating user with details: {e}")

@@ -31,7 +31,7 @@ class DeliveryZoneScheduler:
                 WHERE free_date = %s
             """
             count_result = DatabaseService.execute_query(count_query, (tomorrow,), fetch_one=True)
-            dates_to_delete = count_result['count'] if count_result else 0
+            dates_to_delete = dict(count_result)['count'] if count_result else 0
             
             if dates_to_delete == 0:
                 logger.info("No delivery dates found for cleanup")

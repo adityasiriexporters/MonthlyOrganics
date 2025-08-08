@@ -2,6 +2,7 @@ import os
 import logging
 import re
 from datetime import timedelta
+from typing import Optional
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -31,14 +32,19 @@ from utils.timezone import TimezoneHelper, format_datetime_ist, format_date_ist,
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def get_user_custom_id(user_id: int) -> str:
-    """Get user's custom_id from database using user_id from session"""
+def get_user_custom_id(user_id: int) -> Optional[str]:
+    """Get user's custom_id from database using user_id from session with enhanced error handling"""
     from models import User
-    user = User.query.get(user_id)
-    if not user:
-        logger.warning(f"User with ID {user_id} not found in database - session may be stale")
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            logger.error(f"User with ID {user_id} not found in database - session may be stale or user may have been deleted")
+            return None
+        return user.custom_id
+    except Exception as e:
+        logger.error(f"Database error when looking up user {user_id}: {e}")
+        # Don't clear session on temporary database errors - let the user retry
         return None
-    return user.custom_id
 
 def generate_incremental_label(user_custom_id: str, requested_nickname: str) -> str:
     """Generate incremental label for address nickname if it already exists."""

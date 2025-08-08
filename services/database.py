@@ -198,7 +198,7 @@ class CartService:
             RETURNING quantity
         """
         result = DatabaseService.execute_query(query, (user_custom_id, variation_id), fetch_one=True)
-        return result[0] if result else None
+        return result['quantity'] if result else None
     
     @staticmethod
     def update_cart_quantity(user_custom_id: str, variation_id: int, action: str) -> Optional[int]:
@@ -221,7 +221,7 @@ class CartService:
             return None
             
         result = DatabaseService.execute_query(query, (user_custom_id, variation_id), fetch_one=True)
-        return result[0] if result else None
+        return result['quantity'] if result else None
     
     @staticmethod
     def remove_cart_item(user_custom_id: str, variation_id: int) -> bool:
@@ -375,7 +375,7 @@ class AddressService:
             address_data.get('is_default', False)
         ), fetch_one=True)
         
-        return result[0] if result else None
+        return result['id'] if result else None
     
     @staticmethod
     def update_address(address_id: int, user_custom_id: str, address_data: Dict) -> bool:
