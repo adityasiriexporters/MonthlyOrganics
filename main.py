@@ -133,6 +133,84 @@ app.add_url_rule('/store', 'store', store_view, methods=['GET'])
 app.add_url_rule('/products/<int:category_id>', 'products_by_category', products_by_category, methods=['GET'])
 app.add_url_rule('/all-products', 'all_products', all_products, methods=['GET'])
 
+@app.route('/product-quick-view/<int:product_id>')
+def product_quick_view(product_id):
+    """HTMX route that returns detailed product data for quick view popup."""
+    try:
+        from flask import session
+        
+        # Get user custom_id for cart operations
+        user_custom_id = None
+        if session.get('user_id'):
+            from models import User
+            user = User.query.get(session['user_id'])
+            if user:
+                user_custom_id = user.custom_id
+        
+        # Get product details with all media and variations
+        query = """
+            SELECT 
+                p.id as product_id,
+                p.name as product_name,
+                p.description,
+                p.description_heading,
+                p.primary_photo_url,
+                p.photo_urls,
+                p.video_urls,
+                p.is_best_seller,
+                c.name as category_name,
+                pv.id as variation_id,
+                pv.variation_name,
+                pv.mrp,
+                pv.stock_quantity,
+                COALESCE(ci.quantity, 0) as cart_quantity
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_variations pv ON p.id = pv.product_id
+            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_custom_id = %s
+            WHERE p.id = %s
+            ORDER BY pv.variation_name
+        """
+        
+        from services.database import DatabaseService
+        raw_data = DatabaseService.execute_query(query, (user_custom_id or '', product_id))
+        
+        if not raw_data:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Structure the product data
+        product_data = {
+            'id': raw_data[0]['product_id'],
+            'name': raw_data[0]['product_name'],
+            'description': raw_data[0]['description'],
+            'description_heading': raw_data[0]['description_heading'],
+            'primary_photo_url': raw_data[0]['primary_photo_url'],
+            'photo_urls': raw_data[0]['photo_urls'] or [],
+            'video_urls': raw_data[0]['video_urls'] or [],
+            'is_best_seller': raw_data[0]['is_best_seller'],
+            'category_name': raw_data[0]['category_name'],
+            'variations': []
+        }
+        
+        # Add variations
+        for row in raw_data:
+            if row['variation_id']:
+                variation = {
+                    'id': row['variation_id'],
+                    'name': row['variation_name'],
+                    'price': float(row['mrp']),
+                    'stock': row['stock_quantity'] or 0,
+                    'cart_quantity': row['cart_quantity']
+                }
+                product_data['variations'].append(variation)
+        
+        from flask import render_template
+        return render_template('partials/product_quick_view.html', product=product_data)
+        
+    except Exception as e:
+        logger.error(f"Error loading product quick view {product_id}: {e}")
+        return jsonify({'error': 'Error loading product'}), 500
+
 # Register admin blueprint
 app.register_blueprint(admin_bp)
 

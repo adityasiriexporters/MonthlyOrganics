@@ -249,6 +249,24 @@
     </div>
 </div>
 
+<!-- Product Quick View Popup -->
+<div id="quickViewPopup" class="fixed inset-0 z-50 hidden">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closeQuickView()"></div>
+    
+    <!-- Popup Container -->
+    <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl transform translate-y-full transition-transform duration-300 ease-out"
+         id="quickViewContent" style="height: 80vh; max-width: 448px; margin: 0 auto;">
+        <!-- Content will be loaded here via HTMX -->
+        <div class="h-full flex items-center justify-center">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <span class="text-sm text-gray-600">Loading product details...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Simple store page functionality
 document.addEventListener('DOMContentLoaded', function() {
@@ -307,6 +325,55 @@ function scrollToCategory(categoryId) {
 
 // Make function available globally
 window.scrollToCategory = scrollToCategory;
+
+// Product Quick View Functionality
+function openQuickView(productId) {
+    const popup = document.getElementById('quickViewPopup');
+    const content = document.getElementById('quickViewContent');
+    
+    // Show popup
+    popup.classList.remove('hidden');
+    
+    // Trigger slide up animation
+    setTimeout(() => {
+        content.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Load product content via HTMX
+    htmx.ajax('GET', `/product-quick-view/${productId}`, {
+        target: '#quickViewContent',
+        swap: 'innerHTML'
+    });
+    
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+}
+
+function closeQuickView() {
+    const popup = document.getElementById('quickViewPopup');
+    const content = document.getElementById('quickViewContent');
+    
+    // Trigger slide down animation
+    content.style.transform = 'translateY(100%)';
+    
+    // Hide popup after animation
+    setTimeout(() => {
+        popup.classList.add('hidden');
+        // Restore body scrolling
+        document.body.style.overflow = '';
+    }, 300);
+}
+
+// Make functions available globally
+window.openQuickView = openQuickView;
+window.closeQuickView = closeQuickView;
+
+// Close popup on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeQuickView();
+    }
+});
 
 // Clean and simple - no additional functions needed
 </script>

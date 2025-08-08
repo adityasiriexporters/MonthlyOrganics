@@ -1,0 +1,217 @@
+<!-- Product Quick View Content -->
+<div class="product-quick-view-content h-full flex flex-col bg-white">
+    <!-- Header with Close Button -->
+    <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+        <div class="flex items-center space-x-2">
+            <h2 class="text-lg font-semibold text-gray-900">{{ product.name }}</h2>
+            {% if product.is_best_seller %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Best Seller
+            </span>
+            {% endif %}
+        </div>
+        <button onclick="closeQuickView()" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Scrollable Content Area -->
+    <div class="flex-1 overflow-y-auto">
+        <!-- Image Slider Section -->
+        <div class="relative bg-gray-100">
+            <div class="image-slider-container relative overflow-hidden">
+                <div class="image-slider flex transition-transform duration-300 ease-out" id="imageSlider">
+                    <!-- Primary Photo -->
+                    {% if product.primary_photo_url %}
+                    <div class="w-full flex-shrink-0 aspect-square bg-green-100 flex items-center justify-center">
+                        <img src="{{ product.primary_photo_url }}" alt="{{ product.name }}" 
+                             class="w-full h-full object-cover">
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Additional Photos -->
+                    {% if product.photo_urls %}
+                        {% for photo_url in product.photo_urls %}
+                        <div class="w-full flex-shrink-0 aspect-square bg-green-100 flex items-center justify-center">
+                            <img src="{{ photo_url }}" alt="{{ product.name }}" 
+                                 class="w-full h-full object-cover">
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Videos -->
+                    {% if product.video_urls %}
+                        {% for video_url in product.video_urls %}
+                        <div class="w-full flex-shrink-0 aspect-square bg-gray-200 flex items-center justify-center">
+                            <video class="w-full h-full object-cover" controls>
+                                <source src="{{ video_url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Fallback if no media -->
+                    {% if not product.primary_photo_url and not product.photo_urls and not product.video_urls %}
+                    <div class="w-full flex-shrink-0 aspect-square bg-green-100 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Navigation Arrows (only show if more than 1 image) -->
+                {% set total_media = (1 if product.primary_photo_url else 0) + (product.photo_urls|length if product.photo_urls else 0) + (product.video_urls|length if product.video_urls else 0) %}
+                {% if total_media > 1 %}
+                <button onclick="previousImage()" class="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <button onclick="nextImage()" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                
+                <!-- Dots Indicator -->
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                    {% for i in range(total_media) %}
+                    <button onclick="goToImage({{ i }})" class="slider-dot w-2 h-2 rounded-full bg-white bg-opacity-50 hover:bg-opacity-100 transition-all {% if i == 0 %}bg-opacity-100{% endif %}"></button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="p-4 space-y-4">
+            <!-- Category -->
+            <div class="text-sm text-gray-500">
+                Category: {{ product.category_name }}
+            </div>
+
+            <!-- Description -->
+            <div>
+                {% if product.description_heading %}
+                <p class="text-sm text-gray-700 font-medium mb-2">{{ product.description_heading }}</p>
+                {% endif %}
+                {% if product.description %}
+                <p class="text-sm text-gray-600 leading-relaxed">{{ product.description }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Product Variations -->
+            {% if product.variations %}
+            <div class="space-y-3">
+                <h4 class="text-sm font-medium text-gray-900 uppercase tracking-wider">Available Options</h4>
+                {% for variation in product.variations %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3 mb-1">
+                            <span class="text-sm font-medium text-gray-900">{{ variation.name }}</span>
+                            <span class="text-sm font-bold text-primary">₹{{ "%.0f"|format(variation.price) }}</span>
+                        </div>
+                        {% if variation.stock > 0 %}
+                            <span class="text-xs text-gray-500">{{ variation.stock }} in stock</span>
+                        {% else %}
+                            <span class="text-xs text-red-500">Out of stock</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Add to Cart Button or Quantity Stepper -->
+                    {% if variation.stock > 0 %}
+                        {% if variation.cart_quantity and variation.cart_quantity > 0 %}
+                        <!-- Show quantity stepper if item is in cart -->
+                        <div class="flex items-center space-x-2 bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+                            <button hx-post="/update-cart/{{ variation.id }}/decr" 
+                                    hx-target="closest div"
+                                    hx-swap="outerHTML"
+                                    class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                                -
+                            </button>
+                            <span class="px-2 font-semibold text-green-800">{{ variation.cart_quantity }}</span>
+                            <button hx-post="/update-cart/{{ variation.id }}/incr" 
+                                    hx-target="closest div"
+                                    hx-swap="outerHTML"
+                                    class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+                                +
+                            </button>
+                        </div>
+                        {% else %}
+                        <!-- Show Add to Cart button if item is not in cart -->
+                        <button hx-post="/add-to-cart/{{ variation.id }}" 
+                                hx-swap="outerHTML"
+                                class="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500/20">
+                            Add to Cart
+                        </button>
+                        {% endif %}
+                    {% else %}
+                    <button class="bg-gray-300 text-gray-500 text-sm font-medium px-4 py-2 rounded-lg cursor-not-allowed" 
+                            disabled>
+                        Out of Stock
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-6">
+                <p class="text-sm text-gray-500">No variations available for this product</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Image slider functionality
+let currentImageIndex = 0;
+const totalImages = {{ total_media }};
+
+function nextImage() {
+    if (currentImageIndex < totalImages - 1) {
+        currentImageIndex++;
+        updateSlider();
+    }
+}
+
+function previousImage() {
+    if (currentImageIndex > 0) {
+        currentImageIndex--;
+        updateSlider();
+    }
+}
+
+function goToImage(index) {
+    currentImageIndex = index;
+    updateSlider();
+}
+
+function updateSlider() {
+    const slider = document.getElementById('imageSlider');
+    const translateX = -currentImageIndex * 100;
+    slider.style.transform = `translateX(${translateX}%)`;
+    
+    // Update dots
+    const dots = document.querySelectorAll('.slider-dot');
+    dots.forEach((dot, index) => {
+        if (index === currentImageIndex) {
+            dot.classList.remove('bg-opacity-50');
+            dot.classList.add('bg-opacity-100');
+        } else {
+            dot.classList.remove('bg-opacity-100');
+            dot.classList.add('bg-opacity-50');
+        }
+    });
+}
+
+// Reset slider when popup opens
+currentImageIndex = 0;
+if (totalImages > 0) {
+    updateSlider();
+}
+</script>
