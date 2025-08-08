@@ -1,7 +1,7 @@
 <!-- Product Quick View Content -->
-<div class="product-quick-view-content h-full flex flex-col bg-white">
+<div class="product-quick-view-content max-h-[90vh] flex flex-col bg-white rounded-lg shadow-xl">
     <!-- Header with Close Button -->
-    <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+    <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg flex-shrink-0">
         <div class="flex items-center space-x-2">
             <h2 class="text-lg font-semibold text-gray-900">{{ product.name }}</h2>
             {% if product.is_best_seller %}
@@ -18,7 +18,7 @@
     </div>
 
     <!-- Scrollable Content Area -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-auto min-h-0">
         <!-- Image Slider Section -->
         <div class="relative bg-gray-100">
             <div class="image-slider-container relative overflow-hidden">
@@ -164,6 +164,8 @@
             </div>
             {% endif %}
         </div>
+        <!-- Bottom padding to prevent content from being hidden behind navigation -->
+        <div class="h-20"></div>
     </div>
 </div>
 
