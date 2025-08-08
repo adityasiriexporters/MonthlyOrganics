@@ -57,6 +57,10 @@ def export_database():
         decrypt_suffix = '_decrypted' if decrypt_data else '_encrypted'
         
         # Create file based on format
+        filename = None
+        file_data = None
+        mimetype = None
+        
         if export_format == 'json':
             filename = f'monthly_organics_export{decrypt_suffix}_{timestamp}.json'
             file_data = json.dumps(export_data, indent=2).encode('utf-8')
@@ -72,7 +76,7 @@ def export_database():
             file_data = DatabaseExporter.export_to_xlsx(export_data, export_type)
             mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         
-        if not file_data:
+        if not file_data or not filename or not mimetype:
             flash('Failed to generate export file. Please try again.', 'error')
             tables = DatabaseExporter.get_all_table_names()
             return render_template('admin/admin_export.html', tables=tables)

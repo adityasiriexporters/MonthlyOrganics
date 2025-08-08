@@ -4,6 +4,7 @@ Handles product display and category navigation
 """
 import logging
 from services.database import DatabaseService
+from services.query_optimizer import QueryOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -53,40 +54,20 @@ def products_by_category(category_id):
     try:
         from flask import session
         
-        # Get user cart items if logged in using custom_id
-        user_cart = {}
+        # Get user custom_id for optimized cart queries
+        user_custom_id = None
         if 'user_id' in session:
-            # Get user's custom_id
             from models import User
             from flask import current_app
             with current_app.app_context():
                 user = User.query.get(session['user_id'])
                 if user:
-                    cart_query = """
-                        SELECT variation_id, quantity 
-                        FROM cart_items 
-                        WHERE user_custom_id = %s
-                    """
-                    cart_items = DatabaseService.execute_query(cart_query, (user.custom_id,))
-                    user_cart = {item['variation_id']: item['quantity'] for item in (cart_items or [])}
+                    user_custom_id = user.custom_id
         
-        query = """
-            SELECT 
-                p.id as product_id,
-                p.name as product_name,
-                p.description,
-                p.category_id,
-                p.is_best_seller,
-                pv.id as variation_id,
-                pv.variation_name,
-                pv.mrp,
-                pv.stock_quantity
-            FROM products p
-            LEFT JOIN product_variations pv ON p.id = pv.product_id
-            WHERE p.category_id = %s
-            ORDER BY p.name, pv.variation_name
-        """
-        raw_products = DatabaseService.execute_query(query, (category_id,))
+        # Use optimized query from QueryOptimizer instead of multiple queries
+        raw_products = QueryOptimizer.get_products_with_cart_quantities(
+            user_custom_id or '', category_id
+        )
         
         # Group products with their variations
         products = {}
@@ -107,7 +88,7 @@ def products_by_category(category_id):
                     'name': row['variation_name'],
                     'price': float(row['mrp']),
                     'stock': row['stock_quantity'] or 0,
-                    'cart_quantity': user_cart.get(row['variation_id'], 0)
+                    'cart_quantity': row['cart_quantity']
                 }
                 products[prod_id]['variations'].append(variation)
         
@@ -121,37 +102,11 @@ def products_by_category(category_id):
         return '<div class="text-center text-gray-500 py-8">Error loading products</div>'
 
 def all_products():
-    """Route that returns all products grouped by categories for the store page.""" 
+    """Route that returns all products grouped by categories using optimized queries.""" 
     try:
         from flask import session
         
-        # Cart quantities are now included in the main query above for better performance
-        
-        # Optimized single query to get all data including cart quantities
-        query = """
-            SELECT 
-                c.id as category_id,
-                c.name as category_name,
-                p.id as product_id,
-                p.name as product_name,
-                p.description,
-                p.description_heading,
-                p.primary_photo_url,
-                p.is_best_seller,
-                pv.id as variation_id,
-                pv.variation_name,
-                pv.mrp,
-                pv.stock_quantity,
-                COALESCE(ci.quantity, 0) as cart_quantity
-            FROM categories c
-            LEFT JOIN products p ON c.id = p.category_id
-            LEFT JOIN product_variations pv ON p.id = pv.product_id
-            LEFT JOIN cart_items ci ON pv.id = ci.variation_id AND ci.user_custom_id = %s
-            WHERE p.id IS NOT NULL
-            ORDER BY c.name, p.name, pv.variation_name
-        """
-        
-        # Get user custom_id for cart operations
+        # Get user custom_id for optimized cart operations
         user_custom_id = None
         if session.get('user_id'):
             from models import User
@@ -161,14 +116,15 @@ def all_products():
                 if user:
                     user_custom_id = user.custom_id
         
-        raw_data = DatabaseService.execute_query(query, (user_custom_id or '',))
+        # Use optimized query from QueryOptimizer for all products
+        raw_data = QueryOptimizer.get_products_with_cart_quantities(user_custom_id or '')
         
         # Group data by categories and products
         categories_with_products = {}
         
         for row in (raw_data or []):
             cat_id = row['category_id']
-            cat_name = row['category_name']
+            cat_name = row.get('category_name', f'Category {cat_id}')
             prod_id = row['product_id']
             
             # Initialize category if not exists
@@ -185,8 +141,8 @@ def all_products():
                     'id': prod_id,
                     'name': row['product_name'],
                     'description': row['description'],
-                    'description_heading': row['description_heading'],
-                    'primary_photo_url': row['primary_photo_url'],
+                    'description_heading': row.get('description_heading', ''),
+                    'primary_photo_url': row.get('primary_photo_url', ''),
                     'is_best_seller': row['is_best_seller'],
                     'variations': []
                 }
