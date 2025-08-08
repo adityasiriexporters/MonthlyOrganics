@@ -357,8 +357,27 @@ document.getElementById('primary_photo').addEventListener('change', function(e) 
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Show preview if needed
-            console.log('Primary photo selected:', file.name);
+            // Create or update preview image
+            let previewContainer = document.querySelector('#primary-photo-preview');
+            if (!previewContainer) {
+                previewContainer = document.createElement('div');
+                previewContainer.id = 'primary-photo-preview';
+                previewContainer.className = 'mt-2';
+                document.querySelector('#primary_photo').parentNode.appendChild(previewContainer);
+            }
+            
+            previewContainer.innerHTML = `
+                <div class="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <img src="${e.target.result}" alt="Preview" class="h-16 w-16 object-cover rounded-lg border">
+                    <div>
+                        <p class="text-sm font-medium text-green-800">New primary photo selected</p>
+                        <p class="text-xs text-green-600">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                    </div>
+                    <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+            `;
         };
         reader.readAsDataURL(file);
     }
@@ -366,12 +385,87 @@ document.getElementById('primary_photo').addEventListener('change', function(e) 
 
 document.getElementById('additional_photos').addEventListener('change', function(e) {
     const files = e.target.files;
-    console.log('Additional photos selected:', files.length, 'files');
+    if (files.length > 0) {
+        let previewContainer = document.querySelector('#additional-photos-preview');
+        if (!previewContainer) {
+            previewContainer = document.createElement('div');
+            previewContainer.id = 'additional-photos-preview';
+            previewContainer.className = 'mt-2';
+            document.querySelector('#additional_photos').parentNode.appendChild(previewContainer);
+        }
+        
+        let previewHTML = `
+            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center space-x-2 mb-2">
+                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <p class="text-sm font-medium text-blue-800">${files.length} additional photo(s) selected</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+        `;
+        
+        Array.from(files).forEach((file, index) => {
+            if (index < 6) { // Show max 6 previews
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'h-12 w-12 object-cover rounded border';
+                    img.alt = file.name;
+                    previewContainer.querySelector('.grid').appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        if (files.length > 6) {
+            previewHTML += `<div class="h-12 w-12 bg-gray-200 rounded border flex items-center justify-center text-xs text-gray-600">+${files.length - 6}</div>`;
+        }
+        previewHTML += '</div></div>';
+        previewContainer.innerHTML = previewHTML;
+    }
 });
 
 document.getElementById('videos').addEventListener('change', function(e) {
     const files = e.target.files;
-    console.log('Videos selected:', files.length, 'files');
+    if (files.length > 0) {
+        let previewContainer = document.querySelector('#videos-preview');
+        if (!previewContainer) {
+            previewContainer = document.createElement('div');
+            previewContainer.id = 'videos-preview';
+            previewContainer.className = 'mt-2';
+            document.querySelector('#videos').parentNode.appendChild(previewContainer);
+        }
+        
+        let videoList = '';
+        Array.from(files).forEach(file => {
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            videoList += `
+                <div class="flex items-center space-x-3 p-2 bg-gray-50 rounded">
+                    <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">${file.name}</p>
+                        <p class="text-xs text-gray-500">${sizeMB} MB</p>
+                    </div>
+                </div>
+            `;
+        });
+        
+        previewContainer.innerHTML = `
+            <div class="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <div class="flex items-center space-x-2 mb-2">
+                    <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <p class="text-sm font-medium text-purple-800">${files.length} video(s) selected</p>
+                </div>
+                <div class="space-y-2">${videoList}</div>
+            </div>
+        `;
+    }
 });
 </script>
 {% endblock %}
