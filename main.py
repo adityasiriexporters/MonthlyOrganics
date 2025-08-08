@@ -2462,6 +2462,158 @@ def admin_delivery_zone_stats():
         logger.error(f"Error getting delivery zone stats: {str(e)}")
         return jsonify({'error': 'Failed to get statistics'}), 500
 
+# === ADMIN PRODUCT MANAGEMENT ROUTES ===
+
+@app.route('/admin/products')
+@admin_required
+def admin_products():
+    """Display all products with their variations"""
+    try:
+        query = """
+            SELECT p.id, p.name, p.description, p.category_id, p.is_best_seller, 
+                   p.created_at, p.zoho_item_id, p.sku, p.updated_at,
+                   COUNT(pv.id) as variation_count,
+                   MIN(pv.mrp) as min_price,
+                   MAX(pv.mrp) as max_price,
+                   SUM(pv.stock_on_hand) as total_stock
+            FROM products p
+            LEFT JOIN product_variations pv ON p.id = pv.product_id
+            GROUP BY p.id, p.name, p.description, p.category_id, p.is_best_seller, 
+                     p.created_at, p.zoho_item_id, p.sku, p.updated_at
+            ORDER BY p.id
+        """
+        
+        from services.database import DatabaseService
+        products = DatabaseService.execute_query(query, fetch_all=True)
+        
+        logger.info(f"Retrieved {len(products) if products else 0} products for admin")
+        
+        return render_template('admin/admin_products.html', products=products)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving products for admin: {e}")
+        flash('Error loading products. Please try again.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/products/<int:product_id>/edit')
+@admin_required
+def admin_edit_product(product_id):
+    """Display form to edit a single product with its variations"""
+    try:
+        # Get product details
+        product_query = """
+            SELECT id, name, description, category_id, is_best_seller, 
+                   created_at, zoho_item_id, sku, updated_at
+            FROM products 
+            WHERE id = %s
+        """
+        
+        # Get product variations
+        variations_query = """
+            SELECT id, product_id, variation_name, mrp, stock_quantity, stock_on_hand,
+                   created_at, zoho_item_id, sku, updated_at
+            FROM product_variations 
+            WHERE product_id = %s
+            ORDER BY id
+        """
+        
+        from services.database import DatabaseService
+        product = DatabaseService.execute_query(product_query, (product_id,), fetch_one=True)
+        variations = DatabaseService.execute_query(variations_query, (product_id,), fetch_all=True)
+        
+        if not product:
+            flash('Product not found.', 'error')
+            return redirect(url_for('admin_products'))
+        
+        logger.info(f"Editing product {product_id} with {len(variations) if variations else 0} variations")
+        
+        return render_template('admin/admin_edit_product.html', 
+                             product=dict(product), 
+                             variations=variations)
+        
+    except Exception as e:
+        logger.error(f"Error loading product {product_id} for editing: {e}")
+        flash('Error loading product details. Please try again.', 'error')
+        return redirect(url_for('admin_products'))
+
+@app.route('/admin/products/<int:product_id>/update', methods=['POST'])
+@admin_required
+def admin_update_product(product_id):
+    """Handle form submission to update product details"""
+    try:
+        # Get form data for main product
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        category_id = request.form.get('category_id')
+        is_best_seller = request.form.get('is_best_seller') == 'on'
+        zoho_item_id = request.form.get('zoho_item_id', '').strip()
+        sku = request.form.get('sku', '').strip()
+        
+        # Validate required fields
+        if not name:
+            flash('Product name is required.', 'error')
+            return redirect(url_for('admin_edit_product', product_id=product_id))
+        
+        # Update main product
+        product_update_query = """
+            UPDATE products 
+            SET name = %s, description = %s, category_id = %s, is_best_seller = %s,
+                zoho_item_id = %s, sku = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        
+        from services.database import DatabaseService
+        DatabaseService.execute_query(
+            product_update_query,
+            (name, description, category_id, is_best_seller, 
+             zoho_item_id if zoho_item_id else None, 
+             sku if sku else None, 
+             product_id),
+            fetch_all=False
+        )
+        
+        # Update variations if provided
+        variation_ids = request.form.getlist('variation_id')
+        variation_names = request.form.getlist('variation_name')
+        variation_prices = request.form.getlist('variation_price')
+        variation_stock_quantities = request.form.getlist('variation_stock_quantity')
+        variation_stock_on_hand = request.form.getlist('variation_stock_on_hand')
+        variation_zoho_ids = request.form.getlist('variation_zoho_item_id')
+        variation_skus = request.form.getlist('variation_sku')
+        
+        for i in range(len(variation_ids)):
+            if variation_ids[i] and variation_names[i]:
+                variation_update_query = """
+                    UPDATE product_variations 
+                    SET variation_name = %s, mrp = %s, stock_quantity = %s, stock_on_hand = %s,
+                        zoho_item_id = %s, sku = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s AND product_id = %s
+                """
+                
+                DatabaseService.execute_query(
+                    variation_update_query,
+                    (
+                        variation_names[i],
+                        float(variation_prices[i]) if variation_prices[i] else 0,
+                        int(variation_stock_quantities[i]) if variation_stock_quantities[i] else 0,
+                        int(variation_stock_on_hand[i]) if variation_stock_on_hand[i] else 0,
+                        variation_zoho_ids[i] if variation_zoho_ids[i] else None,
+                        variation_skus[i] if variation_skus[i] else None,
+                        variation_ids[i],
+                        product_id
+                    ),
+                    fetch_all=False
+                )
+        
+        logger.info(f"Product {product_id} updated successfully")
+        flash('Product updated successfully!', 'success')
+        return redirect(url_for('admin_products'))
+        
+    except Exception as e:
+        logger.error(f"Error updating product {product_id}: {e}")
+        flash('Error updating product. Please try again.', 'error')
+        return redirect(url_for('admin_edit_product', product_id=product_id))
+
 # ===== SCHEDULED TASKS =====
 
 def setup_scheduled_tasks():

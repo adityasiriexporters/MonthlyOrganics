@@ -1,0 +1,206 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Edit Product - Monthly Organics Admin{% endblock %}
+{% block page_title %}Edit Product{% endblock %}
+
+{% block content %}
+<div class="px-6">
+    <!-- Header Section -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">Edit Product</h2>
+                <p class="mt-1 text-sm text-gray-500">Update product details and variations</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{{ url_for('admin_products') }}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Products
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <form action="{{ url_for('admin_update_product', product_id=product.id) }}" method="POST" class="space-y-6">
+        <!-- Main Product Information -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Product Information</h3>
+                <p class="mt-1 text-sm text-gray-500">Basic product details and settings</p>
+            </div>
+            <div class="px-6 py-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Product Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Product Name *</label>
+                        <input type="text" 
+                               name="name" 
+                               id="name" 
+                               value="{{ product.name }}"
+                               required
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+
+                    <!-- Category -->
+                    <div>
+                        <label for="category_id" class="block text-sm font-medium text-gray-700">Category ID</label>
+                        <input type="number" 
+                               name="category_id" 
+                               id="category_id" 
+                               value="{{ product.category_id or '' }}"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" 
+                              id="description" 
+                              rows="3"
+                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">{{ product.description or '' }}</textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Zoho Item ID -->
+                    <div>
+                        <label for="zoho_item_id" class="block text-sm font-medium text-gray-700">Zoho Item ID</label>
+                        <input type="text" 
+                               name="zoho_item_id" 
+                               id="zoho_item_id" 
+                               value="{{ product.zoho_item_id or '' }}"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+
+                    <!-- SKU -->
+                    <div>
+                        <label for="sku" class="block text-sm font-medium text-gray-700">SKU</label>
+                        <input type="text" 
+                               name="sku" 
+                               id="sku" 
+                               value="{{ product.sku or '' }}"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <!-- Best Seller Checkbox -->
+                <div class="flex items-center">
+                    <input type="checkbox" 
+                           name="is_best_seller" 
+                           id="is_best_seller" 
+                           {% if product.is_best_seller %}checked{% endif %}
+                           class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                    <label for="is_best_seller" class="ml-2 block text-sm text-gray-900">
+                        Mark as Best Seller
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Variations -->
+        {% if variations %}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Product Variations</h3>
+                <p class="mt-1 text-sm text-gray-500">Manage different sizes, weights, and pricing</p>
+            </div>
+            <div class="px-6 py-4">
+                <div class="space-y-4">
+                    {% for variation in variations %}
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <input type="hidden" name="variation_id" value="{{ variation.id }}">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+                            <!-- Variation Name -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Variation</label>
+                                <input type="text" 
+                                       name="variation_name" 
+                                       value="{{ variation.variation_name }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            </div>
+
+                            <!-- Price (MRP) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Price (₹)</label>
+                                <input type="number" 
+                                       name="variation_price" 
+                                       value="{{ variation.mrp }}"
+                                       step="0.01"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            </div>
+
+                            <!-- Stock Quantity -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Stock Qty</label>
+                                <input type="number" 
+                                       name="variation_stock_quantity" 
+                                       value="{{ variation.stock_quantity or 0 }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            </div>
+
+                            <!-- Stock on Hand -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">On Hand</label>
+                                <input type="number" 
+                                       name="variation_stock_on_hand" 
+                                       value="{{ variation.stock_on_hand or 0 }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            </div>
+
+                            <!-- Zoho Item ID -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Zoho ID</label>
+                                <input type="text" 
+                                       name="variation_zoho_item_id" 
+                                       value="{{ variation.zoho_item_id or '' }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            </div>
+
+                            <!-- SKU -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">SKU</label>
+                                <input type="text" 
+                                       name="variation_sku" 
+                                       value="{{ variation.sku or '' }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex items-end">
+                                <button type="button" 
+                                        class="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Save Button -->
+        <div class="flex justify-end space-x-3">
+            <a href="{{ url_for('admin_products') }}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                Cancel
+            </a>
+            <button type="submit" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Save Product
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
