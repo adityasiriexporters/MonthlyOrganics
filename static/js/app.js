@@ -1,27 +1,21 @@
 // Monthly Organics - Frontend JavaScript
 document.addEventListener('DOMContentLoaded', function() {
-    if (!window.monthlyOrganicsLoaded) {
-        console.log('Monthly Organics application loaded');
-        window.monthlyOrganicsLoaded = true;
-        
-        // Initialize Alpine.js components
-        initializeAlpineComponents();
-        
-        // Add smooth scrolling for anchor links
-        addSmoothScrolling();
-        
-        // Initialize logo animation
-        initializeLogoAnimation();
-    }
+    console.log('Monthly Organics application loaded');
+    
+    // Initialize Alpine.js components
+    initializeAlpineComponents();
+    
+    // Add smooth scrolling for anchor links
+    addSmoothScrolling();
+    
+    // Initialize logo animation
+    initializeLogoAnimation();
 });
 
 function initializeAlpineComponents() {
     // Alpine.js will automatically initialize components
     // This function can be extended for custom Alpine.js initialization
-    if (!window.alpineInitialized) {
-        console.log('Alpine.js components initialized');
-        window.alpineInitialized = true;
-    }
+    console.log('Alpine.js components initialized');
 }
 
 function addSmoothScrolling() {
@@ -100,8 +94,5 @@ async function checkApplicationHealth() {
     }
 }
 
-// Initialize health check on page load (once)
-if (!window.healthCheckRun) {
-    checkApplicationHealth();
-    window.healthCheckRun = true;
-}
+// Initialize health check on page load
+checkApplicationHealth();
