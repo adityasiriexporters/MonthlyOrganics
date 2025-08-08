@@ -2554,14 +2554,16 @@ def admin_products():
         query = """
             SELECT p.id, p.name, p.description, p.category_id, p.is_best_seller, 
                    p.created_at, p.zoho_item_id, p.sku, p.updated_at,
+                   c.name as category_name, c.icon_url as category_icon,
                    COUNT(pv.id) as variation_count,
                    MIN(pv.mrp) as min_price,
                    MAX(pv.mrp) as max_price,
                    SUM(pv.stock_on_hand) as total_stock
             FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN product_variations pv ON p.id = pv.product_id
             GROUP BY p.id, p.name, p.description, p.category_id, p.is_best_seller, 
-                     p.created_at, p.zoho_item_id, p.sku, p.updated_at
+                     p.created_at, p.zoho_item_id, p.sku, p.updated_at, c.name, c.icon_url
             ORDER BY p.id
         """
         
