@@ -2488,7 +2488,9 @@ def admin_products():
         
         logger.info(f"Retrieved {len(products) if products else 0} products for admin")
         
-        return render_template('admin/admin_products.html', products=products)
+        from admin_auth import AdminAuth
+        admin_user = AdminAuth.get_admin_user()
+        return render_template('admin/admin_products.html', products=products, admin_user=admin_user)
         
     except Exception as e:
         logger.error(f"Error retrieving products for admin: {e}")
@@ -2527,9 +2529,12 @@ def admin_edit_product(product_id):
         
         logger.info(f"Editing product {product_id} with {len(variations) if variations else 0} variations")
         
+        from admin_auth import AdminAuth
+        admin_user = AdminAuth.get_admin_user()
         return render_template('admin/admin_edit_product.html', 
                              product=dict(product), 
-                             variations=variations)
+                             variations=variations,
+                             admin_user=admin_user)
         
     except Exception as e:
         logger.error(f"Error loading product {product_id} for editing: {e}")
