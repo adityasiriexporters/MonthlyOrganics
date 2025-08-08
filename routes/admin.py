@@ -5,7 +5,7 @@ Handles admin dashboard, export, and management functionality
 """
 from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
 from utils.database_export import DatabaseExporter
-from admin_auth import admin_required
+from admin_auth import admin_required, AdminAuth
 from services.database import DatabaseService
 from services.zoho_sync import ZohoSyncService
 from services.zoho_inventory import ZohoInventoryAPI, ZohoOAuthError, ZohoAPIError
@@ -276,12 +276,12 @@ def zoho_integration():
         sync_service = ZohoSyncService()
         sync_status = sync_service.get_sync_status()
         
-        return render_template('admin/admin_zoho.html', sync_status=sync_status)
+        return render_template('admin/admin_zoho.html', sync_status=sync_status, admin_user=AdminAuth.get_admin_user())
         
     except Exception as e:
         logger.error(f"Error loading Zoho integration page: {e}")
         flash('Error loading Zoho integration dashboard', 'error')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin_dashboard'))
 
 @admin_bp.route('/zoho/auth', methods=['GET'])
 @admin_required
