@@ -21,7 +21,7 @@
     <div class="flex-1 overflow-y-auto">
         <!-- Image Slider Section -->
         <div class="relative bg-gray-100">
-            <div class="image-slider-container relative overflow-hidden">
+            <div class="image-slider-container relative overflow-hidden select-none touch-pan-y">
                 <div class="image-slider flex transition-transform duration-300 ease-out" id="imageSlider">
                     <!-- Primary Photo -->
                     {% if product.primary_photo_url %}
@@ -172,6 +172,13 @@
 let currentImageIndex = 0;
 const totalImages = {{ total_media }};
 
+// Touch/swipe variables
+let touchStartX = 0;
+let touchEndX = 0;
+let touchStartY = 0;
+let touchEndY = 0;
+let isDragging = false;
+
 function nextImage() {
     if (currentImageIndex < totalImages - 1) {
         currentImageIndex++;
@@ -209,96 +216,92 @@ function updateSlider() {
     });
 }
 
-// Swipe functionality
-let touchStartX = 0;
-let touchEndX = 0;
-let isDragging = false;
-
+// Touch event handlers for swipe functionality
 function handleTouchStart(e) {
-    touchStartX = e.touches[0].clientX;
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
     isDragging = true;
 }
 
 function handleTouchMove(e) {
     if (!isDragging) return;
-    touchEndX = e.touches[0].clientX;
-    
-    // Prevent default scrolling during swipe
-    e.preventDefault();
+    e.preventDefault(); // Prevent scrolling while swiping
 }
 
 function handleTouchEnd(e) {
     if (!isDragging) return;
+    
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
     isDragging = false;
     
-    const swipeThreshold = 50; // Minimum distance for a swipe
-    const swipeDistance = touchStartX - touchEndX;
-    
-    if (Math.abs(swipeDistance) > swipeThreshold) {
-        if (swipeDistance > 0) {
-            // Swiped left - go to next image
-            nextImage();
-        } else {
-            // Swiped right - go to previous image
-            previousImage();
-        }
-    }
-    
-    // Reset touch coordinates
-    touchStartX = 0;
-    touchEndX = 0;
+    handleSwipeGesture();
 }
 
-// Initialize swipe functionality
-function initializeSwipe() {
-    const imageSliderContainer = document.querySelector('.image-slider-container');
-    if (imageSliderContainer && totalImages > 1) {
-        // Add touch event listeners
-        imageSliderContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-        imageSliderContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-        imageSliderContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+function handleSwipeGesture() {
+    const swipeThreshold = 50; // Minimum distance for a swipe
+    const swipeDistanceX = touchEndX - touchStartX;
+    const swipeDistanceY = Math.abs(touchEndY - touchStartY);
+    
+    // Only process horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(swipeDistanceX) > swipeThreshold && swipeDistanceY < 100) {
+        if (swipeDistanceX > 0) {
+            // Swipe right - go to previous image
+            previousImage();
+        } else {
+            // Swipe left - go to next image
+            nextImage();
+        }
+    }
+}
+
+// Initialize touch events
+function initializeTouchEvents() {
+    const sliderContainer = document.querySelector('.image-slider-container');
+    if (sliderContainer && totalImages > 1) {
+        sliderContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+        sliderContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+        sliderContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
         
-        // Add mouse event listeners for desktop drag (optional)
+        // Also add mouse events for desktop dragging
         let mouseDown = false;
         let mouseStartX = 0;
         
-        imageSliderContainer.addEventListener('mousedown', (e) => {
+        sliderContainer.addEventListener('mousedown', (e) => {
             mouseDown = true;
             mouseStartX = e.clientX;
-            imageSliderContainer.style.cursor = 'grabbing';
+            sliderContainer.style.cursor = 'grabbing';
         });
         
-        imageSliderContainer.addEventListener('mousemove', (e) => {
+        sliderContainer.addEventListener('mousemove', (e) => {
             if (!mouseDown) return;
             e.preventDefault();
         });
         
-        imageSliderContainer.addEventListener('mouseup', (e) => {
+        sliderContainer.addEventListener('mouseup', (e) => {
             if (!mouseDown) return;
             mouseDown = false;
-            imageSliderContainer.style.cursor = 'grab';
+            sliderContainer.style.cursor = 'grab';
             
-            const dragDistance = mouseStartX - e.clientX;
-            const dragThreshold = 50;
+            const swipeThreshold = 50;
+            const swipeDistance = e.clientX - mouseStartX;
             
-            if (Math.abs(dragDistance) > dragThreshold) {
-                if (dragDistance > 0) {
-                    nextImage();
-                } else {
+            if (Math.abs(swipeDistance) > swipeThreshold) {
+                if (swipeDistance > 0) {
                     previousImage();
+                } else {
+                    nextImage();
                 }
             }
         });
         
-        imageSliderContainer.addEventListener('mouseleave', () => {
+        sliderContainer.addEventListener('mouseleave', () => {
             mouseDown = false;
-            imageSliderContainer.style.cursor = 'grab';
+            sliderContainer.style.cursor = 'grab';
         });
         
-        // Set initial cursor
-        if (totalImages > 1) {
-            imageSliderContainer.style.cursor = 'grab';
-        }
+        // Set initial cursor style
+        sliderContainer.style.cursor = 'grab';
     }
 }
 
@@ -306,6 +309,6 @@ function initializeSwipe() {
 currentImageIndex = 0;
 if (totalImages > 0) {
     updateSlider();
-    initializeSwipe();
+    initializeTouchEvents();
 }
 </script>
