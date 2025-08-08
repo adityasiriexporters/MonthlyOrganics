@@ -43,11 +43,10 @@ class ZohoSyncService:
         try:
             # Get all local products that need syncing
             query = """
-                SELECT p.id, p.name, p.description, p.category_id, p.is_active,
+                SELECT p.id, p.name, p.description, p.category_id,
                        zm.zoho_item_id, zm.sync_status
                 FROM products p
                 LEFT JOIN zoho_item_mappings zm ON p.id = zm.local_product_id
-                WHERE p.is_active = true
                 ORDER BY p.id
             """
             products = DatabaseService.execute_query(query)
@@ -455,7 +454,7 @@ class ZohoSyncService:
                     COUNT(CASE WHEN zm.sync_status = 'error' THEN 1 END) as error_products
                 FROM products p
                 LEFT JOIN zoho_item_mappings zm ON p.id = zm.local_product_id
-                WHERE p.is_active = true
+                -- All products included for sync stats
             """
             product_stats = DatabaseService.execute_query(product_query, fetch_one=True)
             
