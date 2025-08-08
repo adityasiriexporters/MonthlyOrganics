@@ -6,8 +6,12 @@ Handles admin dashboard, export, and management functionality
 from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
 from utils.database_export import DatabaseExporter
 from admin_auth import admin_required
+from services.database import DatabaseService
+from werkzeug.utils import secure_filename
 import json
 import io
+import os
+import uuid
 from datetime import datetime
 import logging
 
@@ -91,3 +95,147 @@ def export_database():
         flash('Export failed due to an error. Please try again.', 'error')
         tables = DatabaseExporter.get_all_table_names()
         return render_template('admin/admin_export.html', tables=tables)
+
+@admin_bp.route('/categories', methods=['GET'])
+@admin_required
+def categories():
+    """Display categories management"""
+    try:
+        query = "SELECT id, name, icon_url FROM categories ORDER BY name"
+        categories = DatabaseService.execute_query(query)
+        return jsonify({'categories': categories or []})
+    except Exception as e:
+        logger.error(f"Error loading categories: {e}")
+        return jsonify({'error': 'Failed to load categories'}), 500
+
+@admin_bp.route('/categories', methods=['POST'])
+@admin_required
+def add_category():
+    """Add new category"""
+    try:
+        name = request.form.get('name', '').strip()
+        if not name:
+            return jsonify({'error': 'Category name is required'}), 400
+            
+        # Handle icon upload
+        icon_url = None
+        if 'icon' in request.files:
+            file = request.files['icon']
+            if file and file.filename:
+                icon_url = save_category_icon(file)
+                
+        # Insert category
+        query = "INSERT INTO categories (name, icon_url) VALUES (%s, %s) RETURNING id"
+        result = DatabaseService.execute_query(query, (name, icon_url))
+        
+        if result:
+            return jsonify({
+                'success': True, 
+                'category': {
+                    'id': result[0]['id'], 
+                    'name': name, 
+                    'icon_url': icon_url
+                }
+            })
+        else:
+            return jsonify({'error': 'Failed to create category'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error adding category: {e}")
+        return jsonify({'error': 'Failed to create category'}), 500
+
+@admin_bp.route('/categories/<int:category_id>', methods=['PUT'])
+@admin_required
+def update_category(category_id):
+    """Update category"""
+    try:
+        name = request.form.get('name', '').strip()
+        if not name:
+            return jsonify({'error': 'Category name is required'}), 400
+            
+        # Get current category
+        current_query = "SELECT icon_url FROM categories WHERE id = %s"
+        current = DatabaseService.execute_query(current_query, (category_id,))
+        if not current:
+            return jsonify({'error': 'Category not found'}), 404
+            
+        icon_url = current[0]['icon_url']
+        
+        # Handle icon upload
+        if 'icon' in request.files:
+            file = request.files['icon']
+            if file and file.filename:
+                # Delete old icon file if exists
+                if icon_url and icon_url.startswith('/static/'):
+                    old_file_path = icon_url[1:]  # Remove leading /
+                    if os.path.exists(old_file_path):
+                        os.remove(old_file_path)
+                        
+                icon_url = save_category_icon(file)
+                
+        # Update category
+        query = "UPDATE categories SET name = %s, icon_url = %s WHERE id = %s"
+        DatabaseService.execute_query(query, (name, icon_url, category_id))
+        
+        return jsonify({
+            'success': True,
+            'category': {
+                'id': category_id,
+                'name': name,
+                'icon_url': icon_url
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating category {category_id}: {e}")
+        return jsonify({'error': 'Failed to update category'}), 500
+
+@admin_bp.route('/categories/<int:category_id>', methods=['DELETE'])
+@admin_required
+def delete_category(category_id):
+    """Delete category"""
+    try:
+        # Check if category has products
+        check_query = "SELECT COUNT(*) as count FROM products WHERE category_id = %s"
+        result = DatabaseService.execute_query(check_query, (category_id,))
+        
+        if result and result[0]['count'] > 0:
+            return jsonify({'error': 'Cannot delete category with existing products'}), 400
+            
+        # Get category icon to delete file
+        icon_query = "SELECT icon_url FROM categories WHERE id = %s"
+        icon_result = DatabaseService.execute_query(icon_query, (category_id,))
+        
+        # Delete category
+        delete_query = "DELETE FROM categories WHERE id = %s"
+        DatabaseService.execute_query(delete_query, (category_id,))
+        
+        # Delete icon file if exists
+        if icon_result and icon_result[0]['icon_url']:
+            icon_url = icon_result[0]['icon_url']
+            if icon_url.startswith('/static/'):
+                file_path = icon_url[1:]  # Remove leading /
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting category {category_id}: {e}")
+        return jsonify({'error': 'Failed to delete category'}), 500
+
+def save_category_icon(file):
+    """Save uploaded category icon and return URL"""
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        name_part, ext = os.path.splitext(filename)
+        unique_filename = f"category_{uuid.uuid4().hex[:8]}{ext}"
+        
+        upload_dir = 'static/uploads/categories'
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        
+        return f"/static/uploads/categories/{unique_filename}"
+    return None
