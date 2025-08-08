@@ -106,7 +106,7 @@ class ZohoInventoryAPI:
         Generate OAuth authorization URL for user consent
         """
         # Use the correct scope format for Zoho Inventory API
-        scope = 'ZohoInventory.items.all,ZohoInventory.salesorders.all,ZohoInventory.settings.all'
+        scope = 'ZohoInventory.FullAccess.all'
         
         params = {
             'client_id': self.client_id,

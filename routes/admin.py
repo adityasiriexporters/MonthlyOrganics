@@ -341,23 +341,28 @@ def zoho_callback():
         flash('Authentication failed due to an error', 'error')
         return redirect(url_for('admin.zoho_integration'))
 
-@admin_bp.route('/zoho/test-auth', methods=['GET'])
+@admin_bp.route('/zoho/debug', methods=['GET'])
 @admin_required
-def zoho_test_auth():
-    """Test different OAuth URL formats to debug 500 error"""
+def zoho_debug():
+    """Debug endpoint to check Zoho OAuth configuration"""
     try:
         from urllib.parse import urlencode
         
+        # Get environment variables
         client_id = os.environ.get('ZOHO_CLIENT_ID')
+        client_secret = os.environ.get('ZOHO_CLIENT_SECRET', 'SET')  # Don't expose actual secret
+        organization_id = os.environ.get('ZOHO_ORGANIZATION_ID')
+        
+        # Generate redirect URI
         redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
         
-        # Test different scope formats including the corrected one
+        # Test different scope formats
         test_scopes = [
+            'ZohoInventory.FullAccess.all',
             'ZohoInventory.items.all,ZohoInventory.salesorders.all,ZohoInventory.settings.all',
             'ZohoInventory.items.all',
             'ZohoInventory.salesorders.all',
-            'ZohoInventory.settings.all',
-            'ZohoInventory.fullaccess.all'
+            'ZohoInventory.settings.all'
         ]
         
         test_urls = []
@@ -370,17 +375,39 @@ def zoho_test_auth():
                 'access_type': 'offline'
             }
             url = f"https://accounts.zoho.com/oauth/v2/auth?{urlencode(params)}"
-            test_urls.append((scope, url))
+            test_urls.append({
+                'scope': scope,
+                'url': url,
+                'recommended': scope == 'ZohoInventory.FullAccess.all'
+            })
         
-        # Return as JSON for testing
+        # Check if we have existing tokens
+        try:
+            zoho_api = ZohoInventoryAPI()
+            has_tokens = zoho_api.is_authenticated()
+        except Exception:
+            has_tokens = False
+        
         return jsonify({
-            'client_id': client_id,
-            'redirect_uri': redirect_uri,
-            'test_urls': test_urls
+            'configuration': {
+                'client_id': client_id,
+                'client_secret_set': bool(client_secret and client_secret != 'SET'),
+                'organization_id': organization_id,
+                'redirect_uri': redirect_uri,
+                'has_existing_tokens': has_tokens
+            },
+            'checklist': {
+                'redirect_uri_in_console': f"Verify this exact URI is in Zoho console: {redirect_uri}",
+                'scope_enabled': "Enable 'ZohoInventory.FullAccess.all' in Zoho app settings",
+                'app_published': "Ensure app is published OR you're added as test user",
+                'secrets_set': "Verify all environment variables are set"
+            },
+            'test_urls': test_urls,
+            'current_scope': 'ZohoInventory.FullAccess.all'
         })
         
     except Exception as e:
-        logger.error(f"Error in test auth: {e}")
+        logger.error(f"Error in debug endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/zoho/sync-products', methods=['POST'])
