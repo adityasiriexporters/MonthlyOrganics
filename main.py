@@ -2504,8 +2504,9 @@ def admin_edit_product(product_id):
     try:
         # Get product details
         product_query = """
-            SELECT id, name, description, category_id, is_best_seller, 
-                   created_at, zoho_item_id, sku, updated_at
+            SELECT id, name, description, description_heading, category_id, is_best_seller, 
+                   created_at, zoho_item_id, sku, updated_at, primary_photo_url, 
+                   photo_urls, video_urls
             FROM products 
             WHERE id = %s
         """
@@ -2545,10 +2546,15 @@ def admin_edit_product(product_id):
 @admin_required
 def admin_update_product(product_id):
     """Handle form submission to update product details"""
+    import os
+    import uuid
+    from werkzeug.utils import secure_filename
+    
     try:
         # Get form data for main product
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
+        description_heading = request.form.get('description_heading', '').strip()
         category_id = request.form.get('category_id')
         is_best_seller = request.form.get('is_best_seller') == 'on'
         zoho_item_id = request.form.get('zoho_item_id', '').strip()
@@ -2559,20 +2565,122 @@ def admin_update_product(product_id):
             flash('Product name is required.', 'error')
             return redirect(url_for('admin_edit_product', product_id=product_id))
         
+        # Get current product data to get existing media URLs
+        from services.database import DatabaseService
+        current_product_query = """
+            SELECT primary_photo_url, photo_urls, video_urls 
+            FROM products WHERE id = %s
+        """
+        current_product = DatabaseService.execute_query(current_product_query, (product_id,), fetch_one=True)
+        if current_product:
+            current_primary_photo = current_product.get('primary_photo_url')
+            current_photos = current_product.get('photo_urls') or []
+            current_videos = current_product.get('video_urls') or []
+        else:
+            current_primary_photo = None
+            current_photos = []
+            current_videos = []
+        
+        # Handle file uploads
+        def save_uploaded_file(file, upload_type='photo'):
+            """Save uploaded file and return URL"""
+            if file and file.filename:
+                # Generate unique filename
+                filename = secure_filename(file.filename)
+                name_part, ext = os.path.splitext(filename)
+                unique_filename = f"{name_part}_{uuid.uuid4().hex[:8]}{ext}"
+                
+                # Determine upload directory
+                if upload_type == 'video':
+                    upload_dir = 'static/uploads/products/videos'
+                else:
+                    upload_dir = 'static/uploads/products/photos'
+                
+                # Create directory if it doesn't exist
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                # Save file
+                file_path = os.path.join(upload_dir, unique_filename)
+                file.save(file_path)
+                
+                # Return relative URL for database storage
+                return f"/static/uploads/products/{'videos' if upload_type == 'video' else 'photos'}/{unique_filename}"
+            return None
+        
+        # Handle primary photo upload
+        primary_photo_url = current_primary_photo
+        if 'primary_photo' in request.files:
+            primary_photo_file = request.files['primary_photo']
+            if primary_photo_file and primary_photo_file.filename:
+                new_primary_url = save_uploaded_file(primary_photo_file, 'photo')
+                if new_primary_url:
+                    # Delete old primary photo file if it exists
+                    if primary_photo_url and primary_photo_url.startswith('/static/uploads/'):
+                        old_file_path = primary_photo_url[1:]  # Remove leading /
+                        if os.path.exists(old_file_path):
+                            os.remove(old_file_path)
+                    primary_photo_url = new_primary_url
+        
+        # Handle additional photos
+        photo_urls = current_photos.copy()
+        if 'additional_photos' in request.files:
+            additional_photos = request.files.getlist('additional_photos')
+            for photo_file in additional_photos:
+                if photo_file and photo_file.filename:
+                    new_photo_url = save_uploaded_file(photo_file, 'photo')
+                    if new_photo_url:
+                        photo_urls.append(new_photo_url)
+        
+        # Handle photo removal
+        photos_to_remove = request.form.getlist('remove_photos')
+        for photo_url in photos_to_remove:
+            if photo_url in photo_urls:
+                photo_urls.remove(photo_url)
+                # Delete file
+                if photo_url.startswith('/static/uploads/'):
+                    file_path = photo_url[1:]  # Remove leading /
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+        
+        # Handle videos
+        video_urls = current_videos.copy()
+        if 'videos' in request.files:
+            video_files = request.files.getlist('videos')
+            for video_file in video_files:
+                if video_file and video_file.filename:
+                    new_video_url = save_uploaded_file(video_file, 'video')
+                    if new_video_url:
+                        video_urls.append(new_video_url)
+        
+        # Handle video removal
+        videos_to_remove = request.form.getlist('remove_videos')
+        for video_url in videos_to_remove:
+            if video_url in video_urls:
+                video_urls.remove(video_url)
+                # Delete file
+                if video_url.startswith('/static/uploads/'):
+                    file_path = video_url[1:]  # Remove leading /
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+        
         # Update main product
         product_update_query = """
             UPDATE products 
-            SET name = %s, description = %s, category_id = %s, is_best_seller = %s,
-                zoho_item_id = %s, sku = %s, updated_at = CURRENT_TIMESTAMP
+            SET name = %s, description = %s, description_heading = %s, category_id = %s, 
+                is_best_seller = %s, zoho_item_id = %s, sku = %s, 
+                primary_photo_url = %s, photo_urls = %s, video_urls = %s,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """
         
-        from services.database import DatabaseService
         DatabaseService.execute_query(
             product_update_query,
-            (name, description, category_id, is_best_seller, 
+            (name, description, description_heading, category_id, is_best_seller, 
              zoho_item_id if zoho_item_id else None, 
-             sku if sku else None, 
+             sku if sku else None,
+             primary_photo_url,
+             photo_urls,
+             video_urls,
              product_id),
             fetch_all=False
         )
