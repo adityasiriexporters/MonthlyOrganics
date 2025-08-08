@@ -104,21 +104,13 @@ def categories():
         query = "SELECT id, name, icon_url FROM categories ORDER BY name"
         categories_data = DatabaseService.execute_query(query)
         
-        # Ensure we have a proper list and clean the data
-        categories_list = []
-        if categories_data:
-            for cat in categories_data:
-                clean_category = {
-                    'id': cat.get('id'),
-                    'name': cat.get('name', '').strip() if cat.get('name') else 'Unnamed Category',
-                    'icon_url': cat.get('icon_url', '').strip() if cat.get('icon_url') else None
-                }
-                categories_list.append(clean_category)
+        # Ensure we have a proper list
+        categories_list = categories_data if categories_data else []
         
         # Log for debugging
         logger.info(f"Fetched {len(categories_list)} categories for admin")
         for cat in categories_list:
-            logger.info(f"Category: ID={cat['id']}, Name='{cat['name']}', Icon='{cat['icon_url']}'")
+            logger.info(f"Category: ID={cat.get('id')}, Name={cat.get('name')}, Icon={cat.get('icon_url')}")
         
         return jsonify({
             'success': True,

@@ -370,32 +370,35 @@ function renderCategories(categoriesData) {
     }
     
     const grid = categoriesData.map(category => {
-        console.log('Rendering individual category:', category);
+        console.log('Rendering category:', category);
         
-        // Safely extract category data with proper fallbacks
+        // Safely get category data with defaults
         const categoryId = category.id || 0;
         const categoryName = category.name || 'Unnamed Category';
-        const iconUrl = category.icon_url || null;
+        const iconUrl = category.icon_url;
         
-        console.log(`Category ${categoryId}: name="${categoryName}", icon="${iconUrl}"`);
-        
-        // Create icon HTML with proper error handling
+        // Create icon HTML separately for clarity
         let iconHtml;
-        if (iconUrl && iconUrl.trim() !== '') {
-            iconHtml = `<img src="${iconUrl}" alt="${categoryName}" class="w-6 h-6 object-contain" onload="console.log('Icon loaded: ${iconUrl}')" onerror="console.log('Icon failed to load: ${iconUrl}'); this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                       <svg class="w-5 h-5 text-gray-400" style="display:none;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                       </svg>`;
+        if (iconUrl) {
+            iconHtml = `
+                <img src="${iconUrl}" alt="${categoryName}" class="w-6 h-6 object-contain" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <svg class="w-5 h-5 text-gray-400" style="display:none;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+            `;
         } else {
-            iconHtml = `<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                       </svg>`;
+            iconHtml = `
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+            `;
         }
         
         return `
         <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 transition-colors">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-200">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
                     ${iconHtml}
                 </div>
                 <div>
@@ -417,9 +420,9 @@ function renderCategories(categoriesData) {
         `;
     }).join('');
     
-    console.log('Generated grid HTML for', categoriesData.length, 'categories');
+    console.log('Generated grid HTML length:', grid.length);
     container.innerHTML = `<div class="grid grid-cols-1 gap-4">${grid}</div>`;
-    console.log('Categories rendered successfully in DOM');
+    console.log('Categories rendered successfully');
 }
 
 function openCategoryModal(categoryId = null) {
@@ -432,12 +435,12 @@ function openCategoryModal(categoryId = null) {
     const title = document.getElementById('modal-title');
     const submitText = document.getElementById('submit-text');
     
-    // Reset form first
+    // Reset form
     form.reset();
     resetIconPreview();
     
     if (categoryId) {
-        // Edit mode - find category by ID
+        // Edit mode
         const category = categories.find(c => c.id === parseInt(categoryId));
         console.log('Found category for editing:', category);
         
@@ -447,21 +450,18 @@ function openCategoryModal(categoryId = null) {
             
             // Pre-fill the form with current data
             const nameInput = document.getElementById('categoryName');
-            if (nameInput && category.name) {
-                nameInput.value = category.name;
+            if (nameInput) {
+                nameInput.value = category.name || '';
                 console.log('Pre-filled name:', category.name);
             }
             
             // Show current icon if exists
-            if (category.icon_url && category.icon_url.trim() !== '') {
+            if (category.icon_url) {
                 console.log('Pre-filling icon:', category.icon_url);
                 showIconPreview(category.icon_url);
-            } else {
-                console.log('No icon to pre-fill');
             }
         } else {
             console.error('Category not found for ID:', categoryId);
-            console.error('Available category IDs:', categories.map(c => c.id));
             showError('Category not found');
             return;
         }
@@ -469,12 +469,9 @@ function openCategoryModal(categoryId = null) {
         // Add mode
         title.textContent = 'Add Category';
         submitText.textContent = 'Save Category';
-        console.log('Modal opened in add mode');
     }
     
-    // Show modal
     modal.classList.remove('hidden');
-    console.log('Modal is now visible');
 }
 
 function closeCategoryModal() {
@@ -568,16 +565,10 @@ document.getElementById('categoryIcon').addEventListener('change', function(e) {
 });
 
 function showIconPreview(src) {
-    console.log('Showing icon preview for:', src);
     const preview = document.getElementById('iconPreview');
-    if (preview) {
-        preview.innerHTML = `<img src="${src}" alt="Icon preview" class="w-8 h-8 object-contain" onload="console.log('Preview icon loaded successfully')" onerror="console.error('Preview icon failed to load')">`;
-        preview.classList.remove('border-dashed', 'border-gray-300');
-        preview.classList.add('border-solid', 'border-green-300');
-        console.log('Icon preview updated successfully');
-    } else {
-        console.error('Icon preview element not found');
-    }
+    preview.innerHTML = `<img src="${src}" alt="Icon preview" class="w-8 h-8 object-contain">`;
+    preview.classList.remove('border-dashed', 'border-gray-300');
+    preview.classList.add('border-solid', 'border-green-300');
 }
 
 function resetIconPreview() {

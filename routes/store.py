@@ -11,7 +11,7 @@ def store():
     """Store page route that displays categories and products."""
     try:
         query = """
-            SELECT id, name, COALESCE(icon_url, '') as icon_url 
+            SELECT id, name, icon_url 
             FROM categories 
             ORDER BY name
         """
