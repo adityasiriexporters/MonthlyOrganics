@@ -12,10 +12,14 @@
                 {% for product in category.products %}
                 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                     <!-- Product Image (16:9 aspect ratio) -->
-                    <div class="w-full aspect-video bg-green-100 flex items-center justify-center">
-                        <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-                        </svg>
+                    <div class="w-full aspect-video bg-green-100 flex items-center justify-center overflow-hidden">
+                        {% if product.primary_photo_url %}
+                            <img src="{{ product.primary_photo_url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                            <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                            </svg>
+                        {% endif %}
                     </div>
                     
                     <!-- Product Content -->
@@ -43,7 +47,15 @@
                         </div>
                         
                         <!-- Product Description -->
-                        <p class="text-xs text-gray-600 leading-relaxed mb-3">{{ product.description }}</p>
+                        <p class="text-xs text-gray-600 leading-relaxed mb-3">
+                            {% if product.description_heading %}
+                                {{ product.description_heading }}
+                            {% elif product.description %}
+                                {{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}
+                            {% else %}
+                                No description available
+                            {% endif %}
+                        </p>
                         
                         <!-- Product Variations -->
                         {% if product.variations %}

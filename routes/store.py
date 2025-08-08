@@ -135,6 +135,8 @@ def all_products():
                 p.id as product_id,
                 p.name as product_name,
                 p.description,
+                p.description_heading,
+                p.primary_photo_url,
                 p.is_best_seller,
                 pv.id as variation_id,
                 pv.variation_name,
@@ -183,6 +185,8 @@ def all_products():
                     'id': prod_id,
                     'name': row['product_name'],
                     'description': row['description'],
+                    'description_heading': row['description_heading'],
+                    'primary_photo_url': row['primary_photo_url'],
                     'is_best_seller': row['is_best_seller'],
                     'variations': []
                 }
