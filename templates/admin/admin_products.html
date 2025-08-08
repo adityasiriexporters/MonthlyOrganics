@@ -326,26 +326,37 @@ function switchTab(tabName) {
 
 // Category management functions
 function loadCategories() {
+    console.log('Loading categories...');
     fetch('/admin/categories')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Categories response status:', response.status);
+            return response.json();
+        })
         .then(data => {
-            if (data.categories) {
+            console.log('Categories data received:', data);
+            if (data.success && data.categories && Array.isArray(data.categories)) {
                 categories = data.categories;
+                console.log('Categories array:', categories);
                 renderCategories(data.categories);
+            } else if (data.error) {
+                console.error('API error:', data.error, data.message);
+                showError('Failed to load categories: ' + (data.message || data.error));
             } else {
-                showError('Failed to load categories');
+                console.error('Invalid categories data structure:', data);
+                showError('Failed to load categories - invalid data structure');
             }
         })
         .catch(error => {
             console.error('Error loading categories:', error);
-            showError('Failed to load categories');
+            showError('Failed to load categories: ' + error.message);
         });
 }
 
 function renderCategories(categoriesData) {
+    console.log('Rendering categories:', categoriesData);
     const container = document.getElementById('categories-list');
     
-    if (categoriesData.length === 0) {
+    if (!categoriesData || categoriesData.length === 0) {
         container.innerHTML = `
             <div class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,19 +369,21 @@ function renderCategories(categoriesData) {
         return;
     }
     
-    const grid = categoriesData.map(category => `
+    const grid = categoriesData.map(category => {
+        console.log('Rendering category:', category);
+        return `
         <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 transition-colors">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
                     ${category.icon_url ? 
-                        `<img src="${category.icon_url}" alt="${category.name}" class="w-6 h-6 object-contain">` :
+                        `<img src="${category.icon_url}" alt="${category.name || 'Category'}" class="w-6 h-6 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><svg class="w-5 h-5 text-gray-400" style="display:none;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>` :
                         `<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>`
                     }
                 </div>
                 <div>
-                    <h4 class="text-sm font-medium text-gray-900">${category.name}</h4>
+                    <h4 class="text-sm font-medium text-gray-900">${category.name || 'Unnamed Category'}</h4>
                     <p class="text-xs text-gray-500">Category ID: ${category.id}</p>
                 </div>
             </div>
@@ -385,12 +398,17 @@ function renderCategories(categoriesData) {
                 </button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
     
+    console.log('Generated grid HTML:', grid);
     container.innerHTML = `<div class="grid grid-cols-1 gap-4">${grid}</div>`;
 }
 
 function openCategoryModal(categoryId = null) {
+    console.log('Opening category modal for ID:', categoryId);
+    console.log('Available categories:', categories);
+    
     currentCategoryId = categoryId;
     const modal = document.getElementById('categoryModal');
     const form = document.getElementById('categoryForm');
@@ -403,15 +421,29 @@ function openCategoryModal(categoryId = null) {
     
     if (categoryId) {
         // Edit mode
-        const category = categories.find(c => c.id === categoryId);
+        const category = categories.find(c => c.id === parseInt(categoryId));
+        console.log('Found category for editing:', category);
+        
         if (category) {
             title.textContent = 'Edit Category';
             submitText.textContent = 'Update Category';
-            document.getElementById('categoryName').value = category.name;
             
+            // Pre-fill the form with current data
+            const nameInput = document.getElementById('categoryName');
+            if (nameInput) {
+                nameInput.value = category.name || '';
+                console.log('Pre-filled name:', category.name);
+            }
+            
+            // Show current icon if exists
             if (category.icon_url) {
+                console.log('Pre-filling icon:', category.icon_url);
                 showIconPreview(category.icon_url);
             }
+        } else {
+            console.error('Category not found for ID:', categoryId);
+            showError('Category not found');
+            return;
         }
     } else {
         // Add mode
@@ -532,13 +564,45 @@ function resetIconPreview() {
 
 // Utility functions
 function showSuccess(message) {
-    // You can implement a toast notification here
-    alert(message);
+    // Create a simple toast notification
+    const toast = createToast(message, 'success');
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 4000);
 }
 
 function showError(message) {
-    // You can implement a toast notification here
-    alert(message);
+    // Create a simple toast notification
+    const toast = createToast(message, 'error');
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+function createToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <div class="flex-shrink-0">
+                ${type === 'success' ? 
+                    '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>' :
+                    '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>'
+                }
+            </div>
+            <div class="flex-1 text-sm font-medium">${message}</div>
+            <button onclick="this.parentElement.parentElement.remove()" class="flex-shrink-0 ml-2 text-white hover:text-gray-200">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+            </button>
+        </div>
+    `;
+    return toast;
 }
 
 // Initialize on page load

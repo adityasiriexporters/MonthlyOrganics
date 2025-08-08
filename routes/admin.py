@@ -102,11 +102,27 @@ def categories():
     """Display categories management"""
     try:
         query = "SELECT id, name, icon_url FROM categories ORDER BY name"
-        categories = DatabaseService.execute_query(query)
-        return jsonify({'categories': categories or []})
+        categories_data = DatabaseService.execute_query(query)
+        
+        # Ensure we have a proper list
+        categories_list = categories_data if categories_data else []
+        
+        # Log for debugging
+        logger.info(f"Fetched {len(categories_list)} categories for admin")
+        for cat in categories_list:
+            logger.info(f"Category: ID={cat.get('id')}, Name={cat.get('name')}, Icon={cat.get('icon_url')}")
+        
+        return jsonify({
+            'success': True,
+            'categories': categories_list
+        })
     except Exception as e:
         logger.error(f"Error loading categories: {e}")
-        return jsonify({'error': 'Failed to load categories'}), 500
+        return jsonify({
+            'success': False,
+            'error': 'Failed to load categories',
+            'message': str(e)
+        }), 500
 
 @admin_bp.route('/categories', methods=['POST'])
 @admin_required
