@@ -292,6 +292,10 @@ def zoho_auth():
         redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
         auth_url = zoho_api.get_authorization_url(redirect_uri)
         
+        # Log the URL details for debugging
+        logger.info(f"Redirect URI: {redirect_uri}")
+        logger.info(f"Generated Auth URL: {auth_url}")
+        
         return redirect(auth_url)
         
     except Exception as e:
@@ -336,6 +340,48 @@ def zoho_callback():
         logger.error(f"Error in Zoho callback: {e}")
         flash('Authentication failed due to an error', 'error')
         return redirect(url_for('admin.zoho_integration'))
+
+@admin_bp.route('/zoho/test-auth', methods=['GET'])
+@admin_required
+def zoho_test_auth():
+    """Test different OAuth URL formats to debug 500 error"""
+    try:
+        from urllib.parse import urlencode
+        
+        client_id = os.environ.get('ZOHO_CLIENT_ID')
+        redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
+        
+        # Test different scope formats
+        test_scopes = [
+            'ZohoInventory.fullaccess.all',
+            'ZohoInventory.FullAccess.all',
+            'ZohoInventory.items.ALL',
+            'ZohoInventory.items.READ',
+            'ZohoInventory.salesorders.READ'
+        ]
+        
+        test_urls = []
+        for scope in test_scopes:
+            params = {
+                'client_id': client_id,
+                'response_type': 'code', 
+                'redirect_uri': redirect_uri,
+                'scope': scope,
+                'access_type': 'offline'
+            }
+            url = f"https://accounts.zoho.com/oauth/v2/auth?{urlencode(params)}"
+            test_urls.append((scope, url))
+        
+        # Return as JSON for testing
+        return jsonify({
+            'client_id': client_id,
+            'redirect_uri': redirect_uri,
+            'test_urls': test_urls
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in test auth: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/zoho/sync-products', methods=['POST'])
 @admin_required

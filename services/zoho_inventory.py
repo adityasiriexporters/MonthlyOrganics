@@ -11,7 +11,7 @@ import requests
 import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote_plus
 from services.database import DatabaseService
 
 logger = logging.getLogger(__name__)
@@ -105,18 +105,31 @@ class ZohoInventoryAPI:
         """
         Generate OAuth authorization URL for user consent
         """
+        # Try different scope formats to resolve 500 error
+        # Option 1: Standard format
+        scope_options = [
+            'ZohoInventory.fullaccess.all',
+            'ZohoInventory.FullAccess.all', 
+            'ZohoInventory.items.ALL,ZohoInventory.salesorders.ALL',
+            'ZohoInventory.items.READ,ZohoInventory.items.CREATE,ZohoInventory.items.UPDATE'
+        ]
+        
+        # Start with the most common working format
         params = {
-            'scope': 'ZohoInventory.fullaccess.all',
             'client_id': self.client_id,
             'response_type': 'code',
             'redirect_uri': redirect_uri,
+            'scope': scope_options[0],  # Use first option
             'access_type': 'offline'
         }
         
         if state:
             params['state'] = state
             
-        return f"{self.auth_url}/auth?{urlencode(params)}"
+        # Build URL with proper encoding
+        auth_url = f"{self.auth_url}/auth?{urlencode(params)}"
+        logger.info(f"Generated Zoho auth URL with scope '{params['scope']}': {auth_url}")
+        return auth_url
     
     def exchange_code_for_tokens(self, code: str, redirect_uri: str):
         """
