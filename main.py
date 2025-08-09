@@ -104,10 +104,40 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 # Initialize the app with the extension
 db.init_app(app)
 
-with app.app_context():
-    # Make sure to import the models here or their tables won't be created
-    import models  # noqa: F401
-    db.create_all()
+def init_database():
+    """Initialize database tables lazily."""
+    try:
+        with app.app_context():
+            # Make sure to import the models here or their tables won't be created
+            import models  # noqa: F401
+            db.create_all()
+            logger.info("Database tables initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        raise
+
+# Initialize database tables on first request if not already done
+_db_initialized = False
+
+def ensure_db_initialized():
+    """Ensure database is initialized on first use."""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            init_database()
+            _db_initialized = True
+        except Exception as e:
+            logger.error(f"Failed to initialize application: {e}")
+            raise
+
+# Initialize database immediately but handle errors gracefully
+try:
+    init_database()
+    _db_initialized = True
+    logger.info("Database initialized successfully during startup")
+except Exception as e:
+    logger.warning(f"Database initialization during startup failed, will retry on first request: {e}")
+    _db_initialized = False
 
 @app.route('/')
 def index():
@@ -115,6 +145,25 @@ def index():
     logger.info("Rendering homepage")
 
     return render_template('index.html')
+
+@app.route('/health')
+def health():
+    """Health check endpoint for deployment verification."""
+    try:
+        # Quick database connectivity check
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({
+            'status': 'healthy', 
+            'message': 'Monthly Organics is running',
+            'database': 'connected'
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy', 
+            'message': 'Service experiencing issues',
+            'error': str(e)
+        }), 500
 
 @app.route('/profile')
 def profile():
@@ -342,6 +391,13 @@ def save_address():
         # Log all form data for debugging
         logger.info(f"Received form data: {dict(request.form)}")
 
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot save address: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Session expired. Please login again.', 'error')
+            return redirect(url_for('login'))
+
         # Generate incremental label if nickname already exists
         requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
         final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
@@ -453,6 +509,14 @@ def edit_address(address_id):
 
         # Get the specific address using SecureAddressService with custom_id
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot edit address: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
+            
         addresses = SecureAddressService.get_user_addresses(user_custom_id)
         address = None
 
@@ -518,9 +582,15 @@ def update_address(address_id):
         # Generate incremental label if nickname already exists (only for editing existing address)
         requested_nickname = form_data.get('nickname', '')
 
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot update address: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
+
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
-        user_custom_id = get_user_custom_id(user_id)
         existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
 
@@ -621,6 +691,13 @@ def api_addresses():
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot get addresses: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            return {'error': 'Session expired'}, 401
+            
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
 
@@ -1026,6 +1103,13 @@ def update_cart(variation_id, action):
 
         # Use CartService to update quantity with custom_id
         user_custom_id = get_user_custom_id(user_id)
+        
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot update cart: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            return "Session expired. Please login again.", 401
+            
         new_quantity = CartService.update_cart_quantity(user_custom_id, variation_id, action)
 
         if new_quantity is None:
@@ -1070,6 +1154,12 @@ def cart_totals():
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
         logger.info(f"Calculating cart totals for user {user_id}, custom_id: {user_custom_id}")
+
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot get cart totals: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            return "Session expired. Please login again.", 401
 
         # Get cart items using CartService with custom_id
         cart_items = CartService.get_cart_items(user_custom_id)
@@ -1533,6 +1623,13 @@ def checkout():
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
         address_id = request.args.get('address_id', type=int)
+
+        # Handle case where user doesn't exist (stale session)
+        if not user_custom_id:
+            logger.error(f"Cannot access checkout: user_id {user_id} not found in database")
+            session.clear()  # Clear stale session data
+            flash('Your session has expired. Please login again.', 'error')
+            return redirect(url_for('login'))
 
         if not address_id:
             flash('Please select a delivery address.', 'error')
