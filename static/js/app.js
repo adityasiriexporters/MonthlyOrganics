@@ -2,15 +2,13 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Monthly Organics application loaded');
     
-    // Initialize Alpine.js components (lightweight)
+    // Initialize Alpine.js components
     initializeAlpineComponents();
     
-    // Add smooth scrolling for anchor links (only when needed)
-    if (document.querySelector('a[href^="#"]')) {
-        addSmoothScrolling();
-    }
+    // Add smooth scrolling for anchor links
+    addSmoothScrolling();
     
-    // Initialize logo animation (placeholder for backward compatibility)
+    // Initialize logo animation
     initializeLogoAnimation();
 });
 
@@ -83,7 +81,7 @@ window.monthlyOrganics = {
     }
 };
 
-// Health check function (optimized - only run when needed)
+// Health check function
 async function checkApplicationHealth() {
     try {
         const response = await fetch('/health');
@@ -96,5 +94,5 @@ async function checkApplicationHealth() {
     }
 }
 
-// Removed automatic health check on page load for better performance
-// Health check can be called manually when needed: checkApplicationHealth();
+// Initialize health check on page load
+checkApplicationHealth();

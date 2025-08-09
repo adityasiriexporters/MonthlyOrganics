@@ -342,13 +342,6 @@ def save_address():
         # Log all form data for debugging
         logger.info(f"Received form data: {dict(request.form)}")
 
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot save address: user_id {user_id} not found in database")
-            session.clear()  # Clear stale session data
-            flash('Your session has expired. Please login again.', 'error')
-            return redirect(url_for('login'))
-        
         # Generate incremental label if nickname already exists
         requested_nickname = FormValidator.sanitize_string(request.form.get('nickname', ''))
         final_nickname = generate_incremental_label(user_custom_id, requested_nickname)
@@ -460,14 +453,6 @@ def edit_address(address_id):
 
         # Get the specific address using SecureAddressService with custom_id
         user_custom_id = get_user_custom_id(user_id)
-        
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot access addresses: user_id {user_id} not found in database")
-            session.clear()  # Clear stale session data
-            flash('Your session has expired. Please login again.', 'error')
-            return redirect(url_for('login'))
-        
         addresses = SecureAddressService.get_user_addresses(user_custom_id)
         address = None
 
@@ -536,14 +521,6 @@ def update_address(address_id):
         # For editing, we don't need incremental naming unless they're changing to a conflicting name
         # Get existing addresses excluding current one
         user_custom_id = get_user_custom_id(user_id)
-        
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot update address: user_id {user_id} not found in database")
-            session.clear()  # Clear stale session data
-            flash('Your session has expired. Please login again.', 'error')
-            return redirect(url_for('login'))
-        
         existing_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         existing_nicknames = [addr['nickname'].lower() for addr in existing_addresses if addr['id'] != address_id]
 
@@ -644,12 +621,6 @@ def api_addresses():
     try:
         user_id = session['user_id']
         user_custom_id = get_user_custom_id(user_id)
-        
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot access addresses: user_id {user_id} not found in database")
-            return jsonify({'success': False, 'message': 'Session expired'})
-        
         user_addresses = SecureAddressService.get_user_addresses(user_custom_id)
         SecurityAuditLogger.log_data_access(user_id, "VIEW", "addresses")
 
@@ -1055,12 +1026,6 @@ def update_cart(variation_id, action):
 
         # Use CartService to update quantity with custom_id
         user_custom_id = get_user_custom_id(user_id)
-        
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot update cart: user_id {user_id} not found in database")
-            return "Session expired", 401
-        
         new_quantity = CartService.update_cart_quantity(user_custom_id, variation_id, action)
 
         if new_quantity is None:
@@ -1106,11 +1071,6 @@ def cart_totals():
         user_custom_id = get_user_custom_id(user_id)
         logger.info(f"Calculating cart totals for user {user_id}, custom_id: {user_custom_id}")
 
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot access cart: user_id {user_id} not found in database")
-            return jsonify({'success': False, 'message': 'Session expired'})
-        
         # Get cart items using CartService with custom_id
         cart_items = CartService.get_cart_items(user_custom_id)
         logger.info(f"Found {len(cart_items)} cart items")
@@ -1578,13 +1538,6 @@ def checkout():
             flash('Please select a delivery address.', 'error')
             return redirect(url_for('pre_checkout'))
 
-        # Handle case where user doesn't exist (stale session)
-        if not user_custom_id:
-            logger.error(f"Cannot access checkout: user_id {user_id} not found in database")
-            session.clear()
-            flash('Your session has expired. Please login again.', 'error')
-            return redirect(url_for('login'))
-        
         # Get cart items
         cart_items = CartService.get_cart_items(user_custom_id)
         if not cart_items:

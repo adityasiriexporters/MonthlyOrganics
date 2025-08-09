@@ -79,7 +79,7 @@ class QueryOptimizer:
         
         if category_id:
             base_query += " AND p.category_id = %s"
-            params.append(str(category_id))
+            params.append(category_id)
         
         base_query += " ORDER BY c.name, p.name, pv.variation_name"
         

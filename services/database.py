@@ -7,11 +7,8 @@ import logging
 import psycopg2
 import psycopg2.extras
 from psycopg2 import pool
-from typing import Optional, Dict, List, Any, TYPE_CHECKING
+from typing import Optional, Dict, List, Any
 import threading
-
-if TYPE_CHECKING:
-    from models import User
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +31,7 @@ class DatabaseService:
                             return False
                         
                         # Create connection pool with 5-20 connections
-                        cls._connection_pool = pool.ThreadedConnectionPool(
+                        cls._connection_pool = psycopg2.pool.ThreadedConnectionPool(
                             minconn=2,
                             maxconn=10,
                             dsn=database_url
@@ -48,12 +45,19 @@ class DatabaseService:
     
     @classmethod
     def _is_connection_healthy(cls, conn: psycopg2.extensions.connection) -> bool:
-        """Quick connection health check - optimized for performance"""
+        """Check if a database connection is healthy"""
         try:
-            # Quick check without expensive query - just check connection state
-            return conn is not None and conn.closed == 0
+            if conn is None or conn.closed != 0:
+                return False
+            
+            # Test the connection with a simple query
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
+                return result is not None and result[0] == 1
+            
         except Exception as e:
-            logger.debug(f"Connection health check failed: {e}")
+            logger.debug(f"Connection health check failed: {e}")  # Reduce log noise
             return False
     
     @classmethod
@@ -62,21 +66,20 @@ class DatabaseService:
         if not cls.initialize_pool():
             return None
             
-        max_retries = 2  # Reduced retries for better performance
+        max_retries = 3
         for attempt in range(max_retries):
             try:
-                conn = cls._connection_pool.getconn() if cls._connection_pool else None
+                conn = cls._connection_pool.getconn()
                 if conn is None:
                     continue
                 
-                # Quick health check - only check if connection is closed
+                # Check if connection is healthy
                 if cls._is_connection_healthy(conn):
                     return conn
                 else:
-                    # Connection is unhealthy, remove it from pool
-                    logger.debug(f"Closed connection detected on attempt {attempt + 1}, removing from pool")
-                    if cls._connection_pool:
-                        cls._connection_pool.putconn(conn, close=True)
+                    # Connection is unhealthy, remove it from pool and try again
+                    logger.debug(f"Unhealthy connection detected on attempt {attempt + 1}, removing from pool")
+                    cls._connection_pool.putconn(conn, close=True)
                     
             except Exception as e:
                 logger.error(f"Failed to get connection from pool (attempt {attempt + 1}): {e}")
@@ -87,13 +90,12 @@ class DatabaseService:
     
     @classmethod
     def return_connection(cls, conn: psycopg2.extensions.connection, close_conn: bool = False):
-        """Return connection to pool with minimal overhead"""
+        """Return connection to pool or close it if it's unhealthy"""
         if cls._connection_pool and conn:
             try:
-                if close_conn:
+                if close_conn or not cls._is_connection_healthy(conn):
                     cls._connection_pool.putconn(conn, close=True)
                 else:
-                    # Skip health check on return for performance - pool will handle cleanup
                     cls._connection_pool.putconn(conn)
             except Exception as e:
                 logger.error(f"Failed to return connection to pool: {e}")
@@ -256,7 +258,7 @@ class UserService:
     @staticmethod
     def find_user_by_phone(phone: str) -> Optional['User']:
         """Find user by phone number using encrypted phone hash"""
-        from models import User  # Local import to avoid circular dependency
+        from models import User
         from utils.encryption import DataEncryption
         
         # Create hash of the phone number for lookup
@@ -267,7 +269,7 @@ class UserService:
     @staticmethod
     def create_user(phone: str, first_name: str = "User", last_name: str = "") -> Optional['User']:
         """Create new user with phone number using encrypted storage and custom_id"""
-        from models import User, db  # Local import to avoid circular dependency
+        from models import User, db
         from utils.id_generator import CustomIDGenerator
         try:
             # Generate default values if not provided
@@ -277,11 +279,11 @@ class UserService:
             # Generate custom_id
             custom_id = CustomIDGenerator.generate_user_id()
                 
-            # Create user with proper initialization
-            user = User()
-            user.first_name = first_name
-            user.last_name = last_name
-            user.custom_id = custom_id
+            user = User(
+                first_name=first_name,
+                last_name=last_name,
+                custom_id=custom_id
+            )
             # Use the set_phone method which handles encryption
             user.set_phone(phone)
             
@@ -298,7 +300,7 @@ class UserService:
     @staticmethod
     def find_user_by_id(user_id: int) -> Optional['User']:
         """Find user by ID"""
-        from models import User  # Local import to avoid circular dependency
+        from models import User
         return User.query.filter_by(id=user_id, is_active=True).first()
 
 class AddressService:
