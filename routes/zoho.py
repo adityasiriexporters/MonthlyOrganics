@@ -75,19 +75,24 @@ def callback():
     Exchange authorization code for access_token and refresh_token.
     """
     try:
+        logger.info(f"Zoho callback received with args: {request.args}")
+        
         # Get authorization code from query parameters
         auth_code = request.args.get('code')
         error = request.args.get('error')
+        state = request.args.get('state')
         
         if error:
             logger.error(f"Zoho authorization error: {error}")
             flash(f'Zoho authorization failed: {error}', 'error')
-            return redirect(url_for('index'))
+            return redirect(url_for('admin_dashboard'))
         
         if not auth_code:
             logger.error("No authorization code received from Zoho")
             flash('No authorization code received from Zoho', 'error')
-            return redirect(url_for('index'))
+            return redirect(url_for('admin_dashboard'))
+        
+        logger.info(f"Processing authorization code: {auth_code[:20]}...")
         
         # Exchange authorization code for tokens
         token_data = exchange_code_for_tokens(auth_code)
@@ -99,16 +104,16 @@ def callback():
             flash('Successfully connected to Zoho Inventory!', 'success')
             logger.info("Zoho authorization completed successfully")
             
-            # Redirect to admin or appropriate page
-            return redirect(url_for('admin.admin_dashboard'))
+            # Redirect to admin dashboard
+            return redirect(url_for('admin_dashboard'))
         else:
             flash('Failed to exchange authorization code for tokens', 'error')
-            return redirect(url_for('index'))
+            return redirect(url_for('admin_dashboard'))
             
     except Exception as e:
         logger.error(f"Error in Zoho callback: {e}")
         flash('Error processing Zoho authorization callback', 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('admin_dashboard'))
 
 def exchange_code_for_tokens(auth_code):
     """
@@ -131,13 +136,18 @@ def exchange_code_for_tokens(auth_code):
             'code': auth_code
         }
         
-        logger.info("Exchanging authorization code for tokens")
+        logger.info(f"Exchanging authorization code for tokens. URL: {token_url}")
+        logger.info(f"Token params (without sensitive data): grant_type={token_params['grant_type']}, redirect_uri={token_params['redirect_uri']}")
         
         response = requests.post(token_url, data=token_params)
         
+        logger.info(f"Token exchange response status: {response.status_code}")
+        
         if response.status_code == 200:
             token_data = response.json()
-            logger.info("Successfully received tokens from Zoho")
+            logger.info(f"Successfully received tokens from Zoho. Keys: {list(token_data.keys())}")
+            # Log non-sensitive token info
+            logger.info(f"Token type: {token_data.get('token_type')}, expires_in: {token_data.get('expires_in')}")
             return token_data
         else:
             logger.error(f"Token exchange failed. Status: {response.status_code}, Response: {response.text}")
