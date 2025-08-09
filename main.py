@@ -174,6 +174,11 @@ def profile():
         logger.error(f"Error rendering profile page: {e}")
         return render_template('profile.html')
 
+@app.route('/zoho-connect')
+def zoho_connect():
+    """Route to initiate Zoho authorization."""
+    return redirect(url_for('zoho.authorize'))
+
 # Import store functions from routes module
 from routes.store import store as store_view, products_by_category, all_products
 
@@ -262,6 +267,10 @@ def product_quick_view(product_id):
 
 # Register admin blueprint
 app.register_blueprint(admin_bp)
+
+# Register Zoho blueprint
+from routes.zoho import zoho_bp
+app.register_blueprint(zoho_bp)
 
 # Register timezone template filters
 app.jinja_env.filters['format_datetime_ist'] = format_datetime_ist

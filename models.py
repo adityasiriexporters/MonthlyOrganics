@@ -106,6 +106,32 @@ class DeliveryZoneFreeDate(db.Model):
     def __repr__(self):
         return f'<DeliveryZoneFreeDate Zone:{self.zone_id} Date:{self.free_date}>'
 
+
+class ZohoToken(db.Model):
+    """Model to store Zoho OAuth tokens."""
+    __tablename__ = 'zoho_tokens'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=True)
+    expires_in = db.Column(db.Integer, nullable=True)  # Token expiry in seconds
+    token_type = db.Column(db.String(50), default='Bearer', nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    def __repr__(self):
+        return f'<ZohoToken {self.id}>'
+    
+    @property
+    def is_expired(self):
+        """Check if the access token is expired."""
+        if not self.expires_in:
+            return False
+        
+        expiry_time = self.updated_at.timestamp() + self.expires_in
+        current_time = datetime.utcnow().timestamp()
+        return current_time >= expiry_time
+
 # Database initialization function
 def init_db(app):
     """Initialize the database with the Flask app."""
