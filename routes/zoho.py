@@ -292,10 +292,11 @@ def test_zoho_connection(access_token):
             'Content-Type': 'application/json'
         }
         
-        # Make a simple API call to get organization info
-        url = f"{ZOHO_API_BASE_URL}/organizations/{ORGANIZATION_ID}"
-        response = requests.get(url, headers=headers)
+        # Make a simple API call to get organization info using India domain
+        url = f"https://www.zohoapis.in/inventory/v1/organizations/{ORGANIZATION_ID}"
+        response = requests.get(url, headers=headers, timeout=10)
         
+        logger.info(f"Zoho API test: {response.status_code} - {response.text[:200]}")
         return response.status_code == 200
         
     except Exception as e:
@@ -305,70 +306,91 @@ def test_zoho_connection(access_token):
 @zoho_bp.route('/refresh-token')
 def refresh_token():
     """
-    Refresh the Zoho access token using refresh token.
+    Refresh expired Zoho access token using refresh token.
     """
     try:
         from models import ZohoToken
         
-        token_record = ZohoToken.query.first()
-        
-        if not token_record or not token_record.refresh_token:
+        token = ZohoToken.query.first()
+        if not token or not token.refresh_token:
             return jsonify({
                 'status': 'error',
-                'message': 'No refresh token available'
-            })
+                'message': 'No refresh token available. Please re-authorize.'
+            }), 400
         
-        # Refresh the token
-        new_token_data = refresh_zoho_token(token_record.refresh_token)
+        # Prepare refresh token request
+        refresh_url = f"{ZOHO_BASE_URL}/oauth/v2/token"
+        refresh_params = {
+            'grant_type': 'refresh_token',
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+            'refresh_token': token.refresh_token
+        }
         
-        if new_token_data:
-            # Update stored tokens
-            store_zoho_tokens(new_token_data)
+        logger.info("Attempting to refresh Zoho access token")
+        response = requests.post(refresh_url, data=refresh_params)
+        
+        if response.status_code == 200:
+            token_data = response.json()
+            
+            if 'error' in token_data:
+                logger.error(f"Token refresh error: {token_data.get('error')}")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Token refresh failed. Please re-authorize.'
+                }), 400
+            
+            # Update token in database
+            token.access_token = token_data.get('access_token')
+            # Some refresh responses don't include new refresh token
+            if token_data.get('refresh_token'):
+                token.refresh_token = token_data.get('refresh_token')
+            if token_data.get('expires_in'):
+                token.expires_in = token_data.get('expires_in')
+            
+            db.session.commit()
+            logger.info("Access token refreshed successfully")
+            
             return jsonify({
                 'status': 'success',
                 'message': 'Token refreshed successfully'
             })
         else:
+            logger.error(f"Token refresh failed: {response.status_code} - {response.text}")
             return jsonify({
                 'status': 'error',
-                'message': 'Failed to refresh token'
-            })
-            
-    except Exception as e:
-        logger.error(f"Error refreshing token: {e}")
-        return jsonify({
-            'status': 'error',
-            'message': 'Error refreshing token'
-        })
-
-def refresh_zoho_token(refresh_token):
-    """
-    Refresh Zoho access token using refresh token.
-    
-    Args:
-        refresh_token (str): Zoho refresh token
-        
-    Returns:
-        dict: New token data or None if failed
-    """
-    try:
-        refresh_url = f"{ZOHO_BASE_URL}/oauth/v2/token"
-        
-        refresh_params = {
-            'grant_type': 'refresh_token',
-            'client_id': CLIENT_ID,
-            'client_secret': CLIENT_SECRET,
-            'refresh_token': refresh_token
-        }
-        
-        response = requests.post(refresh_url, data=refresh_params)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Token refresh failed. Status: {response.status_code}, Response: {response.text}")
-            return None
+                'message': 'Failed to refresh token. Please re-authorize.'
+            }), 400
             
     except Exception as e:
         logger.error(f"Exception during token refresh: {e}")
-        return None
+        return jsonify({
+            'status': 'error',
+            'message': 'Error refreshing token'
+        }), 500
+
+@zoho_bp.route('/clear-tokens', methods=['POST'])
+def clear_tokens():
+    """
+    Clear stored Zoho tokens (for testing/debugging).
+    """
+    try:
+        from models import ZohoToken
+        
+        # Delete all tokens
+        ZohoToken.query.delete()
+        db.session.commit()
+        
+        logger.info("All Zoho tokens cleared")
+        return jsonify({
+            'status': 'success',
+            'message': 'All tokens cleared successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clearing tokens: {e}")
+        db.session.rollback()
+        return jsonify({
+            'status': 'error',
+            'message': 'Error clearing tokens'
+        }), 500

@@ -270,7 +270,9 @@ app.register_blueprint(admin_bp)
 
 # Register Zoho blueprint
 from routes.zoho import zoho_bp
+from routes.zoho_debug import zoho_debug_bp
 app.register_blueprint(zoho_bp)
+app.register_blueprint(zoho_debug_bp)
 
 # Register timezone template filters
 app.jinja_env.filters['format_datetime_ist'] = format_datetime_ist

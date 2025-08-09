@@ -73,28 +73,33 @@ def export_database():
             mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         
         if not file_data:
-            flash('Failed to generate export file. Please try again.', 'error')
+            flash('Export failed during file generation. Please try again.', 'error')
             tables = DatabaseExporter.get_all_table_names()
             return render_template('admin/admin_export.html', tables=tables)
         
-        # Create file object for download
-        file_obj = io.BytesIO(file_data)
-        file_obj.seek(0)
+        # Create file stream for download
+        file_stream = io.BytesIO(file_data)
+        file_stream.seek(0)
         
-        logger.info(f"Export completed: {filename}")
-        
+        logger.info(f"Export successful: {filename} ({len(file_data)} bytes)")
         return send_file(
-            file_obj,
-            mimetype=mimetype,
+            file_stream,
             as_attachment=True,
-            download_name=filename
+            download_name=filename,
+            mimetype=mimetype
         )
         
     except Exception as e:
-        logger.error(f"Export error: {e}")
-        flash('Export failed due to an error. Please try again.', 'error')
+        logger.error(f"Error during database export: {e}")
+        flash(f'Export failed: {str(e)}', 'error')
         tables = DatabaseExporter.get_all_table_names()
         return render_template('admin/admin_export.html', tables=tables)
+
+@admin_bp.route('/zoho-integration')
+@admin_required
+def zoho_integration():
+    """Zoho Integration management page"""
+    return render_template('admin/zoho_integration.html')
 
 @admin_bp.route('/categories', methods=['GET'])
 @admin_required
