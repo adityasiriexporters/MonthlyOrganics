@@ -5,10 +5,8 @@ Handles admin dashboard, export, and management functionality
 """
 from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
 from utils.database_export import DatabaseExporter
-from admin_auth import admin_required, AdminAuth
+from admin_auth import admin_required
 from services.database import DatabaseService
-from services.zoho_sync import ZohoSyncService
-from services.zoho_inventory import ZohoInventoryAPI, ZohoOAuthError, ZohoAPIError
 from werkzeug.utils import secure_filename
 import json
 import io
@@ -59,6 +57,10 @@ def export_database():
         decrypt_suffix = '_decrypted' if decrypt_data else '_encrypted'
         
         # Create file based on format
+        filename = None
+        file_data = None
+        mimetype = None
+        
         if export_format == 'json':
             filename = f'monthly_organics_export{decrypt_suffix}_{timestamp}.json'
             file_data = json.dumps(export_data, indent=2).encode('utf-8')
@@ -74,7 +76,7 @@ def export_database():
             file_data = DatabaseExporter.export_to_xlsx(export_data, export_type)
             mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         
-        if not file_data:
+        if not file_data or not filename or not mimetype:
             flash('Failed to generate export file. Please try again.', 'error')
             tables = DatabaseExporter.get_all_table_names()
             return render_template('admin/admin_export.html', tables=tables)
@@ -265,268 +267,3 @@ def save_category_icon(file):
         
         return f"/static/uploads/categories/{unique_filename}"
     return None
-
-# Zoho Integration Routes
-
-@admin_bp.route('/zoho', methods=['GET'])
-@admin_required
-def zoho_integration():
-    """Display Zoho integration dashboard"""
-    try:
-        sync_service = ZohoSyncService()
-        sync_status = sync_service.get_sync_status()
-        
-        return render_template('admin/admin_zoho.html', sync_status=sync_status, admin_user=AdminAuth.get_admin_user())
-        
-    except Exception as e:
-        logger.error(f"Error loading Zoho integration page: {e}")
-        flash('Error loading Zoho integration dashboard', 'error')
-        return redirect(url_for('admin_dashboard'))
-
-@admin_bp.route('/zoho/auth', methods=['GET'])
-@admin_required
-def zoho_auth():
-    """Initiate Zoho OAuth authentication"""
-    try:
-        zoho_api = ZohoInventoryAPI()
-        redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
-        auth_url = zoho_api.get_authorization_url(redirect_uri)
-        
-        # Log the URL details for debugging
-        logger.info(f"Redirect URI: {redirect_uri}")
-        logger.info(f"Generated Auth URL: {auth_url}")
-        
-        return redirect(auth_url)
-        
-    except Exception as e:
-        logger.error(f"Error initiating Zoho auth: {e}")
-        flash('Failed to initiate Zoho authentication', 'error')
-        return redirect(url_for('admin.zoho_integration'))
-
-@admin_bp.route('/zoho/callback', methods=['GET'])
-@admin_required
-def zoho_callback():
-    """Handle Zoho OAuth callback"""
-    try:
-        code = request.args.get('code')
-        error = request.args.get('error')
-        
-        if error:
-            logger.error(f"Zoho OAuth error: {error}")
-            flash(f'Zoho authorization failed: {error}', 'error')
-            return redirect(url_for('admin.zoho_integration'))
-        
-        if not code:
-            flash('No authorization code received', 'error')
-            return redirect(url_for('admin.zoho_integration'))
-        
-        zoho_api = ZohoInventoryAPI()
-        redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
-        
-        success = zoho_api.exchange_code_for_tokens(code, redirect_uri)
-        
-        if success:
-            flash('Successfully connected to Zoho Inventory!', 'success')
-        else:
-            flash('Failed to complete Zoho authentication', 'error')
-        
-        return redirect(url_for('admin.zoho_integration'))
-        
-    except ZohoOAuthError as e:
-        logger.error(f"Zoho OAuth error: {e}")
-        flash(f'Authentication error: {str(e)}', 'error')
-        return redirect(url_for('admin.zoho_integration'))
-    except Exception as e:
-        logger.error(f"Error in Zoho callback: {e}")
-        flash('Authentication failed due to an error', 'error')
-        return redirect(url_for('admin.zoho_integration'))
-
-@admin_bp.route('/zoho/debug', methods=['GET'])
-@admin_required
-def zoho_debug():
-    """Debug endpoint to check Zoho OAuth configuration"""
-    try:
-        from urllib.parse import urlencode
-        
-        # Get environment variables
-        client_id = os.environ.get('ZOHO_CLIENT_ID')
-        client_secret = os.environ.get('ZOHO_CLIENT_SECRET', 'SET')  # Don't expose actual secret
-        organization_id = os.environ.get('ZOHO_ORGANIZATION_ID')
-        
-        # Generate redirect URI
-        redirect_uri = request.url_root.rstrip('/') + url_for('admin.zoho_callback')
-        
-        # Test different scope formats
-        test_scopes = [
-            'ZohoInventory.FullAccess.all',
-            'ZohoInventory.items.all,ZohoInventory.salesorders.all,ZohoInventory.settings.all',
-            'ZohoInventory.items.all',
-            'ZohoInventory.salesorders.all',
-            'ZohoInventory.settings.all'
-        ]
-        
-        test_urls = []
-        for scope in test_scopes:
-            params = {
-                'client_id': client_id,
-                'response_type': 'code', 
-                'redirect_uri': redirect_uri,
-                'scope': scope,
-                'access_type': 'offline'
-            }
-            url = f"https://accounts.zoho.com/oauth/v2/auth?{urlencode(params)}"
-            test_urls.append({
-                'scope': scope,
-                'url': url,
-                'recommended': scope == 'ZohoInventory.FullAccess.all'
-            })
-        
-        # Check if we have existing tokens
-        try:
-            zoho_api = ZohoInventoryAPI()
-            has_tokens = zoho_api.is_authenticated()
-        except Exception:
-            has_tokens = False
-        
-        return jsonify({
-            'configuration': {
-                'client_id': client_id,
-                'client_secret_set': bool(client_secret and client_secret != 'SET'),
-                'organization_id': organization_id,
-                'redirect_uri': redirect_uri,
-                'has_existing_tokens': has_tokens
-            },
-            'checklist': {
-                'redirect_uri_in_console': f"Verify this exact URI is in Zoho console: {redirect_uri}",
-                'scope_enabled': "Enable 'ZohoInventory.FullAccess.all' in Zoho app settings",
-                'app_published': "Ensure app is published OR you're added as test user",
-                'secrets_set': "Verify all environment variables are set"
-            },
-            'test_urls': test_urls,
-            'current_scope': 'ZohoInventory.FullAccess.all'
-        })
-        
-    except Exception as e:
-        logger.error(f"Error in debug endpoint: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@admin_bp.route('/zoho/sync-products', methods=['POST'])
-@admin_required
-def sync_products_to_zoho():
-    """Sync local products to Zoho Inventory"""
-    try:
-        sync_service = ZohoSyncService()
-        
-        if not sync_service.is_zoho_connected():
-            return jsonify({
-                'success': False,
-                'error': 'Zoho not connected. Please authenticate first.'
-            }), 400
-        
-        results = sync_service.sync_products_to_zoho()
-        
-        if results.get('errors', 0) == -1:
-            return jsonify({
-                'success': False,
-                'error': 'Sync failed due to an error'
-            }), 500
-        
-        return jsonify({
-            'success': True,
-            'results': results,
-            'message': f"Sync completed: {results['created']} created, {results['updated']} updated, {results['errors']} errors"
-        })
-        
-    except Exception as e:
-        logger.error(f"Error syncing products to Zoho: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'Sync failed due to an error'
-        }), 500
-
-@admin_bp.route('/zoho/import-products', methods=['POST'])
-@admin_required
-def import_products_from_zoho():
-    """Import products from Zoho Inventory"""
-    try:
-        sync_service = ZohoSyncService()
-        
-        if not sync_service.is_zoho_connected():
-            return jsonify({
-                'success': False,
-                'error': 'Zoho not connected. Please authenticate first.'
-            }), 400
-        
-        results = sync_service.sync_products_from_zoho()
-        
-        if results.get('errors', 0) == -1:
-            return jsonify({
-                'success': False,
-                'error': 'Import failed due to an error'
-            }), 500
-        
-        return jsonify({
-            'success': True,
-            'results': results,
-            'message': f"Import completed: {results['imported']} products imported, {results['errors']} errors"
-        })
-        
-    except Exception as e:
-        logger.error(f"Error importing products from Zoho: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'Import failed due to an error'
-        }), 500
-
-@admin_bp.route('/zoho/status', methods=['GET'])
-@admin_required
-def zoho_status():
-    """Get current Zoho integration status"""
-    try:
-        sync_service = ZohoSyncService()
-        sync_status = sync_service.get_sync_status()
-        
-        return jsonify({
-            'success': True,
-            'status': sync_status
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting Zoho status: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'Failed to get status'
-        }), 500
-
-@admin_bp.route('/zoho/sync-order/<int:order_id>', methods=['POST'])
-@admin_required
-def sync_order_to_zoho(order_id):
-    """Manually sync a specific order to Zoho Inventory"""
-    try:
-        sync_service = ZohoSyncService()
-        
-        if not sync_service.is_zoho_connected():
-            return jsonify({
-                'success': False,
-                'error': 'Zoho not connected. Please authenticate first.'
-            }), 400
-        
-        success = sync_service.create_sales_order_in_zoho(order_id)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': f'Order {order_id} successfully synced to Zoho Inventory'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': f'Failed to sync order {order_id} to Zoho Inventory'
-            }), 500
-        
-    except Exception as e:
-        logger.error(f"Error syncing order {order_id} to Zoho: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'Sync failed due to an error'
-        }), 500

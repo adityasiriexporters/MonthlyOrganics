@@ -106,59 +106,6 @@ class DeliveryZoneFreeDate(db.Model):
     def __repr__(self):
         return f'<DeliveryZoneFreeDate Zone:{self.zone_id} Date:{self.free_date}>'
 
-
-class ZohoOAuthToken(db.Model):
-    """Store Zoho OAuth tokens for API integration."""
-    __tablename__ = 'zoho_oauth_tokens'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    service = db.Column(db.String(50), nullable=False, unique=True)  # e.g., 'inventory'
-    access_token = db.Column(db.Text, nullable=False)
-    refresh_token = db.Column(db.Text, nullable=False)
-    expires_at = db.Column(db.DateTime, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    def __repr__(self):
-        return f'<ZohoOAuthToken {self.service}>'
-
-
-class ZohoItemMapping(db.Model):
-    """Map local products to Zoho inventory items."""
-    __tablename__ = 'zoho_item_mappings'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    local_product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    zoho_item_id = db.Column(db.String(100), nullable=False, unique=True)
-    zoho_item_name = db.Column(db.String(255), nullable=False)
-    last_sync_at = db.Column(db.DateTime, nullable=True)
-    sync_status = db.Column(db.String(20), default='pending', nullable=False)  # pending, synced, error
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    # Relationships
-    product = db.relationship('Product', backref=db.backref('zoho_mapping', uselist=False))
-    
-    def __repr__(self):
-        return f'<ZohoItemMapping Product:{self.local_product_id} ZohoItem:{self.zoho_item_id}>'
-
-
-class ZohoSalesOrder(db.Model):
-    """Track Zoho sales orders created from local orders."""
-    __tablename__ = 'zoho_sales_orders'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    local_order_id = db.Column(db.Integer, nullable=False)  # References orders table
-    zoho_salesorder_id = db.Column(db.String(100), nullable=False, unique=True)
-    zoho_salesorder_number = db.Column(db.String(100), nullable=False)
-    sync_status = db.Column(db.String(20), default='pending', nullable=False)  # pending, synced, error
-    error_message = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    def __repr__(self):
-        return f'<ZohoSalesOrder LocalOrder:{self.local_order_id} ZohoSO:{self.zoho_salesorder_number}>'
-
 # Database initialization function
 def init_db(app):
     """Initialize the database with the Flask app."""
@@ -173,11 +120,21 @@ def init_db(app):
             # Add sample data if tables are empty
             if Product.query.count() == 0:
                 sample_products = [
-                    Product(name='Organic Apples', description='Fresh organic apples from local orchards', category_id=1),
-                    Product(name='Organic Carrots', description='Sweet organic carrots grown locally', category_id=2),
-                    Product(name='Organic Spinach', description='Fresh organic spinach leaves', category_id=2),
-                    Product(name='Organic Tomatoes', description='Vine-ripened organic tomatoes', category_id=2),
-                    Product(name='Organic Basil', description='Fresh organic basil for cooking', category_id=3)
+                    Product(name='Organic Apples', description='Fresh organic apples from local orchards', 
+                           category='fruit', season='fall', origin_farm='Green Valley Farm', 
+                           price_per_unit=2.50, unit_type='pound'),
+                    Product(name='Organic Carrots', description='Sweet organic carrots grown locally', 
+                           category='vegetable', season='year-round', origin_farm='Sunrise Gardens', 
+                           price_per_unit=1.75, unit_type='pound'),
+                    Product(name='Organic Spinach', description='Fresh organic spinach leaves', 
+                           category='vegetable', season='spring', origin_farm='Healthy Harvest Farm', 
+                           price_per_unit=3.25, unit_type='bunch'),
+                    Product(name='Organic Tomatoes', description='Vine-ripened organic tomatoes', 
+                           category='vegetable', season='summer', origin_farm='Sunny Acres', 
+                           price_per_unit=4.00, unit_type='pound'),
+                    Product(name='Organic Basil', description='Fresh organic basil for cooking', 
+                           category='herb', season='summer', origin_farm='Herb Haven', 
+                           price_per_unit=2.00, unit_type='bunch')
                 ]
                 
                 for product in sample_products:
