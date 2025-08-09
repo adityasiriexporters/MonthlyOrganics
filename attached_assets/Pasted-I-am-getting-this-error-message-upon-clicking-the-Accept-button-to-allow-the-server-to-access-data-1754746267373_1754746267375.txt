@@ -1,0 +1,23 @@
+I am getting this error message upon clicking the "Accept" button to allow the server to access data in my Zoho account. Is this completely normal at this point in time? 
+
+[
+auth?scope=ZohoInventory.items.ALL%2CZohoInventory.salesorders.ALL%2CZohoInventory.invoices.ALL%2CZohoInventory.contacts.ALL%2CZohoInventory.settings.READ&client_id=1000.6VB9BOIG68UP8T1IEAMX50CBKJ6FCO&response_type=code&redirect_uri=https%3A%2F%2Fmonthly-organics-adityasiriexpor.replit.app%2Fzoho%2Fcallback&access_type=offline&prompt=consent&state=aee6caf3-d22d-416a-a603-1b8380463ddc:904 Refused to set unsafe header "Content-length"
+getPlainResponse @ auth?scope=ZohoInventory.items.ALL%2CZohoInventory.salesorders.ALL%2CZohoInventory.invoices.ALL%2CZohoInventory.contacts.ALL%2CZohoInventory.settings.READ&client_id=1000.6VB9BOIG68UP8T1IEAMX50CBKJ6FCO&response_type=code&redirect_uri=https%3A%2F%2Fmonthly-organics-adityasiriexpor.replit.app%2Fzoho%2Fcallback&access_type=offline&prompt=consent&state=aee6caf3-d22d-416a-a603-1b8380463ddc:904
+submitApproveForm @ auth?scope=ZohoInventory.items.ALL%2CZohoInventory.salesorders.ALL%2CZohoInventory.invoices.ALL%2CZohoInventory.contacts.ALL%2CZohoInventory.settings.READ&client_id=1000.6VB9BOIG68UP8T1IEAMX50CBKJ6FCO&response_type=code&redirect_uri=https%3A%2F%2Fmonthly-organics-adityasiriexpor.replit.app%2Fzoho%2Fcallback&access_type=offline&prompt=consent&state=aee6caf3-d22d-416a-a603-1b8380463ddc:1027
+(anonymous) @ auth?scope=ZohoInventory.items.ALL%2CZohoInventory.salesorders.ALL%2CZohoInventory.invoices.ALL%2CZohoInventory.contacts.ALL%2CZohoInventory.settings.READ&client_id=1000.6VB9BOIG68UP8T1IEAMX50CBKJ6FCO&response_type=code&redirect_uri=https%3A%2F%2Fmonthly-organics-adityasiriexpor.replit.app%2Fzoho%2Fcallback&access_type=offline&prompt=consent&state=aee6caf3-d22d-416a-a603-1b8380463ddc:478
+dispatch @ jquery-3.7.1.min.2c872dbe60f4ba70fb85356113d8b35e.js:2
+v.handle @ jquery-3.7.1.min.2c872dbe60f4ba70fb85356113d8b35e.js:2
+]
+
+
+[
+upon visiting (/zoho/debug) I am getting page not found message and this error in the console log.
+{
+debug:1  Failed to load resource: the server responded with a status of 404 ()
+}
+]
+
+[
+upon visiting (/zoho/status) I am getting this message.
+{"message":"Zoho token exists but connection test failed","status":"error"}
+]
