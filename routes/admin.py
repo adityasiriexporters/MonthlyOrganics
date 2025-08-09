@@ -263,3 +263,15 @@ def save_category_icon(file):
         
         return f"/static/uploads/categories/{unique_filename}"
     return None
+
+@admin_bp.route('/zoho-connect')
+@admin_required
+def zoho_connect():
+    """Route to initiate Zoho authorization from admin panel."""
+    return redirect(url_for('zoho.authorize'))
+
+@admin_bp.route('/zoho-status')
+@admin_required  
+def zoho_status():
+    """Check Zoho connection status from admin panel."""
+    return redirect(url_for('zoho.connection_status'))
