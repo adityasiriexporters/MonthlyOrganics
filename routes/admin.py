@@ -101,13 +101,7 @@ def zoho_integration():
     """Zoho Integration management page"""
     try:
         logger.info("Loading Zoho Integration admin page")
-        # Get admin user info from session or create default context
-        from flask import session
-        admin_user = {
-            'username': session.get('admin_username', 'Admin'),
-            'role': 'administrator'
-        }
-        return render_template('admin/zoho_integration.html', admin_user=admin_user)
+        return render_template('admin/zoho_integration.html')
     except Exception as e:
         logger.error(f"Error loading Zoho integration page: {e}")
         flash('Error loading Zoho integration page. Please try again.', 'error')
