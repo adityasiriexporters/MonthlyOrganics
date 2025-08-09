@@ -46,13 +46,19 @@ def authorize():
             return redirect(url_for('index'))
         
         # Build authorization URL parameters
+        # Generate state parameter for security
+        import uuid
+        state = str(uuid.uuid4())
+        session['oauth_state'] = state
+        
         auth_params = {
             'scope': ','.join(SCOPES),
             'client_id': CLIENT_ID,
             'response_type': 'code',
             'redirect_uri': REDIRECT_URI,
             'access_type': 'offline',
-            'prompt': 'consent'
+            'prompt': 'consent',
+            'state': state
         }
         
         # Construct the full authorization URL
@@ -91,23 +97,42 @@ def callback():
             logger.error("No authorization code received from Zoho")
             flash('No authorization code received from Zoho', 'error')
             return redirect(url_for('admin_dashboard'))
+            
+        # Validate state parameter (optional but recommended for security)
+        expected_state = session.get('oauth_state')
+        if expected_state and state != expected_state:
+            logger.warning(f"OAuth state mismatch. Expected: {expected_state}, Got: {state}")
+            # Continue anyway for now, but log the issue
+        
+        # Clear the state from session
+        session.pop('oauth_state', None)
         
         logger.info(f"Processing authorization code: {auth_code[:20]}...")
         
-        # Exchange authorization code for tokens
+        # Add timing information for debugging
+        import time
+        callback_time = time.time()
+        logger.info(f"Callback received at timestamp: {callback_time}")
+        
+        # Exchange authorization code for tokens immediately
         token_data = exchange_code_for_tokens(auth_code)
         
-        if token_data:
+        if token_data and token_data.get('access_token'):
             # Store tokens securely
-            store_zoho_tokens(token_data)
+            store_result = store_zoho_tokens(token_data)
             
-            flash('Successfully connected to Zoho Inventory!', 'success')
-            logger.info("Zoho authorization completed successfully")
+            if store_result:
+                flash('Successfully connected to Zoho Inventory!', 'success')
+                logger.info("Zoho authorization completed successfully")
+            else:
+                flash('Connected to Zoho but failed to store tokens. Please try again.', 'warning')
+                logger.warning("Token exchange successful but storage failed")
             
             # Redirect to admin dashboard
             return redirect(url_for('admin_dashboard'))
         else:
-            flash('Failed to exchange authorization code for tokens', 'error')
+            logger.error("Token exchange failed - no valid access token received")
+            flash('Failed to exchange authorization code for tokens. The authorization code may have expired.', 'error')
             return redirect(url_for('admin_dashboard'))
             
     except Exception as e:
@@ -145,8 +170,19 @@ def exchange_code_for_tokens(auth_code):
         
         if response.status_code == 200:
             token_data = response.json()
-            logger.info(f"Successfully received tokens from Zoho. Keys: {list(token_data.keys())}")
-            # Log non-sensitive token info
+            logger.info(f"Token response keys: {list(token_data.keys())}")
+            
+            # Check if response contains error even with 200 status
+            if 'error' in token_data:
+                logger.error(f"Zoho returned error in token response: {token_data.get('error')} - {token_data.get('error_description', 'No description')}")
+                return None
+            
+            # Validate required token fields
+            if not token_data.get('access_token'):
+                logger.error("No access_token in response")
+                return None
+                
+            logger.info(f"Successfully received valid tokens from Zoho")
             logger.info(f"Token type: {token_data.get('token_type')}, expires_in: {token_data.get('expires_in')}")
             return token_data
         else:
@@ -163,9 +199,17 @@ def store_zoho_tokens(token_data):
     
     Args:
         token_data (dict): Token data from Zoho
+        
+    Returns:
+        bool: True if successful, False otherwise
     """
     try:
         from models import ZohoToken
+        
+        # Validate token data before storing
+        if not token_data.get('access_token'):
+            logger.error("Cannot store tokens - no access_token provided")
+            return False
         
         # Check if token record already exists
         existing_token = ZohoToken.query.first()
@@ -176,6 +220,7 @@ def store_zoho_tokens(token_data):
             existing_token.refresh_token = token_data.get('refresh_token')
             existing_token.expires_in = token_data.get('expires_in')
             existing_token.token_type = token_data.get('token_type', 'Bearer')
+            logger.info("Updating existing Zoho token")
         else:
             # Create new token record
             new_token = ZohoToken(
@@ -185,13 +230,16 @@ def store_zoho_tokens(token_data):
                 token_type=token_data.get('token_type', 'Bearer')
             )
             db.session.add(new_token)
+            logger.info("Creating new Zoho token")
         
         db.session.commit()
         logger.info("Zoho tokens stored successfully")
+        return True
         
     except Exception as e:
         logger.error(f"Error storing Zoho tokens: {e}")
         db.session.rollback()
+        return False
 
 @zoho_bp.route('/status')
 def connection_status():
