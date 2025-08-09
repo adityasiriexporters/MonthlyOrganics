@@ -26,13 +26,11 @@ ORGANIZATION_ID = os.environ.get('ZOHO_ORGANIZATION_ID')
 
 # Define scopes for Zoho Inventory API
 SCOPES = [
-    'ZohoInventory.FullAccess.all',
-    'ZohoInventory.items.READ',
-    'ZohoInventory.items.WRITE',
-    'ZohoInventory.salesorders.READ',
-    'ZohoInventory.salesorders.WRITE',
-    'ZohoInventory.webhooks.READ',
-    'ZohoInventory.webhooks.WRITE'
+    'ZohoInventory.items.ALL',
+    'ZohoInventory.salesorders.ALL',
+    'ZohoInventory.invoices.ALL',
+    'ZohoInventory.contacts.ALL',
+    'ZohoInventory.settings.READ'
 ]
 
 @zoho_bp.route('/authorize')
