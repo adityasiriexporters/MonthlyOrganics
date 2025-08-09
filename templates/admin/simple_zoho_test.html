@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoho Integration - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <div class="bg-white shadow-lg rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-900">Zoho Inventory Integration</h1>
+                <p class="text-gray-600 mt-1">Manage your Zoho Inventory API connection and sync status</p>
+            </div>
+
+            <div class="p-6">
+                <!-- Connection Status Section -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h2 class="text-lg font-semibold text-blue-900 mb-2">Connection Status</h2>
+                    <div id="connectionStatus" class="flex items-center">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                        <span class="text-blue-700">Checking connection...</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-green-900 mb-2">Connect to Zoho</h3>
+                        <p class="text-green-700 text-sm mb-3">Authorize access to your Zoho Inventory account</p>
+                        <a href="/zoho-connect" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                            Connect Zoho
+                        </a>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-blue-900 mb-2">Refresh Token</h3>
+                        <p class="text-blue-700 text-sm mb-3">Refresh expired access tokens</p>
+                        <button onclick="refreshToken()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            Refresh Token
+                        </button>
+                    </div>
+
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-red-900 mb-2">Clear Tokens</h3>
+                        <p class="text-red-700 text-sm mb-3">Remove stored authentication tokens</p>
+                        <button onclick="clearTokens()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:red-700 transition-colors">
+                            Clear Tokens
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Debug Information Section -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">Debug Information</h2>
+                    <div id="debugInfo" class="bg-white rounded border p-3 font-mono text-sm overflow-auto max-h-96">
+                        <div class="text-gray-500">Loading debug information...</div>
+                    </div>
+                    <button onclick="loadDebugInfo()" class="mt-3 inline-flex items-center px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors">
+                        Reload Debug Info
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Check connection status on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        checkConnectionStatus();
+        loadDebugInfo();
+    });
+
+    async function checkConnectionStatus() {
+        try {
+            const response = await fetch('/zoho/status');
+            const data = await response.json();
+            
+            const statusDiv = document.getElementById('connectionStatus');
+            const icon = getStatusIcon(data.status);
+            const message = data.message || 'Unknown status';
+            
+            statusDiv.innerHTML = `${icon} <span class="${getStatusClass(data.status)}">${message}</span>`;
+        } catch (error) {
+            document.getElementById('connectionStatus').innerHTML = 
+                '<span class="text-red-600">❌ Error checking status</span>';
+        }
+    }
+
+    async function refreshToken() {
+        try {
+            const response = await fetch('/zoho/refresh-token');
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                alert('Token refreshed successfully!');
+                checkConnectionStatus();
+            } else {
+                alert('Failed to refresh token: ' + data.message);
+            }
+        } catch (error) {
+            alert('Error refreshing token: ' + error.message);
+        }
+    }
+
+    async function clearTokens() {
+        if (!confirm('Are you sure you want to clear all stored tokens? This will disconnect Zoho integration.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/zoho/clear-tokens', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                alert('Tokens cleared successfully!');
+                checkConnectionStatus();
+                loadDebugInfo();
+            } else {
+                alert('Failed to clear tokens: ' + data.message);
+            }
+        } catch (error) {
+            alert('Error clearing tokens: ' + error.message);
+        }
+    }
+
+    async function loadDebugInfo() {
+        try {
+            const response = await fetch('/zoho/debug');
+            const data = await response.json();
+            
+            document.getElementById('debugInfo').innerHTML = 
+                `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } catch (error) {
+            document.getElementById('debugInfo').innerHTML = 
+                `<div class="text-red-600">Error loading debug info: ${error.message}</div>`;
+        }
+    }
+
+    function getStatusIcon(status) {
+        switch (status) {
+            case 'connected':
+                return '✅';
+            case 'not_connected':
+                return '❌';
+            case 'error':
+                return '⚠️';
+            default:
+                return '❓';
+        }
+    }
+
+    function getStatusClass(status) {
+        switch (status) {
+            case 'connected':
+                return 'text-green-600';
+            case 'not_connected':
+                return 'text-red-600';
+            case 'error':
+                return 'text-yellow-600';
+            default:
+                return 'text-gray-600';
+        }
+    }
+    </script>
+</body>
+</html>

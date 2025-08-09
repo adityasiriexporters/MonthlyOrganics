@@ -99,7 +99,13 @@ def export_database():
 @admin_required
 def zoho_integration():
     """Zoho Integration management page"""
-    return render_template('admin/zoho_integration.html')
+    try:
+        logger.info("Loading Zoho Integration admin page")
+        return render_template('admin/zoho_integration.html')
+    except Exception as e:
+        logger.error(f"Error loading Zoho integration page: {e}")
+        flash('Error loading Zoho integration page. Please try again.', 'error')
+        return redirect(url_for('admin_dashboard'))
 
 @admin_bp.route('/categories', methods=['GET'])
 @admin_required

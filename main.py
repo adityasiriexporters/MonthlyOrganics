@@ -274,6 +274,12 @@ from routes.zoho_debug import zoho_debug_bp
 app.register_blueprint(zoho_bp)
 app.register_blueprint(zoho_debug_bp)
 
+# Test route for Zoho integration (remove after testing)
+@app.route('/test-zoho')
+def test_zoho_page():
+    """Test route to verify Zoho integration page works"""
+    return render_template('admin/simple_zoho_test.html')
+
 # Register timezone template filters
 app.jinja_env.filters['format_datetime_ist'] = format_datetime_ist
 app.jinja_env.filters['format_date_ist'] = format_date_ist
